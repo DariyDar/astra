@@ -12,7 +12,7 @@ Astra is built in 8 phases following strict dependency order. Infrastructure and
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Infrastructure and Security Foundation** - Docker Compose stack, encrypted credentials, structured logging, LLM routing with fallbacks
+- [ ] **Phase 1: Infrastructure and Security Foundation** - Docker Compose stack, encrypted credentials, structured logging, single-model LLM integration
 - [ ] **Phase 2: Bot Shell and Agent Brain** - Telegram + Slack bots, unified message router, LangGraph agent, conversation context, notification preferences
 - [ ] **Phase 3: Core Integrations** - ClickUp task management, Gmail email triage, Google Calendar — the PM's daily toolkit
 - [ ] **Phase 4: Knowledge Base** - Google Drive indexing, RAG pipeline, hybrid search with project filtering, company terminology
@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05
 **Success Criteria** (what must be TRUE):
-  1. Docker Compose stack starts all services (PostgreSQL, Redis, Qdrant, LiteLLM, bot, worker) with a single command and all health checks pass
+  1. Docker Compose stack starts all services (PostgreSQL, Redis, Qdrant, bot, worker) with a single command and all health checks pass
   2. API tokens stored in PostgreSQL are encrypted at rest and cannot be read as plaintext from the database
   3. Every bot action produces a structured JSON log entry with correlation ID, and an audit trail query can reconstruct the sequence of actions for any request
-  4. LLM requests route to the correct model tier (Haiku for triage, Sonnet for standard, Opus for complex) based on task classification
-  5. When the primary LLM model is unavailable, requests automatically fall back to the next model in the chain without user-visible errors
+  4. Single model (Sonnet) used for all LLM tasks — no tiering, no classification by complexity
+  5. When Claude is unavailable, user receives a Telegram notification with a friendly message
 **Plans**: 2 plans
 
 Plans:
