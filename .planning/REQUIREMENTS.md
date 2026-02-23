@@ -10,10 +10,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Infrastructure
 
 - [x] **INFRA-01**: System runs as Docker Compose stack on VPS with all services (Qdrant, PostgreSQL, Redis, LiteLLM, bot, worker)
-- [ ] **INFRA-02**: All API tokens encrypted at rest using AES-256-GCM
-- [ ] **INFRA-03**: Structured JSON logging (Pino) with audit trail for all bot actions
-- [ ] **INFRA-04**: Multi-LLM routing: Haiku for triage/classification, Sonnet for standard work, Opus for complex analysis
-- [ ] **INFRA-05**: LLM fallback chains: if primary model unavailable, route to fallback automatically
+- [x] **INFRA-02**: All API tokens encrypted at rest using AES-256-GCM
+- [x] **INFRA-03**: Structured JSON logging (Pino) with audit trail for all bot actions
+- [x] **INFRA-04**: Multi-LLM routing: Haiku for triage/classification, Sonnet for standard work, Opus for complex analysis
+- [x] **INFRA-05**: LLM fallback chains: if primary model unavailable, route to fallback automatically
 
 ### Messaging Interface
 
@@ -141,10 +141,10 @@ Requirements for initial release. Each maps to roadmap phases.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INFRA-01 | Phase 1 | Complete |
-| INFRA-02 | Phase 1 | Pending |
-| INFRA-03 | Phase 1 | Pending |
-| INFRA-04 | Phase 1 | Pending |
-| INFRA-05 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Complete |
+| INFRA-03 | Phase 1 | Complete |
+| INFRA-04 | Phase 1 | Complete |
+| INFRA-05 | Phase 1 | Complete |
 | MSG-01 | Phase 2 | Pending |
 | MSG-02 | Phase 2 | Pending |
 | MSG-03 | Phase 2 | Pending |
