@@ -9,7 +9,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: System runs as Docker Compose stack on VPS with all services (Qdrant, PostgreSQL, Redis, LiteLLM, bot, worker)
+- [x] **INFRA-01**: System runs as Docker Compose stack on VPS with all services (Qdrant, PostgreSQL, Redis, LiteLLM, bot, worker)
 - [ ] **INFRA-02**: All API tokens encrypted at rest using AES-256-GCM
 - [ ] **INFRA-03**: Structured JSON logging (Pino) with audit trail for all bot actions
 - [ ] **INFRA-04**: Multi-LLM routing: Haiku for triage/classification, Sonnet for standard work, Opus for complex analysis
@@ -140,7 +140,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 1 | Pending |
 | INFRA-03 | Phase 1 | Pending |
 | INFRA-04 | Phase 1 | Pending |

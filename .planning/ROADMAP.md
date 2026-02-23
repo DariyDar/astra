@@ -36,7 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Project setup, Docker Compose stack, DB schema, bot/worker entry points
+- [x] 01-01-PLAN.md — Project setup, Docker Compose stack, DB schema, bot/worker entry points
 - [ ] 01-02-PLAN.md — Credential encryption, structured logging, Claude API client, health monitoring
 
 ### Phase 2: Bot Shell and Agent Brain
