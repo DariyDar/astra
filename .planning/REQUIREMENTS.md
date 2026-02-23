@@ -197,10 +197,10 @@ Requirements for initial release. Each maps to roadmap phases.
 | EXT-04 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 49 total
-- Mapped to phases: 49
-- Unmapped: 0 ✓
+- v1 requirements: 55 total
+- Mapped to phases: 55
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after initial definition*
+*Last updated: 2026-02-23 after roadmap creation*
