@@ -33,11 +33,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Every bot action produces a structured JSON log entry with correlation ID, and an audit trail query can reconstruct the sequence of actions for any request
   4. LLM requests route to the correct model tier (Haiku for triage, Sonnet for standard, Opus for complex) based on task classification
   5. When the primary LLM model is unavailable, requests automatically fall back to the next model in the chain without user-visible errors
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Project setup, Docker Compose stack, DB schema, bot/worker entry points
+- [ ] 01-02-PLAN.md — Credential encryption, structured logging, Claude API client, health monitoring
 
 ### Phase 2: Bot Shell and Agent Brain
 **Goal**: User can talk to Astra in Telegram and Slack, hold multi-step conversations with context, and configure how proactive alerts reach them
