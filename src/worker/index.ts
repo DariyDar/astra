@@ -1,12 +1,45 @@
+import cron from 'node-cron'
 import '../config/env.js'
+import { logger } from '../logging/logger.js'
+import { cleanupOldEntries } from '../logging/audit.js'
+import { closeDb } from '../db/index.js'
 
-// Phase 1: audit trail cleanup job will be added in Plan 02
+const AUDIT_RETENTION_DAYS = 30
 
-console.log('Worker started')
+/**
+ * Schedule audit trail cleanup: daily at 3 AM.
+ * Deletes entries older than 30 days.
+ */
+const auditCleanupJob = cron.schedule('0 3 * * *', async () => {
+  logger.info('Starting audit trail cleanup')
+  try {
+    const deleted = await cleanupOldEntries(AUDIT_RETENTION_DAYS)
+    logger.info(
+      { deletedCount: deleted, retentionDays: AUDIT_RETENTION_DAYS },
+      'Audit trail cleanup complete',
+    )
+  } catch (error) {
+    logger.error({ error }, 'Audit trail cleanup failed')
+  }
+})
 
+logger.info('Worker started')
+
+/**
+ * Graceful shutdown: stop cron jobs, close DB connection.
+ */
 function shutdown(signal: string) {
-  console.log(`Received ${signal}, shutting down worker...`)
-  process.exit(0)
+  logger.info({ signal }, 'Shutting down worker')
+  auditCleanupJob.stop()
+  closeDb()
+    .then(() => {
+      logger.info('Database connection closed')
+      process.exit(0)
+    })
+    .catch((error) => {
+      logger.error({ error }, 'Error closing database connection')
+      process.exit(1)
+    })
 }
 
 process.on('SIGINT', () => shutdown('SIGINT'))
