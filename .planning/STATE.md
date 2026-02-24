@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 2 of 8 (Bot Shell and Agent Brain)
-Plan: 4 of 5 in current phase
-Status: Executing Phase 2
-Last activity: 2026-02-24 — Plan 02-04 complete (Slack DM adapter)
+Plan: 5 of 5 in current phase
+Status: Phase 2 COMPLETE
+Last activity: 2026-02-24 — Plan 02-05 complete (Notification system)
 
-Progress: [█████░░░░░] 27%
+Progress: [██████░░░░] 32%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 6.5 min
-- Total execution time: 0.6 hours
+- Total plans completed: 7
+- Average duration: 6.4 min
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | 16 min | 8 min |
-| 2 | 4 | 21 min | 5.3 min |
+| 2 | 5 | 27 min | 5.4 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (10 min), 02-01 (4 min), 02-02 (7 min), 02-03 (4 min), 02-04 (6 min)
-- Trend: stable, consistent ~5 min/plan in Phase 2
+- Last 5 plans: 02-01 (4 min), 02-02 (7 min), 02-03 (4 min), 02-04 (6 min), 02-05 (6 min)
+- Trend: stable, consistent ~5.4 min/plan in Phase 2
 
 *Updated after each plan completion*
 
@@ -71,6 +71,11 @@ Recent decisions affecting current work:
 - 02-04: GenericMessageEvent from @slack/types (not @slack/bolt) for correct TypeScript types
 - 02-04: Socket Mode for Slack (no public URL required, WebSocket-based)
 - 02-04: Conditional adapter registration — Telegram-only mode when Slack tokens missing
+- 02-05: In-memory queues for digest and on-demand notification items (Map<userId, items[]>)
+- 02-05: preference_update XML tags in Claude responses for structured NL preference changes
+- 02-05: Digest cron runs in bot process (not worker) since it needs adapter access
+- 02-05: HTML parse mode for /settings with urgency and channel icons
+- 02-05: Fallback to Telegram when configured Slack adapter unavailable
 
 ### Pending Todos
 
@@ -83,5 +88,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 02-04-PLAN.md (Slack DM adapter)
-Resume file: .planning/phases/02-bot-shell-and-agent-brain/02-04-SUMMARY.md
+Stopped at: Completed 02-05-PLAN.md (Notification system) — Phase 2 complete
+Resume file: .planning/phases/02-bot-shell-and-agent-brain/02-05-SUMMARY.md
