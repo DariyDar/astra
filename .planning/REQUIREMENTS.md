@@ -17,11 +17,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Messaging Interface
 
-- [ ] **MSG-01**: User can interact with Astra via Telegram personal chat in Russian and English
-- [ ] **MSG-02**: User can interact with Astra via Slack DM in Russian and English
-- [ ] **MSG-03**: Bot detects message language automatically and responds in the same language
+- [x] **MSG-01**: User can interact with Astra via Telegram personal chat in Russian and English
+- [x] **MSG-02**: User can interact with Astra via Slack DM in Russian and English
+- [x] **MSG-03**: Bot detects message language automatically and responds in the same language
 - [ ] **MSG-04**: Bot supports multi-step conversations with context retention within a session
-- [ ] **MSG-05**: User can configure notification preferences (what types of proactive alerts to receive)
+- [x] **MSG-05**: User can configure notification preferences (what types of proactive alerts to receive)
 
 ### ClickUp Integration
 
@@ -145,11 +145,11 @@ Requirements for initial release. Each maps to roadmap phases.
 | INFRA-03 | Phase 1 | Complete |
 | INFRA-04 | Phase 1 | Complete |
 | INFRA-05 | Phase 1 | Complete |
-| MSG-01 | Phase 2 | Pending |
-| MSG-02 | Phase 2 | Pending |
-| MSG-03 | Phase 2 | Pending |
+| MSG-01 | Phase 2 | Complete |
+| MSG-02 | Phase 2 | Complete |
+| MSG-03 | Phase 2 | Complete |
 | MSG-04 | Phase 2 | Pending |
-| MSG-05 | Phase 2 | Pending |
+| MSG-05 | Phase 2 | Complete |
 | CU-01 | Phase 3 | Pending |
 | CU-02 | Phase 3 | Pending |
 | CU-03 | Phase 3 | Pending |
