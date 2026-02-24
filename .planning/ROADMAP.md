@@ -49,11 +49,14 @@ Plans:
   3. User can have a multi-step conversation (e.g., "create a task" -> "in which project?" -> "Project Alpha" -> "done") and the bot retains context throughout
   4. User can configure notification preferences (e.g., "only alert me about urgent items" or "batch non-critical notifications hourly") and the bot respects those settings
   5. Bot auto-detects whether a message is in Russian or English and responds in the matching language without being told
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Database schema extensions (messages, preferences, feedback), unified channel types, language detection
+- [ ] 02-02-PLAN.md — Three-tier memory system (Redis short-term, PostgreSQL medium-term, Qdrant long-term semantic)
+- [ ] 02-03-PLAN.md — Telegram adapter refactor + conversation brain (context builder, system prompt, message router)
+- [ ] 02-04-PLAN.md — Slack adapter (Bolt Socket Mode) with optional registration
+- [ ] 02-05-PLAN.md — Notification system (preferences, urgency, dispatcher, morning digest)
 
 ### Phase 3: Core Integrations
 **Goal**: User can manage ClickUp tasks, triage Gmail, and check Google Calendar through natural language — the daily PM workflow works end-to-end
@@ -157,7 +160,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure and Security Foundation | 0/2 | Complete    | 2026-02-23 |
-| 2. Bot Shell and Agent Brain | 0/2 | Not started | - |
+| 2. Bot Shell and Agent Brain | 0/5 | Not started | - |
 | 3. Core Integrations | 0/3 | Not started | - |
 | 4. Knowledge Base | 0/2 | Not started | - |
 | 5. Report Generation | 0/2 | Not started | - |
