@@ -109,7 +109,14 @@ function execClaude(args: string[]): Promise<ClaudeResponse> {
       }
 
       try {
-        const parsed = JSON.parse(stdout) as { result?: string; content?: string; response?: string }
+        const parsed = JSON.parse(stdout) as { result?: string; content?: string; response?: string; is_error?: boolean }
+
+        // CLI may exit 0 but return is_error: true for auth failures
+        if (parsed.is_error) {
+          reject(new Error(parsed.result ?? 'Claude CLI returned is_error'))
+          return
+        }
+
         const text = parsed.result ?? parsed.content ?? parsed.response ?? stdout.trim()
         resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: MODEL })
       } catch {

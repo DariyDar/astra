@@ -176,24 +176,29 @@ export class HealthChecker {
     const start = Date.now()
 
     try {
-      await new Promise<void>((resolve, reject) => {
-        const proc = spawn('claude', ['--print', '--no-session-persistence', '--model', 'sonnet', 'Reply with OK'], {
+      const result = await new Promise<string>((resolve, reject) => {
+        const proc = spawn('claude', [
+          '--print', '--no-session-persistence', '--model', 'sonnet',
+          '--output-format', 'json', 'Reply with OK',
+        ], {
           stdio: ['pipe', 'pipe', 'pipe'],
         })
         proc.stdin.end()
 
+        let stdout = ''
         let stderr = ''
+        proc.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
         proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
 
         const timer = setTimeout(() => { proc.kill(); reject(new Error('Claude CLI timed out')) }, 90_000)
 
         proc.on('close', (code) => {
           clearTimeout(timer)
-          if (code === 0) {
-            resolve()
-          } else {
+          if (code !== 0) {
             reject(new Error(stderr.trim() || `claude exited with code ${code}`))
+            return
           }
+          resolve(stdout)
         })
 
         proc.on('error', (err) => {
@@ -201,6 +206,18 @@ export class HealthChecker {
           reject(err)
         })
       })
+
+      // CLI may exit 0 but return is_error: true for auth failures
+      const parsed = JSON.parse(result) as { is_error?: boolean; result?: string }
+      if (parsed.is_error) {
+        return {
+          service: 'Claude',
+          healthy: false,
+          latencyMs: Date.now() - start,
+          error: parsed.result ?? 'Claude CLI returned is_error',
+        }
+      }
+
       return {
         service: 'Claude',
         healthy: true,
