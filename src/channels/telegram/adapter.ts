@@ -56,6 +56,19 @@ export class TelegramAdapter implements ChannelAdapter {
         return
       }
 
+      // React with eyes to acknowledge receipt
+      try {
+        await ctx.react('👀')
+      } catch {
+        // Reaction API may not be available in all chats
+      }
+
+      // Show "typing" indicator while processing
+      const typingInterval = setInterval(() => {
+        ctx.replyWithChatAction('typing').catch(() => {})
+      }, 4000)
+      ctx.replyWithChatAction('typing').catch(() => {})
+
       const inbound: InboundMessage = {
         id: ctx.update.update_id.toString(),
         channelType: 'telegram',
@@ -67,15 +80,17 @@ export class TelegramAdapter implements ChannelAdapter {
           ctx.message!.reply_to_message?.message_id?.toString(),
       }
 
-      for (const handler of this.handlers) {
-        try {
+      try {
+        for (const handler of this.handlers) {
           await handler(inbound)
-        } catch (error) {
-          logger.error(
-            { error, updateId: ctx.update.update_id },
-            'Error in message handler',
-          )
         }
+      } catch (error) {
+        logger.error(
+          { error, updateId: ctx.update.update_id },
+          'Error in message handler',
+        )
+      } finally {
+        clearInterval(typingInterval)
       }
     })
   }
