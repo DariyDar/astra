@@ -8,15 +8,29 @@ import type { LongTermMemory } from '../memory/long-term.js'
 import type { MediumTermMemory } from '../memory/medium-term.js'
 import type { ShortTermMemory } from '../memory/short-term.js'
 import type { StoredMessage } from '../memory/types.js'
+import type { NotificationPreferences } from '../notifications/preferences.js'
+import type { UrgencyLevel } from '../notifications/urgency.js'
 import { buildContext } from './context-builder.js'
 import { detectLanguage } from './language.js'
 import { buildSystemPrompt } from './system-prompt.js'
+
+/** Regex to match <preference_update>...</preference_update> tags in Claude responses */
+const PREFERENCE_UPDATE_RE = /<preference_update>\s*([\s\S]*?)\s*<\/preference_update>/g
+
+interface PreferenceUpdateAction {
+  action: 'set' | 'setEnabled'
+  category: string
+  urgencyLevel?: UrgencyLevel
+  deliveryChannel?: 'telegram' | 'slack'
+  enabled?: boolean
+}
 
 interface MessageRouterConfig {
   shortTerm: ShortTermMemory
   mediumTerm: MediumTermMemory
   longTerm: LongTermMemory
   adapters: ChannelAdapter[]
+  preferences?: NotificationPreferences
 }
 
 /**
@@ -29,12 +43,14 @@ export class MessageRouter {
   private readonly mediumTerm: MediumTermMemory
   private readonly longTerm: LongTermMemory
   private readonly adapters: ChannelAdapter[]
+  private readonly preferences?: NotificationPreferences
 
   constructor(config: MessageRouterConfig) {
     this.shortTerm = config.shortTerm
     this.mediumTerm = config.mediumTerm
     this.longTerm = config.longTerm
     this.adapters = config.adapters
+    this.preferences = config.preferences
   }
 
   /**
@@ -94,6 +110,16 @@ export class MessageRouter {
       'Claude response received',
     )
 
+    // 4b. Process preference updates from Claude's response (if preferences wired)
+    let responseText = response.text
+    if (this.preferences) {
+      responseText = await this.processPreferenceUpdates(
+        responseText,
+        message.userId,
+        requestLogger,
+      )
+    }
+
     // 5. Store user message in all three tiers
     const userStored: StoredMessage = {
       id: message.id,
@@ -115,7 +141,7 @@ export class MessageRouter {
       channelId: message.channelId,
       userId: 'assistant',
       role: 'assistant',
-      text: response.text,
+      text: responseText,
       language,
       timestamp: new Date(),
     }
@@ -131,7 +157,7 @@ export class MessageRouter {
       metadata: {
         language,
         userTextLength: message.text.length,
-        responseTextLength: response.text.length,
+        responseTextLength: responseText.length,
         channelId: message.channelId,
       },
       status: 'success',
@@ -141,7 +167,7 @@ export class MessageRouter {
     return {
       channelType: message.channelType,
       channelId: message.channelId,
-      text: response.text,
+      text: responseText,
       replyToMessageId: message.id,
     }
   }
@@ -222,6 +248,55 @@ export class MessageRouter {
         }
       })
     }
+  }
+
+  /**
+   * Scan Claude's response for <preference_update> tags and execute them.
+   * Strips the tags from the response so the user only sees the natural language confirmation.
+   */
+  private async processPreferenceUpdates(
+    responseText: string,
+    userId: string,
+    requestLogger: ReturnType<typeof createRequestLogger>,
+  ): Promise<string> {
+    if (!this.preferences) return responseText
+
+    let cleaned = responseText
+    const matches = [...responseText.matchAll(PREFERENCE_UPDATE_RE)]
+
+    for (const match of matches) {
+      try {
+        const json = match[1].trim()
+        const parsed = JSON.parse(json) as PreferenceUpdateAction
+
+        if (parsed.action === 'set' && parsed.category && parsed.urgencyLevel && parsed.deliveryChannel) {
+          await this.preferences.set(userId, parsed.category, parsed.urgencyLevel, parsed.deliveryChannel)
+          requestLogger.info(
+            { action: 'set', category: parsed.category, urgencyLevel: parsed.urgencyLevel, deliveryChannel: parsed.deliveryChannel },
+            'Preference updated via natural language',
+          )
+        } else if (parsed.action === 'setEnabled' && parsed.category && parsed.enabled !== undefined) {
+          await this.preferences.setEnabled(userId, parsed.category, parsed.enabled)
+          requestLogger.info(
+            { action: 'setEnabled', category: parsed.category, enabled: parsed.enabled },
+            'Preference enabled/disabled via natural language',
+          )
+        } else {
+          requestLogger.warn({ parsed }, 'Unknown preference update action format')
+        }
+      } catch (error) {
+        requestLogger.warn(
+          { error, rawTag: match[0] },
+          'Failed to parse preference_update tag',
+        )
+      }
+
+      // Strip the tag from the response
+      cleaned = cleaned.replace(match[0], '')
+    }
+
+    // Clean up extra whitespace from tag removal
+    return cleaned.replace(/\n{3,}/g, '\n\n').trim()
   }
 
   /**

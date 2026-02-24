@@ -23,6 +23,8 @@ const auditCleanupJob = cron.schedule('0 3 * * *', async () => {
   }
 })
 
+// Digest scheduling runs in bot process (has access to adapters). See src/bot/index.ts.
+
 logger.info('Worker started')
 
 /**
