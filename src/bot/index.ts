@@ -8,6 +8,8 @@ import { writeAuditEntry } from '../logging/audit.js'
 import { HealthChecker } from '../health/checker.js'
 import { db, closeDb } from '../db/index.js'
 import { TelegramAdapter } from '../channels/telegram/adapter.js'
+import { SlackAdapter } from '../channels/slack/adapter.js'
+import type { ChannelAdapter } from '../channels/types.js'
 import { ShortTermMemory } from '../memory/short-term.js'
 import { MediumTermMemory } from '../memory/medium-term.js'
 import { LongTermMemory } from '../memory/long-term.js'
@@ -31,12 +33,27 @@ const longTermMemory = new LongTermMemory(qdrantClient)
 // --- Telegram adapter ---
 const telegramAdapter = new TelegramAdapter(bot, env.TELEGRAM_ADMIN_CHAT_ID)
 
+// --- Channel adapters (Telegram always, Slack optional) ---
+const adapters: ChannelAdapter[] = [telegramAdapter]
+
+if (env.SLACK_BOT_TOKEN && env.SLACK_APP_TOKEN && env.SLACK_ADMIN_USER_ID) {
+  const slackAdapter = new SlackAdapter({
+    botToken: env.SLACK_BOT_TOKEN,
+    appToken: env.SLACK_APP_TOKEN,
+    adminUserId: env.SLACK_ADMIN_USER_ID,
+  })
+  adapters.push(slackAdapter)
+  logger.info('Slack adapter configured')
+} else {
+  logger.info('Slack not configured, running Telegram-only mode')
+}
+
 // --- Message router ---
 const messageRouter = new MessageRouter({
   shortTerm: shortTermMemory,
   mediumTerm: mediumTermMemory,
   longTerm: longTermMemory,
-  adapters: [telegramAdapter],
+  adapters,
 })
 
 // --- Middleware: correlation ID logging for all updates ---
