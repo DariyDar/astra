@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 2 of 8 (Bot Shell and Agent Brain)
-Plan: 3 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: Executing Phase 2
-Last activity: 2026-02-24 — Plan 02-03 complete (conversation brain and Telegram adapter)
+Last activity: 2026-02-24 — Plan 02-04 complete (Slack DM adapter)
 
-Progress: [████░░░░░░] 23%
+Progress: [█████░░░░░] 27%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 6.6 min
-- Total execution time: 0.5 hours
+- Total plans completed: 6
+- Average duration: 6.5 min
+- Total execution time: 0.6 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | 16 min | 8 min |
-| 2 | 3 | 15 min | 5 min |
+| 2 | 4 | 21 min | 5.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (6 min), 01-02 (10 min), 02-01 (4 min), 02-02 (7 min), 02-03 (4 min)
-- Trend: stable, accelerating in Phase 2
+- Last 5 plans: 01-02 (10 min), 02-01 (4 min), 02-02 (7 min), 02-03 (4 min), 02-04 (6 min)
+- Trend: stable, consistent ~5 min/plan in Phase 2
 
 *Updated after each plan completion*
 
@@ -68,6 +68,9 @@ Recent decisions affecting current work:
 - 02-03: Fire-and-forget long-term storage (embed + Qdrant) to avoid blocking response
 - 02-03: Graceful degradation for each memory tier failure
 - 02-03: Language-aware error messages sent to user on processing failures
+- 02-04: GenericMessageEvent from @slack/types (not @slack/bolt) for correct TypeScript types
+- 02-04: Socket Mode for Slack (no public URL required, WebSocket-based)
+- 02-04: Conditional adapter registration — Telegram-only mode when Slack tokens missing
 
 ### Pending Todos
 
@@ -80,5 +83,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed 02-03-PLAN.md (conversation brain + Telegram adapter)
-Resume file: .planning/phases/02-bot-shell-and-agent-brain/02-03-SUMMARY.md
+Stopped at: Completed 02-04-PLAN.md (Slack DM adapter)
+Resume file: .planning/phases/02-bot-shell-and-agent-brain/02-04-SUMMARY.md
