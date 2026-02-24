@@ -1,18 +1,45 @@
 import { Bot } from 'grammy'
+import { Redis } from 'ioredis'
+import { QdrantClient } from '@qdrant/js-client-rest'
 import { env } from '../config/env.js'
 import { logger } from '../logging/logger.js'
 import { createRequestLogger } from '../logging/correlation.js'
 import { writeAuditEntry } from '../logging/audit.js'
 import { HealthChecker } from '../health/checker.js'
-import { closeDb } from '../db/index.js'
+import { db, closeDb } from '../db/index.js'
+import { TelegramAdapter } from '../channels/telegram/adapter.js'
+import { ShortTermMemory } from '../memory/short-term.js'
+import { MediumTermMemory } from '../memory/medium-term.js'
+import { LongTermMemory } from '../memory/long-term.js'
+import { initEmbedder } from '../memory/embedder.js'
+import { MessageRouter } from '../brain/router.js'
 
+// --- Create core instances ---
 const bot = new Bot(env.TELEGRAM_BOT_TOKEN)
 const healthChecker = new HealthChecker()
 
-/**
- * Middleware: Create a request logger with correlation ID for every incoming message.
- * Attaches the logger to ctx.state for downstream middleware and handlers.
- */
+// --- Memory tier instances ---
+const redis = new Redis(env.REDIS_URL, {
+  maxRetriesPerRequest: 3,
+  lazyConnect: true,
+})
+const shortTermMemory = new ShortTermMemory(redis)
+const mediumTermMemory = new MediumTermMemory(db)
+const qdrantClient = new QdrantClient({ url: env.QDRANT_URL })
+const longTermMemory = new LongTermMemory(qdrantClient)
+
+// --- Telegram adapter ---
+const telegramAdapter = new TelegramAdapter(bot, env.TELEGRAM_ADMIN_CHAT_ID)
+
+// --- Message router ---
+const messageRouter = new MessageRouter({
+  shortTerm: shortTermMemory,
+  mediumTerm: mediumTermMemory,
+  longTerm: longTermMemory,
+  adapters: [telegramAdapter],
+})
+
+// --- Middleware: correlation ID logging for all updates ---
 bot.use(async (ctx, next) => {
   const requestLogger = createRequestLogger({
     userId: ctx.from?.id?.toString(),
@@ -20,7 +47,6 @@ bot.use(async (ctx, next) => {
     source: 'telegram',
   })
 
-  // Store logger in context state for access in handlers
   ;(ctx as unknown as { requestLogger: typeof requestLogger }).requestLogger =
     requestLogger
 
@@ -32,7 +58,6 @@ bot.use(async (ctx, next) => {
     'Incoming Telegram update',
   )
 
-  // Write audit entry for every handled message
   await writeAuditEntry({
     correlationId:
       (requestLogger.bindings() as { correlationId: string }).correlationId,
@@ -49,11 +74,9 @@ bot.use(async (ctx, next) => {
   await next()
 })
 
+// --- Commands (registered BEFORE adapter middleware) ---
 bot.command('start', (ctx) => ctx.reply('Astra is running'))
 
-/**
- * /health command: Run health checks and reply with formatted status.
- */
 bot.command('health', async (ctx) => {
   const results = await healthChecker.checkAll()
 
@@ -70,9 +93,7 @@ bot.command('health', async (ctx) => {
   await ctx.reply(`Health Check: ${header}\n\n${lines.join('\n')}`)
 })
 
-/**
- * Error handler: Log errors with correlation ID and write audit entry.
- */
+// --- Error handler ---
 bot.catch(async (err) => {
   const ctx = err.ctx
   const requestLogger =
@@ -100,20 +121,59 @@ bot.catch(async (err) => {
   })
 })
 
-/**
- * Graceful shutdown: stop health checker, close DB connection, stop bot.
- */
-function shutdown(signal: string) {
+// --- Startup sequence ---
+async function startup(): Promise<void> {
+  logger.info('Starting Astra bot...')
+
+  // 1. Connect Redis
+  try {
+    await redis.connect()
+    logger.info('Redis connected')
+  } catch (error) {
+    logger.warn({ error }, 'Redis connection failed, short-term memory degraded')
+  }
+
+  // 2. Initialize embedder (downloads model on first run)
+  try {
+    await initEmbedder()
+    logger.info('Embedder initialized')
+  } catch (error) {
+    logger.warn({ error }, 'Embedder initialization failed, long-term memory degraded')
+  }
+
+  // 3. Ensure Qdrant collection exists
+  try {
+    await longTermMemory.ensureCollection()
+    logger.info('Qdrant collection ready')
+  } catch (error) {
+    logger.warn({ error }, 'Qdrant collection setup failed, long-term memory degraded')
+  }
+
+  // 4. Start health checker
+  healthChecker.startPeriodicChecks(60_000)
+
+  // 5. Start message router (which starts all adapters including Telegram)
+  await messageRouter.start()
+
+  logger.info('Astra bot started successfully')
+}
+
+// --- Graceful shutdown ---
+function shutdown(signal: string): void {
   logger.info({ signal }, 'Shutting down bot')
-  healthChecker.stopPeriodicChecks()
-  bot.stop()
-  closeDb()
+
+  messageRouter.stop()
     .then(() => {
-      logger.info('Database connection closed')
+      healthChecker.stopPeriodicChecks()
+      redis.disconnect()
+      return closeDb()
+    })
+    .then(() => {
+      logger.info('All connections closed')
       process.exit(0)
     })
     .catch((error) => {
-      logger.error({ error }, 'Error closing database connection')
+      logger.error({ error }, 'Error during shutdown')
       process.exit(1)
     })
 }
@@ -121,8 +181,8 @@ function shutdown(signal: string) {
 process.on('SIGINT', () => shutdown('SIGINT'))
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 
-// Start health checker periodic checks (every 60 seconds)
-healthChecker.startPeriodicChecks(60_000)
-
-logger.info('Bot started')
-bot.start()
+// Launch
+startup().catch((error) => {
+  logger.error({ error }, 'Fatal startup error')
+  process.exit(1)
+})
