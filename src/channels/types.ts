@@ -20,6 +20,7 @@ export interface OutboundMessage {
   channelId: string
   text: string
   replyToMessageId?: string
+  parseMode?: 'HTML' | 'MarkdownV2'
   metadata?: Record<string, unknown>
 }
 

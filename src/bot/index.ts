@@ -147,7 +147,7 @@ bot.command('health', async (ctx) => {
 bot.command('settings', async (ctx) => {
   const userId = ctx.from?.id?.toString()
   if (!userId) {
-    await ctx.reply('Cannot identify user.')
+    await ctx.reply('Не удалось определить пользователя.')
     return
   }
 
@@ -155,7 +155,7 @@ bot.command('settings', async (ctx) => {
   const prefs = await notificationPreferences.getAll(userId)
 
   if (prefs.length === 0) {
-    await ctx.reply('No notification preferences found. Defaults will be created on first use.')
+    await ctx.reply('Настройки уведомлений пока не заданы. Будут созданы автоматически.')
     return
   }
 
@@ -163,6 +163,20 @@ bot.command('settings', async (ctx) => {
     urgent: '\u{1F534}',
     important: '\u{1F7E1}',
     normal: '\u{26AA}',
+  }
+
+  const urgencyLabels: Record<string, string> = {
+    urgent: 'срочно',
+    important: 'важно',
+    normal: 'обычно',
+  }
+
+  const categoryLabels: Record<string, string> = {
+    task_deadline: 'Дедлайны задач',
+    email_urgent: 'Срочные письма',
+    calendar_meeting: 'Встречи',
+    task_update: 'Обновления задач',
+    email_digest: 'Дайджест писем',
   }
 
   const channelIcons: Record<string, string> = {
@@ -173,12 +187,14 @@ bot.command('settings', async (ctx) => {
   const lines = prefs.map((p) => {
     const urgIcon = urgencyIcons[p.urgencyLevel] ?? ''
     const chIcon = channelIcons[p.deliveryChannel] ?? ''
-    const status = p.enabled === false ? ' [disabled]' : ''
-    return `${urgIcon} <b>${p.category}</b>: ${p.urgencyLevel} via ${chIcon} ${p.deliveryChannel}${status}`
+    const catLabel = categoryLabels[p.category] ?? p.category
+    const urgLabel = urgencyLabels[p.urgencyLevel] ?? p.urgencyLevel
+    const status = p.enabled === false ? ' [выкл]' : ''
+    return `${urgIcon} <b>${catLabel}</b>: ${urgLabel} \u{2192} ${chIcon} ${p.deliveryChannel}${status}`
   })
 
-  const header = '<b>Notification Preferences:</b>\n'
-  const footer = '\n\nYou can change preferences by telling me in natural language, e.g., "set task deadlines to urgent on Slack" or "disable calendar notifications".'
+  const header = '<b>\u{1F514} Настройки уведомлений</b>\n\n'
+  const footer = '\n\n<i>Чтобы изменить, просто скажи, например: \u{00AB}дедлайны задач \u{2014} срочные в Telegram\u{00BB} или \u{00AB}выключи уведомления о встречах\u{00BB}</i>'
 
   await ctx.reply(header + lines.join('\n') + footer, { parse_mode: 'HTML' })
 })

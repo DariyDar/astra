@@ -101,7 +101,7 @@ export class TelegramAdapter implements ChannelAdapter {
    */
   async send(message: OutboundMessage): Promise<void> {
     await this.bot.api.sendMessage(message.channelId, message.text, {
-      parse_mode: 'HTML',
+      ...(message.parseMode ? { parse_mode: message.parseMode } : {}),
     })
   }
 
