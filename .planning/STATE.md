@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 2 of 8 (Bot Shell and Agent Brain)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: Executing Phase 2
-Last activity: 2026-02-24 — Plan 02-02 complete (three-tier memory system)
+Last activity: 2026-02-24 — Plan 02-03 complete (conversation brain and Telegram adapter)
 
-Progress: [███░░░░░░░] 18%
+Progress: [████░░░░░░] 23%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 7 min
-- Total execution time: 0.4 hours
+- Total plans completed: 5
+- Average duration: 6.6 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 1 | 2 | 16 min | 8 min |
-| 2 | 2 | 11 min | 5.5 min |
+| 2 | 3 | 15 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (6 min), 01-02 (10 min), 02-01 (4 min), 02-02 (7 min)
-- Trend: stable
+- Last 5 plans: 01-01 (6 min), 01-02 (10 min), 02-01 (4 min), 02-02 (7 min), 02-03 (4 min)
+- Trend: stable, accelerating in Phase 2
 
 *Updated after each plan completion*
 
@@ -63,6 +63,11 @@ Recent decisions affecting current work:
 - 02-02: 384-dim multilingual vectors for Russian+English support
 - 02-02: Redis LPUSH/LRANGE with 24h TTL and 100-message cap for short-term
 - 02-02: Qdrant cosine similarity search for long-term semantic recall
+- 02-03: HTML parse mode for Telegram responses (structured formatting)
+- 02-03: Context token budget ~3000 tokens with priority short-term > medium-term > long-term
+- 02-03: Fire-and-forget long-term storage (embed + Qdrant) to avoid blocking response
+- 02-03: Graceful degradation for each memory tier failure
+- 02-03: Language-aware error messages sent to user on processing failures
 
 ### Pending Todos
 
@@ -75,5 +80,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Completed Wave 1 (02-01 + 02-02), proceeding to Wave 2
-Resume file: .planning/phases/02-bot-shell-and-agent-brain/02-02-SUMMARY.md
+Stopped at: Completed 02-03-PLAN.md (conversation brain + Telegram adapter)
+Resume file: .planning/phases/02-bot-shell-and-agent-brain/02-03-SUMMARY.md
