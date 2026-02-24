@@ -1,62 +1,46 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { spawn } from 'node:child_process'
 import type pino from 'pino'
 import { logger } from '../logging/logger.js'
 import { writeAuditEntry } from '../logging/audit.js'
 import { sendHealthAlert } from '../health/alerter.js'
 
-/**
- * Hardcoded model: single model for ALL tasks per user decision.
- * No tiering, no classification, no fallback chains.
- */
-const MODEL = 'claude-sonnet-4-20250514'
-const DEFAULT_MAX_TOKENS = 4096
+const MODEL = 'sonnet'
+const CLAUDE_TIMEOUT_MS = 120_000
 
-let anthropicClient: Anthropic | null = null
-
-function getClient(): Anthropic {
-  if (!anthropicClient) {
-    anthropicClient = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    })
-  }
-  return anthropicClient
+export interface ClaudeResponse {
+  text: string
+  model: string
 }
 
 /**
- * Send a message to Claude Sonnet and return the response.
- * Logs token usage, writes audit entry, and alerts user on API errors.
- *
- * Error handling per user decision:
- * - 529/503: Alert user via Telegram ("Claude is temporarily unavailable")
- * - 429: Log warning only (transient rate limit, no user alert)
- * - 401: Log critical + alert user ("API key issue detected")
- * - All errors are re-thrown after handling
+ * Call Claude via the CLI (`claude --print`).
+ * Uses the OAuth token from the Max subscription configured on the host.
  */
 export async function callClaude(
-  messages: Anthropic.MessageParam[],
-  options?: { maxTokens?: number; system?: string },
+  prompt: string,
+  options?: { system?: string },
   requestLogger?: pino.Logger,
-): Promise<Anthropic.Message> {
+): Promise<ClaudeResponse> {
   const log = requestLogger ?? logger
-  const maxTokens = options?.maxTokens ?? DEFAULT_MAX_TOKENS
+
+  const args = ['--print', '--no-session-persistence', '--model', MODEL, '--output-format', 'json']
+
+  if (options?.system) {
+    args.push('--system-prompt', options.system)
+  }
+
+  args.push(prompt)
 
   try {
-    const response = await getClient().messages.create({
-      model: MODEL,
-      max_tokens: maxTokens,
-      messages,
-      ...(options?.system ? { system: options.system } : {}),
-    })
+    const result = await execClaude(args)
 
     log.info(
       {
         event: 'llm_response',
-        model: response.model,
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
-        stopReason: response.stop_reason,
+        model: MODEL,
+        responseLength: result.text.length,
       },
-      'Claude API response received',
+      'Claude CLI response received',
     )
 
     await writeAuditEntry({
@@ -64,60 +48,78 @@ export async function callClaude(
         (log.bindings() as { correlationId?: string }).correlationId ??
         'unknown',
       action: 'llm_request',
-      model: response.model,
+      model: MODEL,
       metadata: {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
-        stopReason: response.stop_reason,
+        responseLength: result.text.length,
       },
       status: 'success',
     })
 
-    return response
+    return result
   } catch (error) {
-    if (error instanceof Anthropic.APIError) {
-      const status = error.status
+    const errorMessage =
+      error instanceof Error ? error.message : String(error)
 
-      if (status === 529 || status === 503) {
-        log.error(
-          { status, message: error.message },
-          'Claude API unavailable',
-        )
-        await sendHealthAlert(
-          "Claude is temporarily unavailable. I'll keep trying and let you know when it's back.",
-        )
-      } else if (status === 429) {
-        log.warn(
-          { status, message: error.message },
-          'Claude API rate limited (transient)',
-        )
-      } else if (status === 401) {
-        log.fatal(
-          { status, message: error.message },
-          'Claude API authentication failure',
-        )
-        await sendHealthAlert(
-          'API key issue detected. Please check the ANTHROPIC_API_KEY configuration.',
-        )
-      } else {
-        log.error(
-          { status, message: error.message },
-          'Claude API error',
-        )
-      }
+    log.error({ error: errorMessage }, 'Claude CLI error')
 
-      await writeAuditEntry({
-        correlationId:
-          (log.bindings() as { correlationId?: string }).correlationId ??
-          'unknown',
-        action: 'llm_request',
-        model: MODEL,
-        metadata: { status, errorType: error.constructor.name },
-        status: 'error',
-        errorMessage: error.message,
-      })
+    if (
+      errorMessage.includes('overloaded') ||
+      errorMessage.includes('503') ||
+      errorMessage.includes('529')
+    ) {
+      await sendHealthAlert(
+        "Claude is temporarily unavailable. I'll keep trying and let you know when it's back.",
+      )
     }
+
+    await writeAuditEntry({
+      correlationId:
+        (log.bindings() as { correlationId?: string }).correlationId ??
+        'unknown',
+      action: 'llm_request',
+      model: MODEL,
+      metadata: { errorType: 'cli_error' },
+      status: 'error',
+      errorMessage,
+    })
 
     throw error
   }
+}
+
+function execClaude(args: string[]): Promise<ClaudeResponse> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn('claude', args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    proc.stdin.end()
+
+    let stdout = ''
+    let stderr = ''
+    proc.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
+    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+
+    const timer = setTimeout(() => { proc.kill(); reject(new Error('Claude CLI timed out')) }, CLAUDE_TIMEOUT_MS)
+
+    proc.on('close', (code) => {
+      clearTimeout(timer)
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `claude exited with code ${code}`))
+        return
+      }
+
+      try {
+        const parsed = JSON.parse(stdout) as { result?: string; content?: string; response?: string }
+        const text = parsed.result ?? parsed.content ?? parsed.response ?? stdout.trim()
+        resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: MODEL })
+      } catch {
+        resolve({ text: stdout.trim(), model: MODEL })
+      }
+    })
+
+    proc.on('error', (err) => {
+      clearTimeout(timer)
+      reject(err)
+    })
+  })
 }

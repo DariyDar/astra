@@ -7,7 +7,6 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().length(64, 'Must be 32 bytes hex-encoded'),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TELEGRAM_ADMIN_CHAT_ID: z.string().min(1),
-  ANTHROPIC_API_KEY: z.string().startsWith('sk-ant-'),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info'),

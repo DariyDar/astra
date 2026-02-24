@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { spawn } from 'node:child_process'
 import { QdrantClient } from '@qdrant/js-client-rest'
 import { Redis } from 'ioredis'
 import pg from 'pg'
@@ -152,7 +152,7 @@ export class HealthChecker {
 
   private async checkQdrant(): Promise<HealthResult> {
     const start = Date.now()
-    const client = new QdrantClient({ url: 'http://qdrant:6333' })
+    const client = new QdrantClient({ url: process.env.QDRANT_URL ?? 'http://localhost:6333' })
 
     try {
       // Lightweight operation: list collections (no data transfer)
@@ -174,13 +174,33 @@ export class HealthChecker {
 
   private async checkClaude(): Promise<HealthResult> {
     const start = Date.now()
-    const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
-    })
 
     try {
-      // Lightweight model info request, not a completion
-      await client.models.retrieve('claude-sonnet-4-20250514')
+      await new Promise<void>((resolve, reject) => {
+        const proc = spawn('claude', ['--print', '--no-session-persistence', '--model', 'sonnet', 'Reply with OK'], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+        })
+        proc.stdin.end()
+
+        let stderr = ''
+        proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+
+        const timer = setTimeout(() => { proc.kill(); reject(new Error('Claude CLI timed out')) }, 90_000)
+
+        proc.on('close', (code) => {
+          clearTimeout(timer)
+          if (code === 0) {
+            resolve()
+          } else {
+            reject(new Error(stderr.trim() || `claude exited with code ${code}`))
+          }
+        })
+
+        proc.on('error', (err) => {
+          clearTimeout(timer)
+          reject(err)
+        })
+      })
       return {
         service: 'Claude',
         healthy: true,

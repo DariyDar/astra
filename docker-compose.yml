@@ -10,6 +10,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -21,44 +23,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    ports:
+      - "6379:6379"
     restart: unless-stopped
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:6333/readyz || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - qdrant_data:/qdrant/storage
-    restart: unless-stopped
-
-  bot:
-    build: .
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-    env_file: .env
-    restart: unless-stopped
-
-  worker:
-    build: .
-    command: ["node", "dist/worker/index.js"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      qdrant:
-        condition: service_healthy
-    env_file: .env
-    restart: unless-stopped
+  # Qdrant: uses existing shared instance on localhost:6333 (repos-qdrant-1)
 
 volumes:
   postgres_data:
-  qdrant_data:
