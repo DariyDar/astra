@@ -174,11 +174,13 @@ export class MessageRouter {
     })
 
     // 8. Return outbound message
+    // Pass through inbound metadata (e.g. Slack placeholderTs for typing indicator update)
     return {
       channelType: message.channelType,
       channelId: message.channelId,
       text: responseText,
       replyToMessageId: message.id,
+      ...(message.metadata ? { metadata: message.metadata } : {}),
     }
   }
 

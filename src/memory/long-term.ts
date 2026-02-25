@@ -74,42 +74,27 @@ export class LongTermMemory {
 
   /**
    * Search for semantically similar messages by query text.
-   * Embeds the query and searches Qdrant for nearest neighbors.
-   * Optionally filters by channel ID.
+   * Searches across ALL channels (Telegram + Slack) for cross-platform memory.
    */
   async search(
     query: string,
     limit: number,
-    channelId?: string,
   ): Promise<SearchResult[]> {
     const vector = await embed(query)
-    return this.searchByVector(vector, limit, channelId)
+    return this.searchByVector(vector, limit)
   }
 
   /**
    * Search for semantically similar messages by pre-computed vector.
-   * Use when embedding is already available to avoid redundant computation.
+   * Searches across all channels — no channelId filter — for cross-platform memory.
    */
   async searchByVector(
     vector: number[],
     limit: number,
-    channelId?: string,
   ): Promise<SearchResult[]> {
-    const filter = channelId
-      ? {
-          must: [
-            {
-              key: 'channel_id',
-              match: { value: channelId },
-            },
-          ],
-        }
-      : undefined
-
     const results = await this.client.search(COLLECTION_NAME, {
       vector,
       limit,
-      filter,
       with_payload: true,
     })
 

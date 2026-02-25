@@ -106,13 +106,12 @@ export async function buildContext(
     }
   }
 
-  // 4. Long-term: semantic search from Qdrant (current channel)
+  // 4. Long-term: semantic search from Qdrant (all channels — cross-platform)
   try {
     if (totalChars < MAX_CONTEXT_CHARS) {
       const searchResults = await longTerm.search(
         message.text,
         5,
-        message.channelId,
       )
       if (searchResults.length > 0) {
         const budget = MAX_CONTEXT_CHARS - totalChars
