@@ -15,6 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@huggingface/transformers": "^3.8.1",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@qdrant/js-client-rest": "^1.17.0",
     "@slack/bolt": "^4.3.0",
     "dotenv": "^17.3.1",

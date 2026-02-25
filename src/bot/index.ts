@@ -1,3 +1,4 @@
+import type { Server as HttpServer } from 'node:http'
 import { Bot } from 'grammy'
 import { Redis } from 'ioredis'
 import { QdrantClient } from '@qdrant/js-client-rest'
@@ -16,10 +17,10 @@ import { MediumTermMemory } from '../memory/medium-term.js'
 import { LongTermMemory } from '../memory/long-term.js'
 import { initEmbedder } from '../memory/embedder.js'
 import { MessageRouter } from '../brain/router.js'
-import type { CrossChannelConfig } from '../brain/context-builder.js'
 import { NotificationPreferences } from '../notifications/preferences.js'
 import { NotificationDispatcher } from '../notifications/dispatcher.js'
 import { DigestScheduler } from '../notifications/digest.js'
+import { startMcpServer } from '../mcp/server.js'
 
 // --- Create core instances ---
 const bot = new Bot(env.TELEGRAM_BOT_TOKEN)
@@ -79,22 +80,18 @@ const digestScheduler = new DigestScheduler({
   },
 })
 
-// --- Cross-channel memory map: Telegram ↔ Slack ---
-// When in Slack, include recent Telegram context (and vice versa)
-const crossChannelMap = new Map<'telegram' | 'slack', CrossChannelConfig>([
-  ['telegram', { otherChannelType: 'slack', otherChannelLabel: 'Slack' }],
-  ['slack', { otherChannelType: 'telegram', otherChannelLabel: 'Telegram' }],
-])
-
-// --- Message router (with notification preferences wired) ---
+// --- Message router (with notification preferences and MCP memory tools) ---
 const messageRouter = new MessageRouter({
   shortTerm: shortTermMemory,
   mediumTerm: mediumTermMemory,
   longTerm: longTermMemory,
   adapters,
   preferences: notificationPreferences,
-  crossChannelMap,
+  mcpEnabled: true,
 })
+
+// --- MCP server handle (for graceful shutdown) ---
+let mcpServer: HttpServer | null = null
 
 // --- Digest cron job (8 AM daily) ---
 let digestCronJob: cron.ScheduledTask | null = null
@@ -264,13 +261,20 @@ async function startup(): Promise<void> {
     logger.warn({ error }, 'Qdrant collection setup failed, long-term memory degraded')
   }
 
-  // 4. Start health checker
+  // 4. Start MCP memory server (sidecar for Claude memory tools)
+  try {
+    mcpServer = await startMcpServer()
+  } catch (error) {
+    logger.warn({ error }, 'MCP server failed to start, memory tools unavailable')
+  }
+
+  // 5. Start health checker
   healthChecker.startPeriodicChecks(60_000)
 
-  // 5. Start message router (which starts all adapters including Telegram)
+  // 6. Start message router (which starts all adapters including Telegram)
   await messageRouter.start()
 
-  // 6. Schedule morning digest cron job (8 AM daily)
+  // 7. Schedule morning digest cron job (8 AM daily)
   const digestCron = digestScheduler.getScheduledTime()
   digestCronJob = cron.schedule(digestCron, async () => {
     logger.info('Running scheduled morning digest')
@@ -293,6 +297,12 @@ function shutdown(signal: string): void {
   if (digestCronJob) {
     digestCronJob.stop()
     logger.info('Digest cron job stopped')
+  }
+
+  // Stop MCP server
+  if (mcpServer) {
+    mcpServer.close()
+    logger.info('MCP server stopped')
   }
 
   messageRouter.stop()

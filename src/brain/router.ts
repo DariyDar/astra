@@ -1,3 +1,5 @@
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { ChannelAdapter, InboundMessage, OutboundMessage } from '../channels/types.js'
 import { callClaude } from '../llm/client.js'
 import { createRequestLogger } from '../logging/correlation.js'
@@ -10,12 +12,18 @@ import type { ShortTermMemory } from '../memory/short-term.js'
 import type { StoredMessage } from '../memory/types.js'
 import type { NotificationPreferences } from '../notifications/preferences.js'
 import type { UrgencyLevel } from '../notifications/urgency.js'
-import { buildContext, type CrossChannelConfig } from './context-builder.js'
+import { buildRecentContext } from './context-builder.js'
 import { detectLanguage } from './language.js'
 import { buildSystemPrompt } from './system-prompt.js'
 
 /** Regex to match <preference_update>...</preference_update> tags in Claude responses */
 const PREFERENCE_UPDATE_RE = /<preference_update>\s*([\s\S]*?)\s*<\/preference_update>/g
+
+// Path to the static MCP config file (relative to this file's location)
+const MCP_CONFIG_PATH = resolve(
+  fileURLToPath(import.meta.url),
+  '../../mcp/mcp-config.json',
+)
 
 interface PreferenceUpdateAction {
   action: 'set' | 'setEnabled'
@@ -31,18 +39,17 @@ interface MessageRouterConfig {
   longTerm: LongTermMemory
   adapters: ChannelAdapter[]
   preferences?: NotificationPreferences
-  /**
-   * Cross-channel context map: for each channel type, the other platform's config.
-   * Enables Astra to remember conversations across Telegram and Slack.
-   * Key: 'telegram' | 'slack', Value: CrossChannelConfig for the other platform.
-   */
-  crossChannelMap?: Map<'telegram' | 'slack', CrossChannelConfig>
+  /** Whether to enable MCP memory tools for Claude (requires MCP server running on port 3100) */
+  mcpEnabled?: boolean
 }
 
 /**
  * Central message processing engine.
  * Connects channel adapters to the Claude brain through the three-tier memory system.
  * Handles language detection, context assembly, LLM invocation, and memory storage.
+ *
+ * When mcpEnabled is true, Claude gets access to memory tools via MCP and
+ * fetches what it needs on demand instead of receiving a pre-loaded context dump.
  */
 export class MessageRouter {
   private readonly shortTerm: ShortTermMemory
@@ -50,7 +57,7 @@ export class MessageRouter {
   private readonly longTerm: LongTermMemory
   private readonly adapters: ChannelAdapter[]
   private readonly preferences?: NotificationPreferences
-  private readonly crossChannelMap?: Map<'telegram' | 'slack', CrossChannelConfig>
+  private readonly mcpEnabled: boolean
 
   constructor(config: MessageRouterConfig) {
     this.shortTerm = config.shortTerm
@@ -58,15 +65,15 @@ export class MessageRouter {
     this.longTerm = config.longTerm
     this.adapters = config.adapters
     this.preferences = config.preferences
-    this.crossChannelMap = config.crossChannelMap
+    this.mcpEnabled = config.mcpEnabled ?? false
   }
 
   /**
    * Process an incoming message through the full pipeline:
    * 1. Detect language
-   * 2. Build context from three-tier memory
-   * 3. Build language-aware system prompt
-   * 4. Call Claude with context
+   * 2. Build compact recent context (short-term only)
+   * 3. Build language-aware system prompt with channelId and tool guidance
+   * 4. Call Claude with MCP config (tools available on demand)
    * 5. Store user message and assistant response in all memory tiers
    * 6. Return outbound message
    */
@@ -92,26 +99,22 @@ export class MessageRouter {
     const language = detectLanguage(message.text)
     requestLogger.debug({ language }, 'Language detected')
 
-    // 2. Build context from memory (with cross-platform context if configured)
-    const crossChannel = this.crossChannelMap?.get(message.channelType)
-    const context = await buildContext(
-      message,
-      this.shortTerm,
-      this.mediumTerm,
-      this.longTerm,
-      crossChannel,
-    )
+    // 2. Build compact recent context from Redis (current session only)
+    const recentContext = await buildRecentContext(message, this.shortTerm)
 
-    // 3. Build system prompt
-    const systemPrompt = buildSystemPrompt(language)
-    const systemWithContext = context
-      ? `${systemPrompt}\n\n---\n\n${context}`
+    // 3. Build system prompt with channelId and tool guidance
+    const systemPrompt = buildSystemPrompt(language, message.channelId)
+    const systemWithContext = recentContext
+      ? `${systemPrompt}\n\n---\n\n${recentContext}`
       : systemPrompt
 
-    // 4. Call Claude
+    // 4. Call Claude (with MCP tools if enabled)
     const response = await callClaude(
       message.text,
-      { system: systemWithContext },
+      {
+        system: systemWithContext,
+        ...(this.mcpEnabled ? { mcpConfigPath: MCP_CONFIG_PATH } : {}),
+      },
       requestLogger,
     )
 
@@ -169,6 +172,7 @@ export class MessageRouter {
         userTextLength: message.text.length,
         responseTextLength: responseText.length,
         channelId: message.channelId,
+        mcpEnabled: this.mcpEnabled,
       },
       status: 'success',
     })
@@ -195,7 +199,7 @@ export class MessageRouter {
     }
 
     logger.info(
-      { adapterCount: this.adapters.length },
+      { adapterCount: this.adapters.length, mcpEnabled: this.mcpEnabled },
       'Message router started',
     )
   }
@@ -243,7 +247,7 @@ export class MessageRouter {
           const errorText =
             language === 'ru'
               ? 'Извини, что-то пошло не так. Попробую ещё раз.'
-              : 'Sorry, something went wrong. I\'ll try again.'
+              : "Sorry, something went wrong. I'll try again."
 
           try {
             await adapter.send({

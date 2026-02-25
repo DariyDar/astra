@@ -18,7 +18,7 @@ export interface ClaudeResponse {
  */
 export async function callClaude(
   prompt: string,
-  options?: { system?: string },
+  options?: { system?: string; mcpConfigPath?: string },
   requestLogger?: pino.Logger,
 ): Promise<ClaudeResponse> {
   const log = requestLogger ?? logger
@@ -27,6 +27,10 @@ export async function callClaude(
 
   if (options?.system) {
     args.push('--system-prompt', options.system)
+  }
+
+  if (options?.mcpConfigPath) {
+    args.push('--mcp-config', options.mcpConfigPath)
   }
 
   args.push(prompt)
