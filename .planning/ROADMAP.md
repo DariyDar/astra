@@ -2,24 +2,29 @@
 
 ## Overview
 
-Astra is built in 8 phases following strict dependency order. Infrastructure and security come first because prompt architecture, credential encryption, and draft-first output are load-bearing constraints that cannot be retrofitted. Bot shells and the agent brain come second because every feature routes through them. Core integrations (ClickUp, Gmail, Calendar) deliver the PM's daily value as the first user-visible milestone. Google Drive and the RAG knowledge base follow because ghost-writing and reports gain dramatically from company context. Reports, ghost-writing with the full draft UX, self-learning, and self-extension each build on everything before them.
+Astra is built in 11 phases following strict dependency order. Infrastructure and security come first. Bot shell and agent brain come second. All integrations are built on top of ready-made solutions and MCP servers — no custom connectors from scratch. Data flows from initial harvest (Phase 4) through user-guided refinement (Phase 5) into full ingestion (Phase 6), ensuring the knowledge base is grounded in reality before RAG and reports are layered on top.
+
+**Design Principle: Prefer ready-made solutions and MCP over custom code.** Use existing MCP servers (Slack MCP, Gmail MCP, Google Drive MCP, ClickUp MCP, etc.) wherever available. Only build custom connectors when no suitable MCP exists or the available one is insufficient.
 
 ## Phases
 
 **Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
+- Integer phases (1, 2, 3...): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Infrastructure and Security Foundation** - Docker Compose stack, encrypted credentials, structured logging, single-model LLM integration (completed 2026-02-23)
-- [ ] **Phase 2: Bot Shell and Agent Brain** - Telegram + Slack bots, unified message router, LangGraph agent, conversation context, notification preferences
-- [ ] **Phase 3: Core Integrations** - ClickUp task management, Gmail email triage, Google Calendar — the PM's daily toolkit
-- [ ] **Phase 4: Knowledge Base** - Google Drive indexing, RAG pipeline, hybrid search with project filtering, company terminology
-- [ ] **Phase 5: Report Generation** - Daily standups, weekly status, monthly summaries — all as draft-for-approval with bilingual output
-- [ ] **Phase 6: Ghost-Writing and Draft System** - Slack DM monitoring, email ghost-writing, full draft approval UX with expiry and reasoning
-- [ ] **Phase 7: Self-Learning** - Correction capture, explicit preference teaching, behavioral pattern detection, persistent memory
-- [ ] **Phase 8: Self-Extension** - Natural language tool generation, Deno sandbox, approval gating, auto-disable on failure
+- [x] **Phase 2: Bot Shell and Agent Brain** - Telegram + Slack bots, unified message router, MCP memory server, conversation context, notification preferences (completed 2026-02-25)
+- [ ] **Phase 3: Core Integrations** - ClickUp, Gmail, Google Calendar, Google Drive — all via MCP; natural language task/email/calendar access
+- [ ] **Phase 4: Initial Data Harvest** - Test ingestion from all sources (Slack, Gmail, Drive, ClickUp), entity extraction, populate initial knowledge base — foundation for interview phase
+- [ ] **Phase 5: Interview and Entity Refinement** - Present extracted entities by category (people, projects, channels, project context) with LLM assumptions; user corrects and enriches; finalize knowledge base before full ingestion
+- [ ] **Phase 6: Full Data Ingestion** - Slack + Gmail history (months), full ClickUp data, tiered by urgency and secrecy (additional tiers TBD); smart LLM batching by channel priority
+- [ ] **Phase 7: Knowledge Base and RAG** - Hybrid search over ingested data, Google Drive document indexing, company terminology, query filtering by project
+- [ ] **Phase 8: Report Generation** - Daily standups, weekly status, monthly summaries — draft-for-approval, bilingual output, powered by full knowledge base
+- [ ] **Phase 9: Ghost-Writing and Draft System** - Slack DM and email monitoring, contextual draft responses, approve/edit/reject UX with reasoning, draft expiry
+- [ ] **Phase 10: Self-Learning** - Correction capture, explicit preference teaching, behavioral pattern detection, persistent memory
+- [ ] **Phase 11: Self-Extension** - Natural language tool generation, Deno sandbox, approval gating, auto-disable on failure
 
 ## Phase Details
 
@@ -37,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Project setup, Docker Compose stack, DB schema, bot/worker entry points
-- [ ] 01-02-PLAN.md — Credential encryption, structured logging, Claude API client, health monitoring
+- [x] 01-02-PLAN.md — Credential encryption, structured logging, Claude API client, health monitoring
 
 ### Phase 2: Bot Shell and Agent Brain
 **Goal**: User can talk to Astra in Telegram and Slack, hold multi-step conversations with context, and configure how proactive alerts reach them
@@ -52,118 +57,168 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Database schema extensions (messages, preferences, feedback), unified channel types, language detection
-- [ ] 02-02-PLAN.md — Three-tier memory system (Redis short-term, PostgreSQL medium-term, Qdrant long-term semantic)
-- [ ] 02-03-PLAN.md — Telegram adapter refactor + conversation brain (context builder, system prompt, message router)
-- [ ] 02-04-PLAN.md — Slack adapter (Bolt Socket Mode) with optional registration
-- [ ] 02-05-PLAN.md — Notification system (preferences, urgency, dispatcher, morning digest)
+- [x] 02-01-PLAN.md — Database schema extensions (messages, preferences, feedback), unified channel types, language detection
+- [x] 02-02-PLAN.md — Three-tier memory system (Redis short-term, PostgreSQL medium-term, Qdrant long-term semantic)
+- [x] 02-03-PLAN.md — Telegram adapter refactor + conversation brain (context builder, system prompt, message router)
+- [x] 02-04-PLAN.md — Slack adapter (Bolt Socket Mode) with optional registration
+- [x] 02-05-PLAN.md — Notification system (preferences, urgency, dispatcher, morning digest)
 
 ### Phase 3: Core Integrations
-**Goal**: User can manage ClickUp tasks, triage Gmail, and check Google Calendar through natural language — the daily PM workflow works end-to-end
+**Goal**: User can manage ClickUp tasks, triage Gmail, check Google Calendar, and query Google Drive through natural language — the full daily PM workflow works end-to-end via MCP
 **Depends on**: Phase 2
-**Requirements**: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, MAIL-01, MAIL-02, MAIL-03, MAIL-04, MAIL-05, CAL-01, CAL-02, CAL-03, CAL-04
+**Design**: Use MCP servers for all integrations (ClickUp MCP, Gmail MCP, Google Calendar MCP, Google Drive MCP). Research and evaluate available MCP servers before building anything custom.
+**Requirements**: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, MAIL-01, MAIL-02, MAIL-03, MAIL-04, MAIL-05, CAL-01, CAL-02, CAL-03, CAL-04, DRIVE-01, DRIVE-02
 **Success Criteria** (what must be TRUE):
-  1. User asks "what's overdue in Project Alpha?" and gets an accurate list of overdue ClickUp tasks (not hallucinated — fetched from API)
-  2. User says "create a task for John in Project Beta: review the GDD, due Friday" and a correctly populated task appears in ClickUp without needing to know space/folder/list IDs
-  3. User asks "what's on my calendar today?" and sees a formatted schedule pulled from Google Calendar, with a reminder arriving 15 minutes before the next meeting
-  4. User asks "show me my priority emails" and gets a prioritized digest of unread Gmail messages classified by urgency, with draft responses available for the most important ones
-  5. Bot proactively alerts the user about tasks approaching their deadline (within 24 hours) and tasks that are overdue
+  1. User asks "what's overdue in Project Alpha?" and gets an accurate list of overdue ClickUp tasks fetched from API via MCP
+  2. User says "create a task for John in Project Beta: review the GDD, due Friday" and a correctly populated task appears in ClickUp
+  3. User asks "what's on my calendar today?" and sees a formatted schedule pulled from Google Calendar
+  4. User asks "show me my priority emails" and gets a prioritized digest of unread Gmail messages classified by urgency
+  5. User asks "find the GDD for Project Alpha" and gets the relevant document from Google Drive
+  6. Bot proactively alerts about tasks approaching their deadline (within 24 hours) and overdue tasks
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01: TBD — MCP server research and setup (ClickUp, Gmail, Calendar, Drive)
+- [ ] 03-02: TBD — Natural language routing to integrations
+- [ ] 03-03: TBD — Proactive alerts and deadline monitoring
 
-### Phase 4: Knowledge Base
-**Goal**: User can ask questions about company documents and get accurate answers with source citations, powered by an auto-updating RAG pipeline over Google Drive
-**Depends on**: Phase 3
-**Requirements**: DRIVE-01, DRIVE-02, DRIVE-03, DRIVE-04, KB-01, KB-02, KB-03, KB-04
+### Phase 4: Initial Data Harvest
+**Goal**: Test ingestion from all connected sources to extract entities and build the initial knowledge base — prerequisite for the interview phase
+**Depends on**: Phase 3 (all connectors must exist)
+**Design**: Lightweight, bounded ingestion — not months of history, just enough to discover entities. Smart LLM batching: process by channel/source priority, not message-by-message.
 **Success Criteria** (what must be TRUE):
-  1. User asks "what does the GDD say about monetization?" and gets an accurate answer citing the specific document and section
-  2. User can filter knowledge queries by project ("in Project Alpha docs, what are the technical risks?") and results are scoped correctly
-  3. Bot flags documents that have not been modified in a configurable period as potentially outdated, and the user can see which documents are stale
-  4. When a document is updated in Google Drive, the knowledge base re-indexes it automatically without manual intervention
-  5. Bot correctly understands company-specific terminology (project names, gamedev jargon, people's names) in queries and answers
+  1. System ingests a bounded sample from each source (Slack channels, Gmail inbox, Google Drive, ClickUp) without manual intervention
+  2. Entity extractor identifies people, projects, channels, and context from ingested data and stores them in categorized tables
+  3. Each extracted entity has an LLM-generated assumption/summary (e.g., "John Smith — appears to be a developer on Project Alpha based on 12 Slack messages")
+  4. User can see a count of extracted entities per category before proceeding to the interview phase
+  5. Ingestion is idempotent — re-running does not create duplicates
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01: TBD — Entity schema (people, projects, channels, context), ingestion pipeline
+- [ ] 04-02: TBD — Entity extraction worker with LLM batching
 
-### Phase 5: Report Generation
-**Goal**: User can request project reports at any granularity (daily, weekly, monthly) and receive well-structured drafts for review in either language
+### Phase 5: Interview and Entity Refinement
+**Goal**: User reviews all extracted entities with LLM assumptions, corrects errors, fills gaps, and adds context — producing a verified knowledge base before full ingestion
 **Depends on**: Phase 4
-**Requirements**: RPT-01, RPT-02, RPT-03, RPT-04, RPT-05
+**Design**: Conversational interview via Telegram/Slack. Present entities by category, one category at a time. User can confirm, correct, enrich, or delete. After interview, entities are marked as verified.
 **Success Criteria** (what must be TRUE):
-  1. User requests a daily standup for Project Alpha and gets a summary aggregated from ClickUp tasks and Slack activity for that project
-  2. User requests a weekly status report and gets a structured document covering tasks completed, in progress, blocked, and key risks — drawn from ClickUp, Gmail, and Calendar
-  3. User requests a monthly summary and gets trend analysis, completed milestones, and risk overview for the reporting period
-  4. Every generated report is presented as a draft that the user can approve, edit, or reject before it goes anywhere
-  5. User can request any report in Russian or English regardless of the language of the source data, and the output reads naturally in the target language
+  1. User receives a structured list of all extracted entities grouped by category (people, projects, channels, project context, etc.)
+  2. Each entity shows LLM assumptions with confidence level and source evidence ("seen in 12 Slack messages, 3 emails")
+  3. User can correct any entity inline (e.g., "John is not a developer, he's the CEO") and the change persists
+  4. User can add missing entities that were not auto-detected
+  5. After interview completion, all entities are marked as verified and ready for full ingestion
+  6. Interview is resumable — user can stop and continue later without losing progress
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01: TBD — Interview flow, entity presentation UI (Telegram/Slack)
+- [ ] 05-02: TBD — Entity correction, enrichment, verification persistence
 
-### Phase 6: Ghost-Writing and Draft System
-**Goal**: Bot monitors incoming Slack DMs and emails, classifies urgency, drafts contextual responses, and presents everything for approval with full reasoning — nothing sends without the PM's explicit say-so
-**Depends on**: Phase 5
-**Requirements**: GW-01, GW-02, GW-03, GW-04, GW-05, DRAFT-01, DRAFT-02, DRAFT-03, DRAFT-04
+### Phase 6: Full Data Ingestion
+**Goal**: Ingest complete history from all sources with tiered classification — producing a comprehensive, structured knowledge store
+**Depends on**: Phase 5 (verified entity base guides classification)
+**Design**: Months of Slack + Gmail + ClickUp history. Smart batching by channel/source priority. Two initial tiers: urgency (urgent/normal/low) and secrecy (private/internal/public). Additional tiers TBD based on Phase 5 learnings.
 **Success Criteria** (what must be TRUE):
-  1. When an urgent Slack DM arrives, the user receives an immediate notification with a context summary and a draft response ready for approval
-  2. Non-urgent Slack DMs are batched into a periodic digest, each with a draft response the user can approve, edit, or reject
-  3. All outgoing communications (emails, Slack messages, reports) appear as drafts with inline approve/edit/reject buttons — nothing sends automatically
-  4. Each draft includes the bot's reasoning ("I wrote this because the sender is asking about Project Alpha's deadline, and the latest ClickUp data shows...")
-  5. Drafts that the user does not act on expire after 24 hours and are archived, not sent
+  1. System ingests full Slack history (configurable lookback, e.g. 6 months) across all accessible channels
+  2. System ingests full Gmail history (configurable lookback) with thread reconstruction
+  3. System ingests complete ClickUp task history including comments and attachments
+  4. Every ingested item is classified by urgency tier and secrecy tier
+  5. Smart batching ensures LLM processing stays within cost/rate limits — high-priority channels processed first
+  6. Progress is resumable — partial ingestion can continue after interruption
 **Plans**: TBD
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01: TBD — Full ingestion pipeline with tiering logic
+- [ ] 06-02: TBD — Batching strategy and rate limiting
 
-### Phase 7: Self-Learning
-**Goal**: Bot learns from the PM's corrections and explicit teachings, improving draft quality and workflow suggestions over time while preserving what it already does well
+### Phase 7: Knowledge Base and RAG
+**Goal**: User can ask questions about any ingested data and get accurate answers with source citations, powered by hybrid search
 **Depends on**: Phase 6
-**Requirements**: LEARN-01, LEARN-02, LEARN-03, LEARN-04
+**Design**: Qdrant for vector search, PostgreSQL for structured filters. Hybrid search combining semantic + keyword. Respect secrecy tiers in retrieval (don't surface private items in shared contexts).
 **Success Criteria** (what must be TRUE):
-  1. When the user edits a draft before approving, the bot captures the diff and adjusts future drafts for similar contexts (e.g., the user always makes meeting invites more formal)
-  2. User can explicitly teach preferences ("always CC John on Project Alpha emails") and the bot applies them in future drafts without being reminded
-  3. Bot identifies recurring patterns in the PM's workflow and suggests automation ("I notice you check overdue tasks every morning — want me to send a digest at 9am?")
-  4. Learned preferences and patterns persist across sessions and bot restarts — nothing is forgotten
+  1. User asks "what did John say about the deadline last month?" and gets accurate answer with message source
+  2. User can filter queries by project, source, or person
+  3. Bot correctly understands company-specific terminology in queries (project names, people, jargon)
+  4. Secrecy tiers are respected — private items never appear in responses unless explicitly requested
+  5. When a document is updated in Google Drive, the knowledge base re-indexes it automatically
 **Plans**: TBD
 
 Plans:
 - [ ] 07-01: TBD
 - [ ] 07-02: TBD
 
-### Phase 8: Self-Extension
-**Goal**: User can describe new tool integrations in natural language and the bot builds, sandboxes, and deploys them — with human approval at every gate
+### Phase 8: Report Generation
+**Goal**: User can request project reports at any granularity and receive well-structured drafts for review in either language
 **Depends on**: Phase 7
-**Requirements**: EXT-01, EXT-02, EXT-03, EXT-04
 **Success Criteria** (what must be TRUE):
-  1. User describes a new integration in natural language ("I want a tool that checks Jira for cross-team dependencies every morning") and the bot generates a working implementation
-  2. Generated tools execute in a Deno sandbox with explicit permissions — they cannot access filesystem, network, or data beyond what is granted
-  3. No new tool enters the active registry without the user reviewing and explicitly approving it
-  4. Tools that fail repeatedly (3+ consecutive failures) are automatically disabled and the user is notified with a summary of what went wrong
+  1. User requests a daily standup for Project Alpha and gets a summary from ClickUp tasks and Slack activity
+  2. User requests a weekly status report covering tasks, blockers, and risks
+  3. Every report is a draft — user approves, edits, or rejects before it goes anywhere
+  4. Reports available in Russian and English regardless of source data language
 **Plans**: TBD
 
 Plans:
 - [ ] 08-01: TBD
+- [ ] 08-02: TBD
+
+### Phase 9: Ghost-Writing and Draft System
+**Goal**: Bot monitors Slack DMs and emails, drafts contextual responses, presents for approval with reasoning — nothing sends without explicit user say-so
+**Depends on**: Phase 8
+**Success Criteria** (what must be TRUE):
+  1. Urgent Slack DM triggers immediate notification with context summary and draft response
+  2. Non-urgent DMs batched into periodic digest, each with draft response
+  3. All outgoing communications appear as drafts with approve/edit/reject — nothing sends automatically
+  4. Each draft includes bot's reasoning
+  5. Drafts expire after 24 hours and are archived, not sent
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: TBD
+- [ ] 09-02: TBD
+
+### Phase 10: Self-Learning
+**Goal**: Bot learns from PM's corrections and explicit teachings, improving over time while preserving what it does well
+**Depends on**: Phase 9
+**Success Criteria** (what must be TRUE):
+  1. When user edits a draft before approving, bot captures the diff and adjusts future drafts for similar contexts
+  2. User can explicitly teach preferences and bot applies them in future without reminders
+  3. Bot identifies recurring patterns and suggests automation
+  4. Learned preferences persist across sessions and restarts
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: TBD
+- [ ] 10-02: TBD
+
+### Phase 11: Self-Extension
+**Goal**: User describes new tool integrations in natural language and bot builds, sandboxes, and deploys them with human approval at every gate
+**Depends on**: Phase 10
+**Success Criteria** (what must be TRUE):
+  1. User describes integration in natural language and bot generates working implementation
+  2. Generated tools execute in Deno sandbox with explicit permissions
+  3. No new tool enters registry without user review and approval
+  4. Tools that fail repeatedly (3+) are auto-disabled with failure summary
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
+Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure and Security Foundation | 2/2 | Complete    | 2026-02-23 |
-| 2. Bot Shell and Agent Brain | 5/5 | Complete    | 2026-02-24 |
-| 3. Core Integrations | 0/3 | Not started | - |
-| 4. Knowledge Base | 0/2 | Not started | - |
-| 5. Report Generation | 0/2 | Not started | - |
-| 6. Ghost-Writing and Draft System | 0/2 | Not started | - |
-| 7. Self-Learning | 0/2 | Not started | - |
-| 8. Self-Extension | 0/1 | Not started | - |
+| 2. Bot Shell and Agent Brain              | 5/5 | Complete    | 2026-02-25 |
+| 3. Core Integrations                      | 0/3 | Not started | - |
+| 4. Initial Data Harvest                   | 0/2 | Not started | - |
+| 5. Interview and Entity Refinement        | 0/2 | Not started | - |
+| 6. Full Data Ingestion                    | 0/2 | Not started | - |
+| 7. Knowledge Base and RAG                 | 0/2 | Not started | - |
+| 8. Report Generation                      | 0/2 | Not started | - |
+| 9. Ghost-Writing and Draft System         | 0/2 | Not started | - |
+| 10. Self-Learning                         | 0/2 | Not started | - |
+| 11. Self-Extension                        | 0/1 | Not started | - |
