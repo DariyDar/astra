@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, ilike, lte } from 'drizzle-orm'
+import { and, desc, eq, gte, ilike, lte, or } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import { messages } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
@@ -94,6 +94,43 @@ export class MediumTermMemory {
       .select()
       .from(messages)
       .where(and(eq(messages.channelType, channelType), gte(messages.createdAt, since)))
+      .orderBy(desc(messages.createdAt))
+      .limit(limit)
+
+    return rows.map(rowToStoredMessage)
+  }
+
+  /**
+   * Search for user profile facts across ALL channels (name, company, role, etc.).
+   * Used to build a persistent user profile section injected into every LLM context.
+   * Looks for user messages containing self-introduction keywords.
+   * Returns oldest first so the earliest known facts appear first.
+   */
+  async getUserProfileMessages(limit: number): Promise<StoredMessage[]> {
+    const keywords = [
+      '%меня зовут%',
+      '%my name is%',
+      '%i am %',
+      '%я %',
+      '%компания%',
+      '%company%',
+      '%работаю%',
+      '%i work%',
+      '%запомни%',
+      '%remember%',
+    ]
+
+    const conditions = keywords.map((kw) => ilike(messages.text, kw))
+
+    const rows = await this.db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          eq(messages.role, 'user'),
+          or(...conditions),
+        ),
+      )
       .orderBy(desc(messages.createdAt))
       .limit(limit)
 

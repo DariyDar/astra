@@ -41,6 +41,22 @@ export async function buildContext(
   const sections: string[] = []
   let totalChars = 0
 
+  // 0. User profile: self-introductions across ALL channels (always first, always present)
+  try {
+    const profileMessages = await mediumTerm.getUserProfileMessages(10)
+    if (profileMessages.length > 0) {
+      const lines = profileMessages
+        .reverse() // oldest first
+        .map((m) => `[${m.channelType}] ${m.text}`)
+        .join('\n')
+      const section = `## User profile (from all channels)\n${lines}`
+      sections.push(section)
+      totalChars += section.length
+    }
+  } catch (error) {
+    logger.warn({ error }, 'User profile lookup failed, skipping')
+  }
+
   // 1. Short-term: last 20 messages from Redis (today, current channel)
   try {
     const recentMessages = await shortTerm.getRecent(message.channelId, 20)
@@ -89,7 +105,7 @@ export async function buildContext(
         20,
       )
       if (crossMessages.length > 0) {
-        const budget = Math.min(2000, MAX_CONTEXT_CHARS - totalChars - 500)
+        const budget = Math.min(4000, MAX_CONTEXT_CHARS - totalChars - 500)
         const formatted = formatWeekMessages(crossMessages, budget)
         if (formatted) {
           sections.push(
