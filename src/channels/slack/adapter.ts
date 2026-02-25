@@ -79,6 +79,8 @@ export class SlackAdapter implements ChannelAdapter {
   /**
    * Register the Bolt message listener.
    * Filters out messages with subtypes and non-admin users.
+   * Adds 👀 reaction on receipt (processing) and removes it when done.
+   * Note: Slack bots don't support native typing indicators via Bot API.
    */
   private registerListener(): void {
     this.app.message(async ({ message }) => {
@@ -98,6 +100,17 @@ export class SlackAdapter implements ChannelAdapter {
         return
       }
 
+      // React with 👀 to acknowledge receipt and signal processing
+      try {
+        await this.app.client.reactions.add({
+          channel: msg.channel,
+          timestamp: msg.ts,
+          name: 'eyes',
+        })
+      } catch {
+        // Reaction API may fail silently (duplicate reaction, etc.)
+      }
+
       const inbound: InboundMessage = {
         id: msg.ts,
         channelType: 'slack',
@@ -108,15 +121,15 @@ export class SlackAdapter implements ChannelAdapter {
         replyToMessageId: msg.thread_ts,
       }
 
-      for (const handler of this.handlers) {
-        try {
+      try {
+        for (const handler of this.handlers) {
           await handler(inbound)
-        } catch (error) {
-          logger.error(
-            { error, messageTs: msg.ts },
-            'Error in Slack message handler',
-          )
         }
+      } catch (error) {
+        logger.error(
+          { error, messageTs: msg.ts },
+          'Error in Slack message handler',
+        )
       }
     })
   }

@@ -78,6 +78,29 @@ export class MediumTermMemory {
   }
 
   /**
+   * Get recent messages by channel type (e.g. all 'telegram' or all 'slack' messages).
+   * Used for cross-platform memory: when in Slack, load recent Telegram context, and vice versa.
+   * Returns messages in reverse chronological order (newest first).
+   */
+  async getRecentByChannelType(
+    channelType: 'telegram' | 'slack',
+    days: number,
+    limit: number,
+  ): Promise<StoredMessage[]> {
+    const since = new Date()
+    since.setDate(since.getDate() - days)
+
+    const rows = await this.db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.channelType, channelType), gte(messages.createdAt, since)))
+      .orderBy(desc(messages.createdAt))
+      .limit(limit)
+
+    return rows.map(rowToStoredMessage)
+  }
+
+  /**
    * Search messages by keyword using case-insensitive LIKE.
    * Returns messages in reverse chronological order (newest first).
    */

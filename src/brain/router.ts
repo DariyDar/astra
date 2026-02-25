@@ -10,7 +10,7 @@ import type { ShortTermMemory } from '../memory/short-term.js'
 import type { StoredMessage } from '../memory/types.js'
 import type { NotificationPreferences } from '../notifications/preferences.js'
 import type { UrgencyLevel } from '../notifications/urgency.js'
-import { buildContext } from './context-builder.js'
+import { buildContext, type CrossChannelConfig } from './context-builder.js'
 import { detectLanguage } from './language.js'
 import { buildSystemPrompt } from './system-prompt.js'
 
@@ -31,6 +31,12 @@ interface MessageRouterConfig {
   longTerm: LongTermMemory
   adapters: ChannelAdapter[]
   preferences?: NotificationPreferences
+  /**
+   * Cross-channel context map: for each channel type, the other platform's config.
+   * Enables Astra to remember conversations across Telegram and Slack.
+   * Key: 'telegram' | 'slack', Value: CrossChannelConfig for the other platform.
+   */
+  crossChannelMap?: Map<'telegram' | 'slack', CrossChannelConfig>
 }
 
 /**
@@ -44,6 +50,7 @@ export class MessageRouter {
   private readonly longTerm: LongTermMemory
   private readonly adapters: ChannelAdapter[]
   private readonly preferences?: NotificationPreferences
+  private readonly crossChannelMap?: Map<'telegram' | 'slack', CrossChannelConfig>
 
   constructor(config: MessageRouterConfig) {
     this.shortTerm = config.shortTerm
@@ -51,6 +58,7 @@ export class MessageRouter {
     this.longTerm = config.longTerm
     this.adapters = config.adapters
     this.preferences = config.preferences
+    this.crossChannelMap = config.crossChannelMap
   }
 
   /**
@@ -84,12 +92,14 @@ export class MessageRouter {
     const language = detectLanguage(message.text)
     requestLogger.debug({ language }, 'Language detected')
 
-    // 2. Build context from memory
+    // 2. Build context from memory (with cross-platform context if configured)
+    const crossChannel = this.crossChannelMap?.get(message.channelType)
     const context = await buildContext(
       message,
       this.shortTerm,
       this.mediumTerm,
       this.longTerm,
+      crossChannel,
     )
 
     // 3. Build system prompt

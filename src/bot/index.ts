@@ -16,6 +16,7 @@ import { MediumTermMemory } from '../memory/medium-term.js'
 import { LongTermMemory } from '../memory/long-term.js'
 import { initEmbedder } from '../memory/embedder.js'
 import { MessageRouter } from '../brain/router.js'
+import type { CrossChannelConfig } from '../brain/context-builder.js'
 import { NotificationPreferences } from '../notifications/preferences.js'
 import { NotificationDispatcher } from '../notifications/dispatcher.js'
 import { DigestScheduler } from '../notifications/digest.js'
@@ -78,6 +79,13 @@ const digestScheduler = new DigestScheduler({
   },
 })
 
+// --- Cross-channel memory map: Telegram ↔ Slack ---
+// When in Slack, include recent Telegram context (and vice versa)
+const crossChannelMap = new Map<'telegram' | 'slack', CrossChannelConfig>([
+  ['telegram', { otherChannelType: 'slack', otherChannelLabel: 'Slack' }],
+  ['slack', { otherChannelType: 'telegram', otherChannelLabel: 'Telegram' }],
+])
+
 // --- Message router (with notification preferences wired) ---
 const messageRouter = new MessageRouter({
   shortTerm: shortTermMemory,
@@ -85,6 +93,7 @@ const messageRouter = new MessageRouter({
   longTerm: longTermMemory,
   adapters,
   preferences: notificationPreferences,
+  crossChannelMap,
 })
 
 // --- Digest cron job (8 AM daily) ---

@@ -9,9 +9,24 @@ import type { StoredMessage } from '../memory/types.js'
 const MAX_CONTEXT_CHARS = 12_000
 
 /**
+ * Cross-channel context config.
+ * Used so Astra remembers conversations across Telegram and Slack.
+ * Queries by channelType so Slack DM IDs don't need to be known in advance.
+ */
+export interface CrossChannelConfig {
+  /** The other platform's channel type ('telegram' | 'slack') */
+  otherChannelType: 'telegram' | 'slack'
+  /** Human-readable label for the other channel */
+  otherChannelLabel: string
+}
+
+/**
  * Build conversation context from the three-tier memory system.
  * Assembles short-term (Redis), medium-term (PostgreSQL), and long-term (Qdrant)
  * context into a structured string for Claude.
+ *
+ * Optionally includes cross-channel context so conversations from other platforms
+ * (Telegram ↔ Slack) are visible to the LLM.
  *
  * Graceful degradation: if any tier is unavailable, it is skipped with a warning.
  * Context assembly never throws.
@@ -21,11 +36,12 @@ export async function buildContext(
   shortTerm: ShortTermMemory,
   mediumTerm: MediumTermMemory,
   longTerm: LongTermMemory,
+  crossChannel?: CrossChannelConfig,
 ): Promise<string> {
   const sections: string[] = []
   let totalChars = 0
 
-  // 1. Short-term: last 20 messages from Redis (today)
+  // 1. Short-term: last 20 messages from Redis (today, current channel)
   try {
     const recentMessages = await shortTerm.getRecent(message.channelId, 20)
     if (recentMessages.length > 0) {
@@ -40,7 +56,7 @@ export async function buildContext(
     )
   }
 
-  // 2. Medium-term: last 7 days from PostgreSQL, limit 50
+  // 2. Medium-term: last 7 days from PostgreSQL (current channel)
   try {
     if (totalChars < MAX_CONTEXT_CHARS) {
       const weekMessages = await mediumTerm.getRecent(
@@ -64,7 +80,33 @@ export async function buildContext(
     )
   }
 
-  // 3. Long-term: semantic search from Qdrant, limit 5
+  // 3. Cross-channel context: recent messages from the other platform
+  if (crossChannel && totalChars < MAX_CONTEXT_CHARS) {
+    try {
+      const crossMessages = await mediumTerm.getRecentByChannelType(
+        crossChannel.otherChannelType,
+        7,
+        20,
+      )
+      if (crossMessages.length > 0) {
+        const budget = Math.min(2000, MAX_CONTEXT_CHARS - totalChars - 500)
+        const formatted = formatWeekMessages(crossMessages, budget)
+        if (formatted) {
+          sections.push(
+            `## Context from ${crossChannel.otherChannelLabel}\n${formatted}`,
+          )
+          totalChars += formatted.length
+        }
+      }
+    } catch (error) {
+      logger.warn(
+        { error, otherChannelType: crossChannel.otherChannelType },
+        'Cross-channel memory unavailable, skipping cross-platform context',
+      )
+    }
+  }
+
+  // 4. Long-term: semantic search from Qdrant (current channel)
   try {
     if (totalChars < MAX_CONTEXT_CHARS) {
       const searchResults = await longTerm.search(
