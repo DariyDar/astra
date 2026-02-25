@@ -16,7 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Infrastructure and Security Foundation** - Docker Compose stack, encrypted credentials, structured logging, single-model LLM integration (completed 2026-02-23)
 - [x] **Phase 2: Bot Shell and Agent Brain** - Telegram + Slack bots, unified message router, MCP memory server, conversation context, notification preferences (completed 2026-02-25)
-- [ ] **Phase 3: Core Integrations** - ClickUp, Gmail, Google Calendar, Google Drive — all via MCP; natural language task/email/calendar access
+- [ ] **Phase 3: Core Integrations** - ClickUp, Gmail, Google Calendar, Google Drive — all via MCP; read-only natural language access to tasks, emails, calendar, documents
+- [ ] **Phase 3.5: Actions** (INSERTED) - Write access: create/update ClickUp tasks, send emails via Gmail, create calendar events — all with confirmation before execution
 - [ ] **Phase 4: Initial Data Harvest** - Test ingestion from all sources (Slack, Gmail, Drive, ClickUp), entity extraction, populate initial knowledge base — foundation for interview phase
 - [ ] **Phase 5: Interview and Entity Refinement** - Present extracted entities by category (people, projects, channels, project context) with LLM assumptions; user corrects and enriches; finalize knowledge base before full ingestion
 - [ ] **Phase 6: Full Data Ingestion** - Slack + Gmail history (months), full ClickUp data, tiered by urgency and secrecy (additional tiers TBD); smart LLM batching by channel priority
@@ -64,23 +65,38 @@ Plans:
 - [x] 02-05-PLAN.md — Notification system (preferences, urgency, dispatcher, morning digest)
 
 ### Phase 3: Core Integrations
-**Goal**: User can manage ClickUp tasks, triage Gmail, check Google Calendar, and query Google Drive through natural language — the full daily PM workflow works end-to-end via MCP
+**Goal**: User can read ClickUp tasks, triage Gmail, check Google Calendar, and query Google Drive through natural language — read-only access via MCP
 **Depends on**: Phase 2
-**Design**: Use MCP servers for all integrations (ClickUp MCP, Gmail MCP, Google Calendar MCP, Google Drive MCP). Research and evaluate available MCP servers before building anything custom.
-**Requirements**: CU-01, CU-02, CU-03, CU-04, CU-05, CU-06, MAIL-01, MAIL-02, MAIL-03, MAIL-04, MAIL-05, CAL-01, CAL-02, CAL-03, CAL-04, DRIVE-01, DRIVE-02
+**Design**: Use MCP servers for all integrations. Prefer official/Anthropic-maintained MCP servers. For ClickUp (no official MCP): evaluate community servers, build thin custom MCP only if none are sufficient. Single mcp-config.json with both memory and integration tools.
+**Requirements**: CU-01, CU-02, CU-03, MAIL-01, MAIL-02, MAIL-03, CAL-01, CAL-02, DRIVE-01, DRIVE-02
 **Success Criteria** (what must be TRUE):
-  1. User asks "what's overdue in Project Alpha?" and gets an accurate list of overdue ClickUp tasks fetched from API via MCP
-  2. User says "create a task for John in Project Beta: review the GDD, due Friday" and a correctly populated task appears in ClickUp
-  3. User asks "what's on my calendar today?" and sees a formatted schedule pulled from Google Calendar
-  4. User asks "show me my priority emails" and gets a prioritized digest of unread Gmail messages classified by urgency
-  5. User asks "find the GDD for Project Alpha" and gets the relevant document from Google Drive
-  6. Bot proactively alerts about tasks approaching their deadline (within 24 hours) and overdue tasks
+  1. User asks "what's overdue in Project Alpha?" and gets an accurate list from ClickUp via MCP
+  2. User asks "what's on my calendar today?" and sees a formatted schedule from Google Calendar
+  3. User asks "show me my priority emails" and gets a prioritized digest of unread Gmail messages
+  4. User asks "find the GDD for Project Alpha" and gets the relevant document from Google Drive
+  5. Multi-source queries ("show everything this week") call relevant tools in parallel and return a single merged response
+  6. If an integration is unavailable: explicit error message, 1 silent retry, then clear failure response
+  7. Bot proactively alerts about ClickUp tasks approaching deadline (within 24h) and overdue tasks
 **Plans**: TBD
 
 Plans:
 - [ ] 03-01: TBD — MCP server research and setup (ClickUp, Gmail, Calendar, Drive)
-- [ ] 03-02: TBD — Natural language routing to integrations
-- [ ] 03-03: TBD — Proactive alerts and deadline monitoring
+- [ ] 03-02: TBD — Natural language routing and proactive alerts
+
+### Phase 3.5: Actions
+**Goal**: User can create and update data across integrations through natural language — write access with confirmation before execution
+**Depends on**: Phase 3 (read access and MCP infrastructure must exist)
+**Design**: Same MCP-first approach. Every action requires explicit user confirmation before executing. No silent writes.
+**Success Criteria** (what must be TRUE):
+  1. User says "create a task for John in Project Beta: review the GDD, due Friday" — bot describes what it will do and asks for confirmation, then creates the task in ClickUp
+  2. User says "send a reply to Alex's email about the deadline" — bot drafts the reply, shows it, and sends only after approval
+  3. User says "add a meeting with the team on Thursday at 3pm" — bot creates the calendar event after confirmation
+  4. No action executes without explicit user confirmation ("yes", "do it", "confirm", etc.)
+  5. After execution, bot confirms what was done with a summary
+**Plans**: TBD
+
+Plans:
+- [ ] 03.5-01: TBD — Write actions for ClickUp, Gmail, Calendar via MCP
 
 ### Phase 4: Initial Data Harvest
 **Goal**: Test ingestion from all connected sources to extract entities and build the initial knowledge base — prerequisite for the interview phase
@@ -207,13 +223,14 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
+Phases execute in numeric order: 1 → 2 → 3 → 3.5 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure and Security Foundation | 2/2 | Complete    | 2026-02-23 |
 | 2. Bot Shell and Agent Brain              | 5/5 | Complete    | 2026-02-25 |
-| 3. Core Integrations                      | 0/3 | Not started | - |
+| 3. Core Integrations (read-only)          | 0/2 | Not started | - |
+| 3.5. Actions (write access)               | 0/1 | Not started | - |
 | 4. Initial Data Harvest                   | 0/2 | Not started | - |
 | 5. Interview and Entity Refinement        | 0/2 | Not started | - |
 | 6. Full Data Ingestion                    | 0/2 | Not started | - |
