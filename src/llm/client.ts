@@ -33,10 +33,12 @@ export async function callClaude(
     args.push('--mcp-config', options.mcpConfigPath)
   }
 
-  args.push(prompt)
+  // Prompt is always passed via stdin (not as CLI argument).
+  // When --mcp-config is present, Claude CLI requires stdin input and ignores
+  // a trailing positional argument — so we use stdin consistently for both cases.
 
   try {
-    const result = await execClaude(args)
+    const result = await execClaude(args, prompt)
 
     log.info(
       {
@@ -91,11 +93,12 @@ export async function callClaude(
   }
 }
 
-function execClaude(args: string[]): Promise<ClaudeResponse> {
+function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
   return new Promise((resolve, reject) => {
     const proc = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
     })
+    proc.stdin.write(prompt)
     proc.stdin.end()
 
     let stdout = ''
