@@ -77,11 +77,12 @@ Plans:
   5. Multi-source queries ("show everything this week") call relevant tools in parallel and return a single merged response
   6. If an integration is unavailable: explicit error message, 1 silent retry, then clear failure response
   7. Bot proactively alerts about ClickUp tasks approaching deadline (within 24h) and overdue tasks
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD — MCP server research and setup (ClickUp, Gmail, Calendar, Drive)
-- [ ] 03-02: TBD — Natural language routing and proactive alerts
+- [ ] 03-01-PLAN.md — MCP infrastructure: env vars, dynamic config generator, system prompt integration tool guidance
+- [ ] 03-02-PLAN.md — Proactive monitors: ClickUp deadline alerts, Google Calendar reminders via NotificationDispatcher
+- [ ] 03-03-PLAN.md — Server setup (Python/uvx, MCP pre-cache, Google OAuth consent) + end-to-end verification
 
 ### Phase 3.5: Actions
 **Goal**: User can create and update data across integrations through natural language — write access with confirmation before execution
@@ -229,7 +230,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.5 → 4 → 5 → 6 → 7 �
 |-------|----------------|--------|-----------|
 | 1. Infrastructure and Security Foundation | 2/2 | Complete    | 2026-02-23 |
 | 2. Bot Shell and Agent Brain              | 5/5 | Complete    | 2026-02-25 |
-| 3. Core Integrations (read-only)          | 0/2 | Not started | - |
+| 3. Core Integrations (read-only)          | 0/3 | Not started | - |
 | 3.5. Actions (write access)               | 0/1 | Not started | - |
 | 4. Initial Data Harvest                   | 0/2 | Not started | - |
 | 5. Interview and Entity Refinement        | 0/2 | Not started | - |
