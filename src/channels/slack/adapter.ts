@@ -1,6 +1,7 @@
 import { App } from '@slack/bolt'
 import type { GenericMessageEvent } from '@slack/types'
 import { logger } from '../../logging/logger.js'
+import { markdownToMrkdwn } from '../formatter.js'
 import type {
   ChannelAdapter,
   InboundMessage,
@@ -55,17 +56,19 @@ export class SlackAdapter implements ChannelAdapter {
    */
   async send(message: OutboundMessage): Promise<void> {
     const placeholderTs = message.metadata?.placeholderTs as string | undefined
+    const formatted = markdownToMrkdwn(message.text)
 
     if (placeholderTs) {
       await this.app.client.chat.update({
         channel: message.channelId,
         ts: placeholderTs,
-        text: message.text,
+        text: formatted,
       })
     } else {
       await this.app.client.chat.postMessage({
         channel: message.channelId,
-        text: message.text,
+        text: formatted,
+        mrkdwn: true,
         ...(message.replyToMessageId
           ? { thread_ts: message.replyToMessageId }
           : {}),

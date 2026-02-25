@@ -1,5 +1,6 @@
 import type { Bot, Context } from 'grammy'
 import { logger } from '../../logging/logger.js'
+import { markdownToHtml } from '../formatter.js'
 import type {
   ChannelAdapter,
   InboundMessage,
@@ -100,8 +101,9 @@ export class TelegramAdapter implements ChannelAdapter {
    * Uses HTML parse mode for structured responses.
    */
   async send(message: OutboundMessage): Promise<void> {
-    await this.bot.api.sendMessage(message.channelId, message.text, {
-      ...(message.parseMode ? { parse_mode: message.parseMode } : {}),
+    const html = markdownToHtml(message.text)
+    await this.bot.api.sendMessage(message.channelId, html, {
+      parse_mode: 'HTML',
     })
   }
 
