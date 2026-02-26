@@ -24,6 +24,7 @@ import { NotificationDispatcher } from '../notifications/dispatcher.js'
 import { DigestScheduler } from '../notifications/digest.js'
 import { startMcpServer } from '../mcp/server.js'
 import { generateMcpConfig } from '../mcp/config-generator.js'
+import { ClickUpDeadlineMonitor } from '../integrations/monitors/clickup-deadlines.js'
 
 // --- Create core instances ---
 const bot = new Bot(env.TELEGRAM_BOT_TOKEN)
@@ -82,6 +83,19 @@ const digestScheduler = new DigestScheduler({
     slack: env.SLACK_ADMIN_USER_ID,
   },
 })
+
+// --- ClickUp deadline monitor (conditional, no LLM calls) ---
+let clickUpMonitor: ClickUpDeadlineMonitor | undefined
+if (env.CLICKUP_API_KEY && env.CLICKUP_TEAM_ID) {
+  clickUpMonitor = new ClickUpDeadlineMonitor({
+    apiKey: env.CLICKUP_API_KEY,
+    teamId: env.CLICKUP_TEAM_ID,
+    dispatcher: notificationDispatcher,
+    adminUserId: env.TELEGRAM_ADMIN_CHAT_ID,
+  })
+} else {
+  logger.info('ClickUp credentials not configured, deadline monitor disabled')
+}
 
 // --- Generate MCP config dynamically based on available env vars ---
 const mcpConfigPath = resolve(
@@ -296,6 +310,12 @@ async function startup(): Promise<void> {
   })
   logger.info({ cron: digestCron }, 'Morning digest scheduled')
 
+  // 8. Start ClickUp deadline monitor (if configured)
+  if (clickUpMonitor) {
+    clickUpMonitor.start()
+    logger.info('ClickUp deadline monitor started')
+  }
+
   logger.info('Astra bot started successfully')
 }
 
@@ -308,6 +328,9 @@ function shutdown(signal: string): void {
     digestCronJob.stop()
     logger.info('Digest cron job stopped')
   }
+
+  // Stop ClickUp deadline monitor
+  clickUpMonitor?.stop()
 
   // Stop MCP server
   if (mcpServer) {
