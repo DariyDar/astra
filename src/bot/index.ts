@@ -298,23 +298,11 @@ async function startup(): Promise<void> {
   // 6. Start message router (which starts all adapters including Telegram)
   await messageRouter.start()
 
-  // 7. Schedule morning digest cron job (8 AM daily)
-  const digestCron = digestScheduler.getScheduledTime()
-  digestCronJob = cron.schedule(digestCron, async () => {
-    logger.info('Running scheduled morning digest')
-    try {
-      await digestScheduler.deliverDigest()
-    } catch (error) {
-      logger.error({ error }, 'Morning digest delivery failed')
-    }
-  })
-  logger.info({ cron: digestCron }, 'Morning digest scheduled')
-
-  // 8. Start ClickUp deadline monitor (if configured)
-  if (clickUpMonitor) {
-    clickUpMonitor.start()
-    logger.info('ClickUp deadline monitor started')
-  }
+  // 7. Morning digest and ClickUp monitor — disabled until proactive features are configured
+  //    See Phase 6 in roadmap. Only user-initiated requests for now.
+  // const digestCron = digestScheduler.getScheduledTime()
+  // digestCronJob = cron.schedule(digestCron, ...)
+  // clickUpMonitor?.start()
 
   logger.info('Astra bot started successfully')
 }
