@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Bot Shell and Agent Brain** - Telegram + Slack bots, unified message router, MCP memory server, conversation context, notification preferences (completed 2026-02-25)
 - [ ] **Phase 3: Core Integrations** - ClickUp, Gmail, Google Calendar, Google Drive — all via MCP; read-only natural language access to tasks, emails, calendar, documents
 - [ ] **Phase 3.5: Actions** (INSERTED) - Write access: create/update ClickUp tasks, send emails via Gmail, create calendar events — all with confirmation before execution
+- [ ] **Phase 3.7: LLM Usage Optimization** (INSERTED) - Audit LLM calls, replace cron-based with trigger-based patterns, work hours enforcement, per-channel/user priority tiers
 - [ ] **Phase 4: Initial Data Harvest** - Test ingestion from all sources (Slack, Gmail, Drive, ClickUp), entity extraction, populate initial knowledge base — foundation for interview phase
 - [ ] **Phase 5: Interview and Entity Refinement** - Present extracted entities by category (people, projects, channels, project context) with LLM assumptions; user corrects and enriches; finalize knowledge base before full ingestion
 - [ ] **Phase 6: Full Data Ingestion** - Slack + Gmail history (months), full ClickUp data, tiered by urgency and secrecy (additional tiers TBD); smart LLM batching by channel priority
@@ -80,7 +81,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — MCP infrastructure: env vars, dynamic config generator, system prompt integration tool guidance
+- [x] 03-01-PLAN.md — MCP infrastructure: env vars, dynamic config generator, system prompt integration tool guidance
 - [ ] 03-02-PLAN.md — Proactive monitors: ClickUp deadline alerts, Google Calendar reminders via NotificationDispatcher
 - [ ] 03-03-PLAN.md — Server setup (Python/uvx, MCP pre-cache, Google OAuth consent) + end-to-end verification
 
@@ -98,6 +99,24 @@ Plans:
 
 Plans:
 - [ ] 03.5-01: TBD — Write actions for ClickUp, Gmail, Calendar via MCP
+
+### Phase 3.7: LLM Usage Optimization
+**Goal**: Audit and optimize all LLM calls — replace scheduled/cron-based LLM invocations with trigger-based patterns, enforce work hours, configure per-channel/user priority rules
+**Depends on**: Phase 3.5 (all integrations and write access must exist to audit full usage patterns)
+**Design**: Discussion-first phase. User configures: (1) which Slack users/channels trigger immediate LLM analysis, (2) which are batched daily/weekly, (3) work hours schedule (no LLM calls on weekends or outside hours). Proactive features (calendar reminders, email digests) only trigger based on matching patterns, not on timers. All configuration via conversation with the bot.
+**Requirements**: TBD (to be defined during /gsd:discuss-phase)
+**Success Criteria** (what must be TRUE):
+  1. No cron-based LLM calls exist — all proactive LLM usage is trigger-based (new message from priority user, important channel activity, etc.)
+  2. Work hours configured — bot does not invoke LLM for background tasks outside configured hours (weekends, nights)
+  3. Per-channel/user priority tiers: "immediate" (LLM analyzes as batch arrives), "daily" (once-a-day digest), "weekly" (low priority)
+  4. User can configure priority rules via natural language ("messages from @john are always high priority", "ignore #random channel")
+  5. LLM usage dashboard: user can ask "how many LLM calls did you make today/this week?" and get accurate counts
+  6. Cost stays predictable — no runaway LLM calls from polling or cron loops
+**Plans**: TBD
+
+Plans:
+- [ ] 03.7-01: TBD — Trigger-based notification engine, work hours config, priority tiers
+- [ ] 03.7-02: TBD — LLM usage tracking and reporting
 
 ### Phase 4: Initial Data Harvest
 **Goal**: Test ingestion from all connected sources to extract entities and build the initial knowledge base — prerequisite for the interview phase
@@ -224,7 +243,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 3.5 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
+Phases execute in numeric order: 1 → 2 → 3 → 3.5 → 3.7 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -232,6 +251,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 3.5 → 4 → 5 → 6 → 7 �
 | 2. Bot Shell and Agent Brain              | 5/5 | Complete    | 2026-02-25 |
 | 3. Core Integrations (read-only)          | 0/3 | Not started | - |
 | 3.5. Actions (write access)               | 0/1 | Not started | - |
+| 3.7. LLM Usage Optimization              | 0/2 | Not started | - |
 | 4. Initial Data Harvest                   | 0/2 | Not started | - |
 | 5. Interview and Entity Refinement        | 0/2 | Not started | - |
 | 6. Full Data Ingestion                    | 0/2 | Not started | - |

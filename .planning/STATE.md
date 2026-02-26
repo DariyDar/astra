@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Eliminate PM routine so the senior PM can focus on decisions, strategy, and people
-**Current focus:** Phase 2 - Bot Shell and Agent Brain
+**Current focus:** Phase 3 - Core Integrations
 
 ## Current Position
 
-Phase: 2 of 8 (Bot Shell and Agent Brain)
-Plan: 5 of 5 in current phase
-Status: Phase 2 COMPLETE
-Last activity: 2026-02-24 — Plan 02-05 complete (Notification system)
+Phase: 3 of 11 (Core Integrations)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-26 — Plan 03-01 complete (MCP integration infrastructure)
 
-Progress: [██████░░░░] 32%
+Progress: [██████░░░░] 35%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 6.4 min
-- Total execution time: 0.7 hours
+- Total plans completed: 8
+- Average duration: 6.0 min
+- Total execution time: 0.8 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: [██████░░░░] 32%
 |-------|-------|-------|----------|
 | 1 | 2 | 16 min | 8 min |
 | 2 | 5 | 27 min | 5.4 min |
+| 3 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (4 min), 02-02 (7 min), 02-03 (4 min), 02-04 (6 min), 02-05 (6 min)
-- Trend: stable, consistent ~5.4 min/plan in Phase 2
+- Last 5 plans: 02-02 (7 min), 02-03 (4 min), 02-04 (6 min), 02-05 (6 min), 03-01 (3 min)
+- Trend: improving, Phase 3 infrastructure plan completed quickly
 
 *Updated after each plan completion*
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - 02-05: Digest cron runs in bot process (not worker) since it needs adapter access
 - 02-05: HTML parse mode for /settings with urgency and channel icons
 - 02-05: Fallback to Telegram when configured Slack adapter unavailable
+- 03-01: MCP config generated dynamically at startup (not static JSON) to inject actual env var values
+- 03-01: All integration env vars optional (z.string().optional()) so bot starts without them
+- 03-01: System prompt includes static tool names regardless of MCP server availability
 
 ### Pending Todos
 
@@ -87,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-24
-Stopped at: Completed 02-05-PLAN.md (Notification system) — Phase 2 complete
-Resume file: .planning/phases/02-bot-shell-and-agent-brain/02-05-SUMMARY.md
+Last session: 2026-02-26
+Stopped at: Completed 03-01-PLAN.md (MCP integration infrastructure)
+Resume file: .planning/phases/03-core-integrations/03-01-SUMMARY.md

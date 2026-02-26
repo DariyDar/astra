@@ -25,7 +25,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### ClickUp Integration
 
-- [ ] **CU-01**: User can search tasks by natural language query ("what's overdue in Project Alpha?")
+- [x] **CU-01**: User can search tasks by natural language query ("what's overdue in Project Alpha?")
 - [ ] **CU-02**: User can create tasks via bot ("create task X in project Y with deadline Z")
 - [ ] **CU-03**: User can update task status, assignee, and due date via bot
 - [ ] **CU-04**: Bot monitors deadlines and alerts user about approaching (24h) and overdue tasks
@@ -34,15 +34,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Gmail Integration
 
-- [ ] **MAIL-01**: Bot classifies incoming emails by priority (urgent/important/normal/low)
-- [ ] **MAIL-02**: Bot generates digest of unread priority emails on demand
+- [x] **MAIL-01**: Bot classifies incoming emails by priority (urgent/important/normal/low)
+- [x] **MAIL-02**: Bot generates digest of unread priority emails on demand
 - [ ] **MAIL-03**: Bot drafts responses to emails using project context and communication history
 - [ ] **MAIL-04**: Bot analyzes email threads and extracts key points and action items
 - [ ] **MAIL-05**: Bot acts as ghost-writer for Gmail: prioritizes incoming, urgent — immediate alert with draft, rest — batched digest
 
 ### Google Calendar
 
-- [ ] **CAL-01**: User can ask "what's on my calendar today/this week?" and get formatted schedule
+- [x] **CAL-01**: User can ask "what's on my calendar today/this week?" and get formatted schedule
 - [ ] **CAL-02**: Bot sends configurable reminders before meetings (default: 15 min)
 - [ ] **CAL-03**: User can create calendar events via bot ("schedule meeting with X on Tuesday at 3pm")
 - [ ] **CAL-04**: Bot checks availability before suggesting meeting times
@@ -50,7 +50,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Google Drive
 
 - [ ] **DRIVE-01**: Bot indexes documents from specified Drive folders into RAG knowledge base
-- [ ] **DRIVE-02**: User can ask questions about document content ("what does the GDD say about monetization?")
+- [x] **DRIVE-02**: User can ask questions about document content ("what does the GDD say about monetization?")
 - [ ] **DRIVE-03**: Bot tracks document freshness and flags potentially outdated documents (not modified in N months)
 - [ ] **DRIVE-04**: Bot re-indexes documents incrementally when they change (via Drive Changes API)
 
@@ -150,23 +150,23 @@ Requirements for initial release. Each maps to roadmap phases.
 | MSG-03 | Phase 2 | Complete |
 | MSG-04 | Phase 2 | Complete |
 | MSG-05 | Phase 2 | Complete |
-| CU-01 | Phase 3 | Pending |
+| CU-01 | Phase 3 | Complete |
 | CU-02 | Phase 3 | Pending |
 | CU-03 | Phase 3 | Pending |
 | CU-04 | Phase 3 | Pending |
 | CU-05 | Phase 3 | Pending |
 | CU-06 | Phase 3 | Pending |
-| MAIL-01 | Phase 3 | Pending |
-| MAIL-02 | Phase 3 | Pending |
+| MAIL-01 | Phase 3 | Complete |
+| MAIL-02 | Phase 3 | Complete |
 | MAIL-03 | Phase 3 | Pending |
 | MAIL-04 | Phase 3 | Pending |
 | MAIL-05 | Phase 3 | Pending |
-| CAL-01 | Phase 3 | Pending |
+| CAL-01 | Phase 3 | Complete |
 | CAL-02 | Phase 3 | Pending |
 | CAL-03 | Phase 3 | Pending |
 | CAL-04 | Phase 3 | Pending |
 | DRIVE-01 | Phase 4 | Pending |
-| DRIVE-02 | Phase 4 | Pending |
+| DRIVE-02 | Phase 4 | Complete |
 | DRIVE-03 | Phase 4 | Pending |
 | DRIVE-04 | Phase 4 | Pending |
 | KB-01 | Phase 4 | Pending |
