@@ -3,6 +3,7 @@ module.exports = {
   apps: [
     {
       name: 'astra-bot',
+      cwd: '/home/clawdbot/personal-assistant',
       script: './node_modules/.bin/tsx',
       args: 'src/bot/index.ts',
       kill_timeout: 10000,
@@ -14,6 +15,7 @@ module.exports = {
     },
     {
       name: 'astra-worker',
+      cwd: '/home/clawdbot/personal-assistant',
       script: './node_modules/.bin/tsx',
       args: 'src/worker/index.ts',
       kill_timeout: 5000,
