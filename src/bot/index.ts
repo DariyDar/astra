@@ -1,4 +1,6 @@
 import type { Server as HttpServer } from 'node:http'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Bot } from 'grammy'
 import { Redis } from 'ioredis'
 import { QdrantClient } from '@qdrant/js-client-rest'
@@ -21,6 +23,7 @@ import { NotificationPreferences } from '../notifications/preferences.js'
 import { NotificationDispatcher } from '../notifications/dispatcher.js'
 import { DigestScheduler } from '../notifications/digest.js'
 import { startMcpServer } from '../mcp/server.js'
+import { generateMcpConfig } from '../mcp/config-generator.js'
 
 // --- Create core instances ---
 const bot = new Bot(env.TELEGRAM_BOT_TOKEN)
@@ -79,6 +82,13 @@ const digestScheduler = new DigestScheduler({
     slack: env.SLACK_ADMIN_USER_ID,
   },
 })
+
+// --- Generate MCP config dynamically based on available env vars ---
+const mcpConfigPath = resolve(
+  fileURLToPath(import.meta.url),
+  '../../mcp/mcp-config.json',
+)
+generateMcpConfig(mcpConfigPath)
 
 // --- Message router (with notification preferences and MCP memory tools) ---
 const messageRouter = new MessageRouter({
