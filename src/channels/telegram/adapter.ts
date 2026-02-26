@@ -107,20 +107,58 @@ export class TelegramAdapter implements ChannelAdapter {
     })
   }
 
+  private pollingAttempt = 0
+  private readonly maxPollingRetries = 5
+
   /**
    * Start the Telegram bot polling.
+   * Handles 409 conflict errors with exponential backoff retry.
    */
   async start(): Promise<void> {
     this.registerMiddleware()
-    this.bot.start()
-    logger.info('Telegram adapter started')
+    this.startPolling()
+  }
+
+  private startPolling(): void {
+    this.bot.start({
+      drop_pending_updates: true,
+      onStart: () => {
+        this.pollingAttempt = 0
+        logger.info('Telegram adapter started (polling active)')
+      },
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error)
+      const isConflict = message.includes('409') || message.includes('Conflict')
+
+      if (isConflict && this.pollingAttempt < this.maxPollingRetries) {
+        this.pollingAttempt++
+        const delay = Math.min(5000 * 2 ** this.pollingAttempt, 60000)
+        logger.warn(
+          { attempt: this.pollingAttempt, retryInMs: delay },
+          'Telegram 409 conflict — previous instance still polling, retrying...',
+        )
+        setTimeout(() => this.startPolling(), delay)
+        return
+      }
+
+      if (isConflict) {
+        logger.fatal(
+          { error, attempts: this.pollingAttempt },
+          'Telegram 409 conflict persists after retries. Exiting.',
+        )
+      } else {
+        logger.fatal({ error }, 'Telegram polling fatal error')
+      }
+
+      process.exit(1)
+    })
   }
 
   /**
    * Stop the Telegram bot.
    */
   async stop(): Promise<void> {
-    this.bot.stop()
+    await this.bot.stop()
     logger.info('Telegram adapter stopped')
   }
 }

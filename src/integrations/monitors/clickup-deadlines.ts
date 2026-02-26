@@ -51,13 +51,15 @@ export class ClickUpDeadlineMonitor {
 
   /**
    * Start the deadline monitor cron job (every 30 minutes).
-   * Also runs an immediate check on start.
+   * First check runs after a 5-minute delay to avoid notification spam on restart.
    */
   start(): void {
-    // Run immediately on start
-    this.checkDeadlines().catch((error) => {
-      logger.error({ error }, 'ClickUp deadline monitor: initial check failed')
-    })
+    // Delay first check by 5 minutes to avoid spam on restarts
+    setTimeout(() => {
+      this.checkDeadlines().catch((error) => {
+        logger.error({ error }, 'ClickUp deadline monitor: initial check failed')
+      })
+    }, 5 * 60 * 1000)
 
     // Schedule every 30 minutes
     this.cronJob = cron.schedule('*/30 * * * *', () => {

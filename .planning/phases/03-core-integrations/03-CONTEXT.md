@@ -22,8 +22,8 @@ Write access (creating tasks, sending emails, creating calendar events) is a sep
 
 ### Authorization and setup
 - All credentials configured via `.env` / server config — no Telegram-based onboarding flows.
-- Google OAuth flow: bot serves an OAuth redirect URL; user opens it in browser and authorizes. Tokens stored encrypted in DB (same mechanism as Phase 1).
-- Google tokens: auto-refresh in background. User never prompted for re-auth unless refresh token is revoked.
+- Google OAuth flow: handled by workspace-mcp internally. User runs `uvx workspace-mcp` auth flow on the server, tokens stored in `~/.google-workspace-mcp/` (workspace-mcp's own storage). No custom OAuth route or DB token storage — workspace-mcp manages its own token lifecycle.
+- Google tokens: auto-refresh by workspace-mcp. User never prompted for re-auth unless refresh token is revoked.
 - ClickUp: API key via `.env`.
 
 ### Routing
