@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Phase: 3 of 11 (Core Integrations)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-26 — Plan 03-01 complete (MCP integration infrastructure)
+Last activity: 2026-02-26 — Plan 03-02 complete (ClickUp deadline monitor)
 
-Progress: [██████░░░░] 35%
+Progress: [██████░░░░] 38%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 6.0 min
+- Total plans completed: 9
+- Average duration: 5.6 min
 - Total execution time: 0.8 hours
 
 **By Phase:**
@@ -29,11 +29,11 @@ Progress: [██████░░░░] 35%
 |-------|-------|-------|----------|
 | 1 | 2 | 16 min | 8 min |
 | 2 | 5 | 27 min | 5.4 min |
-| 3 | 1 | 3 min | 3 min |
+| 3 | 2 | 5 min | 2.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (7 min), 02-03 (4 min), 02-04 (6 min), 02-05 (6 min), 03-01 (3 min)
-- Trend: improving, Phase 3 infrastructure plan completed quickly
+- Last 5 plans: 02-03 (4 min), 02-04 (6 min), 02-05 (6 min), 03-01 (3 min), 03-02 (2 min)
+- Trend: improving, Phase 3 plans completing quickly
 
 *Updated after each plan completion*
 
@@ -80,6 +80,9 @@ Recent decisions affecting current work:
 - 03-01: MCP config generated dynamically at startup (not static JSON) to inject actual env var values
 - 03-01: All integration env vars optional (z.string().optional()) so bot starts without them
 - 03-01: System prompt includes static tool names regardless of MCP server availability
+- 03-02: Direct REST API calls only (no LLM) for ClickUp deadline monitoring
+- 03-02: Session-based deduplication via Set<string> resets on bot restart (acceptable for 30-min interval)
+- 03-02: Monitor is opt-in: only starts when both CLICKUP_API_KEY and CLICKUP_TEAM_ID are configured
 
 ### Pending Todos
 
@@ -92,5 +95,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 03-01-PLAN.md (MCP integration infrastructure)
-Resume file: .planning/phases/03-core-integrations/03-01-SUMMARY.md
+Stopped at: Completed 03-02-PLAN.md (ClickUp deadline monitor)
+Resume file: .planning/phases/03-core-integrations/03-02-SUMMARY.md
