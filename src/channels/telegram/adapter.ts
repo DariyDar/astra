@@ -99,12 +99,23 @@ export class TelegramAdapter implements ChannelAdapter {
   /**
    * Send an outbound message via Telegram.
    * Uses HTML parse mode for structured responses.
+   * Falls back to plain text if HTML parsing fails (malformed tags from LLM output).
    */
   async send(message: OutboundMessage): Promise<void> {
     const html = markdownToHtml(message.text)
-    await this.bot.api.sendMessage(message.channelId, html, {
-      parse_mode: 'HTML',
-    })
+    try {
+      await this.bot.api.sendMessage(message.channelId, html, {
+        parse_mode: 'HTML',
+      })
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      if (errorMsg.includes("can't parse entities") || errorMsg.includes('Bad Request')) {
+        logger.warn({ error: errorMsg }, 'Telegram HTML parse failed, falling back to plain text')
+        await this.bot.api.sendMessage(message.channelId, message.text)
+      } else {
+        throw error
+      }
+    }
   }
 
   private pollingAttempt = 0

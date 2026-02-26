@@ -111,7 +111,9 @@ export function markdownToHtml(text: string): string {
   // 7. Italic: *text* or _text_ → <i>text</i>
   //    Use careful regex to avoid touching already-converted <b> tags
   result = result.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/gs, '<i>$1</i>')
-  result = result.replace(/(?<!_)_(?!_)(.+?)(?<!_)_(?!_)/gs, '<i>$1</i>')
+  //    For underscore italic: require word boundary or space around _text_ to avoid
+  //    matching underscores inside identifiers like mcp__google-workspace__list_calendars
+  result = result.replace(/(?<=\s|^)_([^\s_][^_]*[^\s_])_(?=\s|[.,!?;:]|$)/gm, '<i>$1</i>')
 
   // 8. Links: [text](url) → <a href="url">text</a>
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')

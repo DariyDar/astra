@@ -5,7 +5,9 @@ import { writeAuditEntry } from '../logging/audit.js'
 import { sendHealthAlert } from '../health/alerter.js'
 
 const MODEL = 'sonnet'
-const CLAUDE_TIMEOUT_MS = 120_000
+const CLAUDE_TIMEOUT_MS = 180_000
+/** Max agentic turns for MCP tool calls — Claude needs multiple turns to call tools and format results */
+const MCP_MAX_TURNS = 10
 
 export interface ClaudeResponse {
   text: string
@@ -32,11 +34,10 @@ export async function callClaude(
   if (options?.mcpConfigPath) {
     args.push('--mcp-config', options.mcpConfigPath)
     // Bypass permission checks for MCP tools — --print mode cannot prompt interactively.
-    // Wildcard --allowedTools 'mcp__*' is not supported by Claude CLI,
-    // and we can't enumerate tool names without querying each MCP server first.
-    // bypassPermissions is safe here: --print mode has no interactive tools,
-    // and MCP servers are configured as read-only.
     args.push('--permission-mode', 'bypassPermissions')
+    // Allow multiple turns so Claude can call MCP tools and then format the response.
+    // Without this, --print mode exits after 1 turn and Claude never gets tool results back.
+    args.push('--max-turns', String(MCP_MAX_TURNS))
   }
 
   // Prompt is always passed via stdin (not as CLI argument).
