@@ -1,4 +1,5 @@
 import { writeFileSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { env } from '../config/env.js'
 import { logger } from '../logging/logger.js'
 
@@ -32,16 +33,18 @@ export function generateMcpConfig(outputPath: string): void {
 
   // Conditionally add google-workspace stdio server
   if (env.GOOGLE_OAUTH_CLIENT_ID && env.GOOGLE_OAUTH_CLIENT_SECRET) {
+    // Resolve full path to uvx — PM2/SSH sessions may not have ~/.local/bin in PATH
+    const uvxPath = resolveCommand('uvx', ['/home/clawdbot/.local/bin/uvx'])
     servers['google-workspace'] = {
       type: 'stdio',
-      command: 'uvx',
+      command: uvxPath,
       args: ['workspace-mcp', '--read-only', '--tools', 'gmail', 'drive', 'calendar'],
       env: {
         GOOGLE_OAUTH_CLIENT_ID: env.GOOGLE_OAUTH_CLIENT_ID,
         GOOGLE_OAUTH_CLIENT_SECRET: env.GOOGLE_OAUTH_CLIENT_SECRET,
       },
     }
-    logger.info('MCP: google-workspace server configured')
+    logger.info({ command: uvxPath }, 'MCP: google-workspace server configured')
   } else {
     logger.info('MCP: google-workspace server skipped (GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not set)')
   }
@@ -68,4 +71,25 @@ export function generateMcpConfig(outputPath: string): void {
 
   writeFileSync(outputPath, JSON.stringify(config, null, 2), 'utf-8')
   logger.info({ servers: serverNames, outputPath }, 'MCP config generated')
+}
+
+/**
+ * Resolve a command to its full path. Tries `which` first, then falls back
+ * to known locations. Returns the bare command name if nothing found
+ * (lets the OS try PATH at runtime).
+ */
+function resolveCommand(name: string, fallbacks: string[]): string {
+  try {
+    const resolved = execSync(`which ${name} 2>/dev/null`, { encoding: 'utf-8' }).trim()
+    if (resolved) return resolved
+  } catch { /* which failed, try fallbacks */ }
+
+  for (const path of fallbacks) {
+    try {
+      execSync(`test -x ${path}`, { encoding: 'utf-8' })
+      return path
+    } catch { /* not found at this path */ }
+  }
+
+  return name
 }

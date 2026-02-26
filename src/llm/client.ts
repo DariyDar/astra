@@ -31,8 +31,12 @@ export async function callClaude(
 
   if (options?.mcpConfigPath) {
     args.push('--mcp-config', options.mcpConfigPath)
-    // Allow all MCP tools without interactive confirmation (--print mode cannot prompt)
-    args.push('--allowedTools', 'mcp__*')
+    // Bypass permission checks for MCP tools — --print mode cannot prompt interactively.
+    // Wildcard --allowedTools 'mcp__*' is not supported by Claude CLI,
+    // and we can't enumerate tool names without querying each MCP server first.
+    // bypassPermissions is safe here: --print mode has no interactive tools,
+    // and MCP servers are configured as read-only.
+    args.push('--permission-mode', 'bypassPermissions')
   }
 
   // Prompt is always passed via stdin (not as CLI argument).
