@@ -1,0 +1,110 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  SERVER_USER: clawdbot
+  SERVER_HOST: 91.98.194.94
+  DEPLOY_PATH: /home/clawdbot/personal-assistant
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx tsc --noEmit
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment archive
+        run: |
+          tar czf deploy.tar.gz \
+            --exclude=node_modules \
+            --exclude=.git \
+            --exclude=.planning \
+            --exclude=.claude \
+            --exclude=.github \
+            --exclude=.env \
+            --exclude='*.tar.gz' \
+            .
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Upload and extract
+        run: |
+          scp -i ~/.ssh/deploy_key deploy.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/tmp/astra-deploy.tar.gz
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'DEPLOY'
+            set -e
+
+            cd /home/clawdbot/personal-assistant
+
+            # Extract new code (preserves .env)
+            tar xzf /tmp/astra-deploy.tar.gz
+            rm /tmp/astra-deploy.tar.gz
+
+            # Install all dependencies (tsx and pino-pretty are devDeps but needed at runtime)
+            npm ci
+
+            # Run database migrations
+            npx drizzle-kit push --force
+
+            # Restart services via PM2 ecosystem config
+            pm2 delete astra-bot astra-worker 2>/dev/null || true
+            sleep 2
+            pm2 start ecosystem.config.cjs
+            pm2 save
+          DEPLOY
+
+      - name: Sync env vars
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << ENVEOF
+            cd /home/clawdbot/personal-assistant
+
+            # Ensure NODE_ENV=production
+            sed -i 's/NODE_ENV=development/NODE_ENV=production/' .env
+
+            # ClickUp integration
+            grep -q '^CLICKUP_API_KEY=' .env || echo 'CLICKUP_API_KEY=' >> .env
+            sed -i 's|^CLICKUP_API_KEY=.*|CLICKUP_API_KEY=${{ secrets.CLICKUP_API_KEY }}|' .env
+
+            grep -q '^CLICKUP_TEAM_ID=' .env || echo 'CLICKUP_TEAM_ID=' >> .env
+            sed -i 's|^CLICKUP_TEAM_ID=.*|CLICKUP_TEAM_ID=${{ secrets.CLICKUP_TEAM_ID }}|' .env
+
+            # Google Workspace integration
+            grep -q '^GOOGLE_OAUTH_CLIENT_ID=' .env || echo 'GOOGLE_OAUTH_CLIENT_ID=' >> .env
+            sed -i 's|^GOOGLE_OAUTH_CLIENT_ID=.*|GOOGLE_OAUTH_CLIENT_ID=${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}|' .env
+
+            grep -q '^GOOGLE_OAUTH_CLIENT_SECRET=' .env || echo 'GOOGLE_OAUTH_CLIENT_SECRET=' >> .env
+            sed -i 's|^GOOGLE_OAUTH_CLIENT_SECRET=.*|GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}|' .env
+
+            # Restart to pick up new env
+            pm2 restart astra-bot --update-env
+          ENVEOF
+
+      - name: Health check
+        run: |
+          sleep 10
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'CHECK'
+            pm2 list
+            pm2 logs astra-bot --lines 20 --nostream
+          CHECK
