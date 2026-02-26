@@ -31,6 +31,8 @@ export async function callClaude(
 
   if (options?.mcpConfigPath) {
     args.push('--mcp-config', options.mcpConfigPath)
+    // Allow all MCP tools without interactive confirmation (--print mode cannot prompt)
+    args.push('--allowedTools', 'mcp__*')
   }
 
   // Prompt is always passed via stdin (not as CLI argument).
