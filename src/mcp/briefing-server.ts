@@ -258,6 +258,16 @@ async function fetchSlack(
       )
       if (found) channelIds.push(found)
     }
+  } else if (req.search_term) {
+    // For search: include channels whose name matches the search term + top active channels
+    const allChannels = await fetchSlackChannels(headers, teamId)
+    const term = req.search_term.toLowerCase()
+    const nameMatches = allChannels.filter(c => c.name.toLowerCase().includes(term))
+    const topActive = allChannels
+      .filter(c => !nameMatches.some(m => m.id === c.id))
+      .sort((a, b) => (b.num_members ?? 0) - (a.num_members ?? 0))
+      .slice(0, Math.max(1, 5 - nameMatches.length))
+    channelIds = [...nameMatches, ...topActive]
   } else {
     // For "recent" / "unread" without specific channels, get top active channels
     const allChannels = await fetchSlackChannels(headers, teamId)
@@ -299,10 +309,20 @@ async function fetchSlack(
     }),
   )
 
-  const items: BriefingItem[] = []
+  let items: BriefingItem[] = []
   for (const r of results) {
     if (r.status === 'fulfilled') items.push(...r.value)
   }
+
+  // For search queries, filter messages by search term
+  if (req.search_term) {
+    const term = req.search_term.toLowerCase()
+    items = items.filter(item =>
+      ((item.text as string) ?? '').toLowerCase().includes(term) ||
+      ((item.channel as string) ?? '').toLowerCase().includes(term),
+    )
+  }
+
   return items.slice(0, limit)
 }
 
