@@ -1,7 +1,15 @@
 import { writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { execSync } from 'node:child_process'
 import { env } from '../config/env.js'
 import { logger } from '../logging/logger.js'
+
+/** Absolute path to the local Slack MCP server (forked for private channel support). */
+const SLACK_SERVER_PATH = resolve(
+  fileURLToPath(import.meta.url),
+  '../slack-server.js',
+)
 
 interface McpServerConfig {
   type: 'http' | 'stdio'
@@ -47,6 +55,27 @@ export function generateMcpConfig(outputPath: string): void {
     logger.info({ command: uvxPath }, 'MCP: google-workspace server configured')
   } else {
     logger.info('MCP: google-workspace server skipped (GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not set)')
+  }
+
+  // Conditionally add slack stdio server (read-only channel history)
+  // Prefer SLACK_USER_TOKEN (xoxp-) — sees all channels the user belongs to, including private.
+  // Falls back to SLACK_BOT_TOKEN (xoxb-) — only sees channels where the bot is invited.
+  const slackToken = env.SLACK_USER_TOKEN ?? env.SLACK_BOT_TOKEN
+  if (slackToken && env.SLACK_TEAM_ID) {
+    const nodePath = resolveCommand('node', ['/usr/local/bin/node', '/usr/bin/node'])
+    servers['slack'] = {
+      type: 'stdio',
+      command: nodePath,
+      args: [SLACK_SERVER_PATH],
+      env: {
+        SLACK_BOT_TOKEN: slackToken,
+        SLACK_TEAM_ID: env.SLACK_TEAM_ID,
+      },
+    }
+    const tokenType = env.SLACK_USER_TOKEN ? 'user token' : 'bot token'
+    logger.info({ tokenType }, 'MCP: slack server configured')
+  } else {
+    logger.info('MCP: slack server skipped (SLACK_BOT_TOKEN/SLACK_USER_TOKEN or SLACK_TEAM_ID not set)')
   }
 
   // Conditionally add clickup stdio server

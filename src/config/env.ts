@@ -11,6 +11,7 @@ const envSchema = z.object({
   SLACK_APP_TOKEN: z.string().optional(),
   SLACK_USER_TOKEN: z.string().optional(),
   SLACK_ADMIN_USER_ID: z.string().optional(),
+  SLACK_TEAM_ID: z.string().optional(),
   CLICKUP_API_KEY: z.string().optional(),
   CLICKUP_TEAM_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),

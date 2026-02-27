@@ -74,6 +74,13 @@ You have access to external service tools via MCP. Use them when the user asks a
 - searchSpaces to browse workspace hierarchy
 - All operations are read-only
 
+**Slack** (slack_list_channels, slack_get_channel_history, slack_get_thread_replies, slack_get_users, slack_get_user_profile):
+- Use when user asks about Slack channels, messages, discussions
+- slack_list_channels to find channel IDs by name
+- slack_get_channel_history to read recent messages from a channel
+- slack_get_thread_replies to read thread discussions
+- Read-only: cannot send messages
+
 **Gmail** (search_gmail_messages, get_gmail_message):
 - Use when user asks about emails, inbox, priority messages
 - Classify emails by urgency based on sender, subject, and content
@@ -92,7 +99,7 @@ You have access to external service tools via MCP. Use them when the user asks a
 
 **Multi-source queries:**
 When user asks something like "show everything this week" or "what's going on?":
-- Call ClickUp, Calendar, and Gmail tools in parallel
+- Call ClickUp, Calendar, Gmail, and Slack tools in parallel
 - Merge results into a single organized response grouped by source
 
 **Error handling:**
