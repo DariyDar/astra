@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process'
 import { QdrantClient } from '@qdrant/js-client-rest'
 import { Redis } from 'ioredis'
 import pg from 'pg'
@@ -31,13 +30,12 @@ export class HealthChecker {
       this.checkPostgres(),
       this.checkRedis(),
       this.checkQdrant(),
-      this.checkClaude(),
     ]
 
     const settled = await Promise.allSettled(checks)
 
     const results: HealthResult[] = settled.map((result, index) => {
-      const serviceName = ['PostgreSQL', 'Redis', 'Qdrant', 'Claude'][index]
+      const serviceName = ['PostgreSQL', 'Redis', 'Qdrant'][index]
       if (result.status === 'fulfilled') {
         return result.value
       }
@@ -172,64 +170,4 @@ export class HealthChecker {
     }
   }
 
-  private async checkClaude(): Promise<HealthResult> {
-    const start = Date.now()
-
-    try {
-      const result = await new Promise<string>((resolve, reject) => {
-        const proc = spawn('claude', [
-          '--print', '--no-session-persistence', '--model', 'sonnet',
-          '--output-format', 'json', 'Reply with OK',
-        ], {
-          stdio: ['pipe', 'pipe', 'pipe'],
-        })
-        proc.stdin.end()
-
-        let stdout = ''
-        let stderr = ''
-        proc.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
-        proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
-
-        const timer = setTimeout(() => { proc.kill(); reject(new Error('Claude CLI timed out')) }, 90_000)
-
-        proc.on('close', (code) => {
-          clearTimeout(timer)
-          if (code !== 0) {
-            reject(new Error(stderr.trim() || `claude exited with code ${code}`))
-            return
-          }
-          resolve(stdout)
-        })
-
-        proc.on('error', (err) => {
-          clearTimeout(timer)
-          reject(err)
-        })
-      })
-
-      // CLI may exit 0 but return is_error: true for auth failures
-      const parsed = JSON.parse(result) as { is_error?: boolean; result?: string }
-      if (parsed.is_error) {
-        return {
-          service: 'Claude',
-          healthy: false,
-          latencyMs: Date.now() - start,
-          error: parsed.result ?? 'Claude CLI returned is_error',
-        }
-      }
-
-      return {
-        service: 'Claude',
-        healthy: true,
-        latencyMs: Date.now() - start,
-      }
-    } catch (error) {
-      return {
-        service: 'Claude',
-        healthy: false,
-        latencyMs: Date.now() - start,
-        error: error instanceof Error ? error.message : String(error),
-      }
-    }
-  }
 }
