@@ -1,7 +1,7 @@
 import { App } from '@slack/bolt'
 import type { GenericMessageEvent } from '@slack/types'
 import { logger } from '../../logging/logger.js'
-import { markdownToMrkdwn } from '../formatter.js'
+import { formatUsageFooter, markdownToMrkdwn } from '../formatter.js'
 import type {
   ChannelAdapter,
   InboundMessage,
@@ -56,7 +56,10 @@ export class SlackAdapter implements ChannelAdapter {
    */
   async send(message: OutboundMessage): Promise<void> {
     const placeholderTs = message.metadata?.placeholderTs as string | undefined
-    const formatted = markdownToMrkdwn(message.text)
+    const textWithFooter = message.usage
+      ? `${message.text}\n\n---\n_${formatUsageFooter(message.usage)}_`
+      : message.text
+    const formatted = markdownToMrkdwn(textWithFooter)
 
     if (placeholderTs) {
       await this.app.client.chat.update({

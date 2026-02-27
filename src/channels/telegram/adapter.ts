@@ -1,6 +1,6 @@
 import type { Bot, Context } from 'grammy'
 import { logger } from '../../logging/logger.js'
-import { markdownToHtml } from '../formatter.js'
+import { formatUsageFooter, markdownToHtml } from '../formatter.js'
 import type {
   ChannelAdapter,
   InboundMessage,
@@ -102,7 +102,10 @@ export class TelegramAdapter implements ChannelAdapter {
    * Falls back to plain text if HTML parsing fails (malformed tags from LLM output).
    */
   async send(message: OutboundMessage): Promise<void> {
-    const html = markdownToHtml(message.text)
+    const textWithFooter = message.usage
+      ? `${message.text}\n\n---\n_${formatUsageFooter(message.usage)}_`
+      : message.text
+    const html = markdownToHtml(textWithFooter)
     try {
       await this.bot.api.sendMessage(message.channelId, html, {
         parse_mode: 'HTML',
@@ -111,7 +114,7 @@ export class TelegramAdapter implements ChannelAdapter {
       const errorMsg = error instanceof Error ? error.message : String(error)
       if (errorMsg.includes("can't parse entities") || errorMsg.includes('Bad Request')) {
         logger.warn({ error: errorMsg }, 'Telegram HTML parse failed, falling back to plain text')
-        await this.bot.api.sendMessage(message.channelId, message.text)
+        await this.bot.api.sendMessage(message.channelId, textWithFooter)
       } else {
         throw error
       }

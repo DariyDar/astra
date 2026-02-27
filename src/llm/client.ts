@@ -9,9 +9,17 @@ const CLAUDE_TIMEOUT_MS = 180_000
 /** Max agentic turns for MCP tool calls — Claude needs multiple turns to call tools and format results */
 const MCP_MAX_TURNS = 10
 
+export interface UsageMetrics {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  costUsd: number
+}
+
 export interface ClaudeResponse {
   text: string
   model: string
+  usage?: UsageMetrics
 }
 
 /**
@@ -64,6 +72,7 @@ export async function callClaude(
       model: MODEL,
       metadata: {
         responseLength: result.text.length,
+        ...(result.usage ?? {}),
       },
       status: 'success',
     })
@@ -129,7 +138,14 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
       }
 
       try {
-        const parsed = JSON.parse(stdout) as { result?: string; content?: string; response?: string; is_error?: boolean }
+        const parsed = JSON.parse(stdout) as {
+          result?: string
+          content?: string
+          response?: string
+          is_error?: boolean
+          usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number }
+          total_cost_usd?: number
+        }
 
         // CLI may exit 0 but return is_error: true for auth failures
         if (parsed.is_error) {
@@ -138,7 +154,16 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
         }
 
         const text = parsed.result ?? parsed.content ?? parsed.response ?? stdout.trim()
-        resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: MODEL })
+        const usage: UsageMetrics | undefined = parsed.usage
+          ? {
+              inputTokens: parsed.usage.input_tokens ?? 0,
+              outputTokens: parsed.usage.output_tokens ?? 0,
+              cacheReadTokens: parsed.usage.cache_read_input_tokens ?? 0,
+              costUsd: parsed.total_cost_usd ?? 0,
+            }
+          : undefined
+
+        resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: MODEL, usage })
       } catch {
         // Log raw stdout when JSON parse fails — helps debug unexpected output formats
         logger.debug({ stdoutLength: stdout.length, stdoutHead: stdout.slice(0, 500) }, 'Claude CLI non-JSON output')

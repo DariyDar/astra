@@ -185,6 +185,7 @@ export class MessageRouter {
       text: responseText,
       replyToMessageId: message.id,
       ...(message.metadata ? { metadata: message.metadata } : {}),
+      usage: response.usage,
     }
   }
 

@@ -22,6 +22,12 @@ export interface OutboundMessage {
   replyToMessageId?: string
   parseMode?: 'HTML' | 'MarkdownV2'
   metadata?: Record<string, unknown>
+  usage?: {
+    inputTokens: number
+    outputTokens: number
+    cacheReadTokens: number
+    costUsd: number
+  }
 }
 
 export type MessageHandler = (message: InboundMessage) => Promise<void>

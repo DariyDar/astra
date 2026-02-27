@@ -145,3 +145,29 @@ function escapeHtml(text: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 }
+
+/** Format a number with K suffix for thousands (e.g. 1234 → "1.2K", 500 → "500"). */
+function formatTokenCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K`
+  return String(n)
+}
+
+/**
+ * Build a compact usage stats line for message footers.
+ * Example: "tokens: 1.2K→287 | cache: 42K | $0.04"
+ */
+export function formatUsageFooter(usage: {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  costUsd: number
+}): string {
+  const parts = [
+    `tokens: ${formatTokenCount(usage.inputTokens)}→${formatTokenCount(usage.outputTokens)}`,
+  ]
+  if (usage.cacheReadTokens > 0) {
+    parts.push(`cache: ${formatTokenCount(usage.cacheReadTokens)}`)
+  }
+  parts.push(`$${usage.costUsd.toFixed(2)}`)
+  return parts.join(' | ')
+}
