@@ -5,16 +5,18 @@
 See: .planning/PROJECT.md (updated 2026-02-23)
 
 **Core value:** Eliminate PM routine so the senior PM can focus on decisions, strategy, and people
-**Current focus:** Phase 3 - Core Integrations
+**Current focus:** Phase 3 - Core Integrations (Milestone 1: Information Assistant)
 
 ## Current Position
 
-Phase: 3 of 11 (Core Integrations)
-Plan: 2 of 3 in current phase
+Milestone: 1 of 3 (Information Assistant)
+Phase: 3 of 12 (Core Integrations)
+Plan: 1 of 3 complete in current phase
 Status: In progress
-Last activity: 2026-02-26 — Plan 03-02 complete (ClickUp deadline monitor)
+Last activity: 2026-02-26 — Roadmap restructured into 3 milestones, 12 phases
 
-Progress: [██████░░░░] 38%
+Progress (M1): [████░░░░░░] 33% (2/6 phases complete)
+Progress (overall): [██░░░░░░░░] 17% (2/12 phases complete)
 
 ## Performance Metrics
 
@@ -29,7 +31,7 @@ Progress: [██████░░░░] 38%
 |-------|-------|-------|----------|
 | 1 | 2 | 16 min | 8 min |
 | 2 | 5 | 27 min | 5.4 min |
-| 3 | 2 | 5 min | 2.5 min |
+| 3 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
 - Last 5 plans: 02-03 (4 min), 02-04 (6 min), 02-05 (6 min), 03-01 (3 min), 03-02 (2 min)
@@ -44,9 +46,14 @@ Progress: [██████░░░░] 38%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Roadmap: 8-phase layered construction following strict dependency order from research
-- Roadmap: Draft-first architectural constraint baked into Phase 2, full UX in Phase 6
-- Roadmap: Phase 3 groups all table-stakes integrations (ClickUp + Gmail + Calendar) for coherent daily-value delivery
+- Roadmap restructured: 3 milestones (Information → Advisor → Actor), 12 phases total
+- M1 scope: read-only information access + knowledge base + reports + proactive monitoring
+- M2 scope: recommendations + ghost-writing (read-only) + team oversight
+- M3 scope: write actions + self-learning + self-extension
+- MCP optimization is part of Phase 3 (not separate phase): precise MCP filters, no redundant data to LLM
+- No cron-based LLM calls ever — proactive features are trigger-based (Phase 6)
+- Direct REST API monitors (like ClickUp deadline check) are OK on cron
+- Roadmap: Draft-first architectural constraint baked into Phase 2, full UX in Phase 10
 - 01-01: ESM-only project (type: module) with NodeNext resolution
 - 01-01: Zod 4.x for env validation (backwards compatible with 3.x API)
 - 01-01: No host port exposure for infrastructure services (Docker-internal only)
@@ -95,5 +102,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 03-02-PLAN.md (ClickUp deadline monitor)
-Resume file: .planning/phases/03-core-integrations/03-02-SUMMARY.md
+Stopped at: Roadmap restructured into 3 milestones. Phase 3 in progress (03-01 complete, 03-02 and 03-03 pending).
+Resume file: .planning/phases/03-core-integrations/03-CONTEXT.md

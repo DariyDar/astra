@@ -138,69 +138,73 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ## Traceability
 
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| INFRA-01 | Phase 1 | Complete |
-| INFRA-02 | Phase 1 | Complete |
-| INFRA-03 | Phase 1 | Complete |
-| INFRA-04 | Phase 1 | Complete |
-| INFRA-05 | Phase 1 | Complete |
-| MSG-01 | Phase 2 | Complete |
-| MSG-02 | Phase 2 | Complete |
-| MSG-03 | Phase 2 | Complete |
-| MSG-04 | Phase 2 | Complete |
-| MSG-05 | Phase 2 | Complete |
-| CU-01 | Phase 3 | Complete |
-| CU-02 | Phase 3 | Pending |
-| CU-03 | Phase 3 | Pending |
-| CU-04 | Phase 3 | Pending |
-| CU-05 | Phase 3 | Pending |
-| CU-06 | Phase 3 | Pending |
-| MAIL-01 | Phase 3 | Complete |
-| MAIL-02 | Phase 3 | Complete |
-| MAIL-03 | Phase 3 | Pending |
-| MAIL-04 | Phase 3 | Pending |
-| MAIL-05 | Phase 3 | Pending |
-| CAL-01 | Phase 3 | Complete |
-| CAL-02 | Phase 3 | Pending |
-| CAL-03 | Phase 3 | Pending |
-| CAL-04 | Phase 3 | Pending |
-| DRIVE-01 | Phase 4 | Pending |
-| DRIVE-02 | Phase 4 | Complete |
-| DRIVE-03 | Phase 4 | Pending |
-| DRIVE-04 | Phase 4 | Pending |
-| KB-01 | Phase 4 | Pending |
-| KB-02 | Phase 4 | Pending |
-| KB-03 | Phase 4 | Pending |
-| KB-04 | Phase 4 | Pending |
-| RPT-01 | Phase 5 | Pending |
-| RPT-02 | Phase 5 | Pending |
-| RPT-03 | Phase 5 | Pending |
-| RPT-04 | Phase 5 | Pending |
-| RPT-05 | Phase 5 | Pending |
-| GW-01 | Phase 6 | Pending |
-| GW-02 | Phase 6 | Pending |
-| GW-03 | Phase 6 | Pending |
-| GW-04 | Phase 6 | Pending |
-| GW-05 | Phase 6 | Pending |
-| DRAFT-01 | Phase 6 | Pending |
-| DRAFT-02 | Phase 6 | Pending |
-| DRAFT-03 | Phase 6 | Pending |
-| DRAFT-04 | Phase 6 | Pending |
-| LEARN-01 | Phase 7 | Pending |
-| LEARN-02 | Phase 7 | Pending |
-| LEARN-03 | Phase 7 | Pending |
-| LEARN-04 | Phase 7 | Pending |
-| EXT-01 | Phase 8 | Pending |
-| EXT-02 | Phase 8 | Pending |
-| EXT-03 | Phase 8 | Pending |
-| EXT-04 | Phase 8 | Pending |
+| Requirement | Phase | Milestone | Status |
+|-------------|-------|-----------|--------|
+| INFRA-01 | Phase 1 | M1 | Complete |
+| INFRA-02 | Phase 1 | M1 | Complete |
+| INFRA-03 | Phase 1 | M1 | Complete |
+| INFRA-04 | Phase 1 | M1 | Complete |
+| INFRA-05 | Phase 1 | M1 | Complete |
+| MSG-01 | Phase 2 | M1 | Complete |
+| MSG-02 | Phase 2 | M1 | Complete |
+| MSG-03 | Phase 2 | M1 | Complete |
+| MSG-04 | Phase 2 | M1 | Complete |
+| MSG-05 | Phase 2 | M1 | Complete |
+| CU-01 | Phase 3 | M1 | Complete |
+| CU-04 | Phase 3, 6 | M1 | In progress |
+| CU-05 | Phase 3 | M1 | Pending |
+| CU-06 | Phase 3 | M1 | Pending |
+| MAIL-01 | Phase 3 | M1 | Complete |
+| MAIL-02 | Phase 3 | M1 | Complete |
+| CAL-01 | Phase 3 | M1 | Complete |
+| DRIVE-02 | Phase 3 | M1 | Complete |
+| DRIVE-01 | Phase 4 | M1 | Pending |
+| DRIVE-03 | Phase 4, 6 | M1 | Pending |
+| DRIVE-04 | Phase 4 | M1 | Pending |
+| KB-01 | Phase 4 | M1 | Pending |
+| KB-02 | Phase 4 | M1 | Pending |
+| KB-03 | Phase 4 | M1 | Pending |
+| KB-04 | Phase 4 | M1 | Pending |
+| MAIL-04 | Phase 5 | M1 | Pending |
+| RPT-01 | Phase 5 | M1 | Pending |
+| RPT-02 | Phase 5 | M1 | Pending |
+| RPT-03 | Phase 5 | M1 | Pending |
+| RPT-04 | Phase 5 | M1 | Pending |
+| RPT-05 | Phase 5 | M1 | Pending |
+| CAL-02 | Phase 6 | M1 | Pending |
+| MAIL-03 | Phase 7 | M2 | Pending |
+| MAIL-05 | Phase 7 | M2 | Pending |
+| GW-01 | Phase 8 | M2 | Pending |
+| GW-02 | Phase 8 | M2 | Pending |
+| GW-03 | Phase 8 | M2 | Pending |
+| GW-05 | Phase 8 | M2 | Pending |
+| DRAFT-04 | Phase 8 | M2 | Pending |
+| PMO-01 | Phase 9 | M2 | Pending |
+| PMO-02 | Phase 9 | M2 | Pending |
+| PMO-03 | Phase 9 | M2 | Pending |
+| PMO-04 | Phase 9 | M2 | Pending |
+| CU-02 | Phase 10 | M3 | Pending |
+| CU-03 | Phase 10 | M3 | Pending |
+| CAL-03 | Phase 10 | M3 | Pending |
+| CAL-04 | Phase 10 | M3 | Pending |
+| GW-04 | Phase 10 | M3 | Pending |
+| DRAFT-01 | Phase 10 | M3 | Pending |
+| DRAFT-02 | Phase 10 | M3 | Pending |
+| DRAFT-03 | Phase 10 | M3 | Pending |
+| LEARN-01 | Phase 11 | M3 | Pending |
+| LEARN-02 | Phase 11 | M3 | Pending |
+| LEARN-03 | Phase 11 | M3 | Pending |
+| LEARN-04 | Phase 11 | M3 | Pending |
+| EXT-01 | Phase 12 | M3 | Pending |
+| EXT-02 | Phase 12 | M3 | Pending |
+| EXT-03 | Phase 12 | M3 | Pending |
+| EXT-04 | Phase 12 | M3 | Pending |
 
 **Coverage:**
-- v1 requirements: 55 total
-- Mapped to phases: 55
+- v1 requirements: 55 total + 4 v2 (PMO) pulled into M2
+- Mapped to phases: 59
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-23*
-*Last updated: 2026-02-23 after roadmap creation*
+*Last updated: 2026-02-26 after roadmap restructuring into 3 milestones*
