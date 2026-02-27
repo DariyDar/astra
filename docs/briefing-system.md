@@ -186,17 +186,24 @@ GAP: briefing search_term works but Claude didn't use it — update system promp
 
 ## Token Economics
 
-Based on A/B/C/D testing with 10 standard questions:
+Based on A/B/C/D/E testing with 10 standard questions (same test set across all variants):
 
-| Approach | Avg cost/question | Avg turns |
-|----------|-------------------|-----------|
-| No optimization (old) | ~$0.18 | ~5 |
-| Variant D (prompt only) | ~$0.14* | ~6 |
-| With briefing (projected) | ~$0.05-0.08 | ~2-3 |
+| Variant | Description | Avg cost/q | Avg turns | Fails | Total cost |
+|---------|-------------|------------|-----------|-------|------------|
+| A | Philosophy + always ask | $0.22 | 5.3 | 1 | $2.18 |
+| B | Strict per-tool rules | $0.18 | 4.9 | 1 | $1.82 |
+| C | Autonomous philosophy | $0.16 | 6.1 | 2 | $1.63 |
+| D | Hybrid C+B (prompt only) | $0.19 | 5.9 | 0 | $1.93 |
+| **E** | **D + briefing server** | **$0.13** | **3.8** | **0** | **$1.31** |
 
-*Excluding Q8 outlier ($0.52)
+Key improvements from briefing (E vs D):
+- **-31% cost** ($0.13 vs $0.19 per question)
+- **-36% turns** (3.8 vs 5.9 avg)
+- **0 failures** maintained
+- Multi-source queries ("что нового по всем фронтам"): 13→3 turns
 
 Briefing reduces cost by:
-- Fewer turns (1-2 vs 4-14)
+- Fewer turns (1-3 vs 4-14 for multi-source queries)
 - Smaller response payloads (filtered fields, truncated previews)
 - No redundant data (parallel fetch, no re-reading previous turn results)
+- Single Google token refresh (pre-resolved once for Gmail + Calendar)

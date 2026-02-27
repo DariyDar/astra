@@ -104,7 +104,9 @@ export function generateMcpConfig(outputPath: string): void {
   // Always add astra-briefing server (aggregated multi-source queries).
   // It reads Google tokens from disk and uses Slack/ClickUp tokens from env.
   // Needs tsx to run .ts file directly.
-  const tsxPath = resolveCommand('tsx', ['/usr/local/bin/tsx', '/usr/bin/tsx'])
+  // tsx is a devDependency — check node_modules/.bin first, then global
+  const localTsx = resolve(fileURLToPath(import.meta.url), '../../../node_modules/.bin/tsx')
+  const tsxPath = resolveCommand('tsx', [localTsx, '/usr/local/bin/tsx', '/usr/bin/tsx'])
   const briefingEnv: Record<string, string> = {}
   if (slackToken && env.SLACK_TEAM_ID) {
     briefingEnv.SLACK_USER_TOKEN = slackToken
