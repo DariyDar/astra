@@ -11,6 +11,12 @@ const SLACK_SERVER_PATH = resolve(
   '../slack-server.js',
 )
 
+/** Absolute path to the Astra Briefing MCP server (aggregated multi-source queries). */
+const BRIEFING_SERVER_PATH = resolve(
+  fileURLToPath(import.meta.url),
+  '../briefing-server.ts',
+)
+
 interface McpServerConfig {
   type: 'http' | 'stdio'
   url?: string
@@ -94,6 +100,27 @@ export function generateMcpConfig(outputPath: string): void {
   } else {
     logger.info('MCP: clickup server skipped (CLICKUP_API_KEY or CLICKUP_TEAM_ID not set)')
   }
+
+  // Always add astra-briefing server (aggregated multi-source queries).
+  // It reads Google tokens from disk and uses Slack/ClickUp tokens from env.
+  // Needs tsx to run .ts file directly.
+  const tsxPath = resolveCommand('tsx', ['/usr/local/bin/tsx', '/usr/bin/tsx'])
+  const briefingEnv: Record<string, string> = {}
+  if (slackToken && env.SLACK_TEAM_ID) {
+    briefingEnv.SLACK_USER_TOKEN = slackToken
+    briefingEnv.SLACK_TEAM_ID = env.SLACK_TEAM_ID
+  }
+  if (env.CLICKUP_API_KEY && env.CLICKUP_TEAM_ID) {
+    briefingEnv.CLICKUP_API_KEY = env.CLICKUP_API_KEY
+    briefingEnv.CLICKUP_TEAM_ID = env.CLICKUP_TEAM_ID
+  }
+  servers['astra-briefing'] = {
+    type: 'stdio',
+    command: tsxPath,
+    args: [BRIEFING_SERVER_PATH],
+    env: briefingEnv,
+  }
+  logger.info('MCP: astra-briefing server configured')
 
   const config: McpConfig = { mcpServers: servers }
   const serverNames = Object.keys(servers)
