@@ -7,7 +7,7 @@ import { sendHealthAlert } from '../health/alerter.js'
 const MODEL = 'sonnet'
 const CLAUDE_TIMEOUT_MS = 180_000
 /** Max agentic turns for MCP tool calls — Claude needs multiple turns to call tools and format results */
-const MCP_MAX_TURNS = 10
+const MCP_MAX_TURNS = 6
 
 export interface UsageMetrics {
   inputTokens: number
@@ -142,6 +142,7 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
           result?: string
           content?: string
           response?: string
+          subtype?: string
           is_error?: boolean
           usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number }
           total_cost_usd?: number
@@ -153,7 +154,6 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
           return
         }
 
-        const text = parsed.result ?? parsed.content ?? parsed.response ?? stdout.trim()
         const usage: UsageMetrics | undefined = parsed.usage
           ? {
               inputTokens: parsed.usage.input_tokens ?? 0,
@@ -163,6 +163,19 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
             }
           : undefined
 
+        // Handle error_max_turns: Claude ran out of turns before producing a result
+        const rawText = parsed.result ?? parsed.content ?? parsed.response
+        if (!rawText && parsed.subtype === 'error_max_turns') {
+          const costNote = usage ? ` ($${usage.costUsd.toFixed(2)})` : ''
+          resolve({
+            text: `Не удалось обработать запрос за отведённое количество шагов${costNote}. Попробуй задать вопрос конкретнее.`,
+            model: MODEL,
+            usage,
+          })
+          return
+        }
+
+        const text = rawText ?? stdout.trim()
         resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: MODEL, usage })
       } catch {
         // Log raw stdout when JSON parse fails — helps debug unexpected output formats
