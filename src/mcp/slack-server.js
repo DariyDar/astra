@@ -35,7 +35,7 @@ function log(msg) {
 
 const listChannelsTool = {
   name: 'slack_list_channels',
-  description: 'List public and private channels in the workspace. Returns compact list: id, name, is_private, num_members, topic. Use this first to get channel IDs before calling other tools.',
+  description: 'List public and private channels in the workspace. Returns compact list: id, name, is_private, num_members, topic. Only use when the user asks to browse channels — other tools accept channel names directly.',
   inputSchema: {
     type: 'object',
     properties: {

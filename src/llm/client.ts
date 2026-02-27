@@ -7,7 +7,7 @@ import { sendHealthAlert } from '../health/alerter.js'
 const MODEL = 'sonnet'
 const CLAUDE_TIMEOUT_MS = 180_000
 /** Max agentic turns for MCP tool calls — Claude needs multiple turns to call tools and format results */
-const MCP_MAX_TURNS = 6
+const MCP_MAX_TURNS = 8
 
 export interface UsageMetrics {
   inputTokens: number
