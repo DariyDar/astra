@@ -375,9 +375,8 @@ async function main() {
     process.exit(1)
   }
 
-  // Clear log on startup
-  try { writeFileSync(LOG_PATH, '') } catch { /* ignore */ }
-  log(`slack-mcp starting (teamId=${teamId}, tokenPrefix=${token.slice(0, 8)}...)`)
+  // Append separator on startup (don't clear — multiple sessions share this log)
+  log(`\n--- slack-mcp starting (teamId=${teamId}, tokenPrefix=${token.slice(0, 8)}...) ---`)
 
   const server = new Server(
     { name: 'Slack MCP Server (read-only, optimized)', version: '1.2.0' },

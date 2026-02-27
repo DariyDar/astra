@@ -117,6 +117,12 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
 
     proc.on('close', (code) => {
       clearTimeout(timer)
+
+      // Log stderr from Claude CLI (includes MCP server output)
+      if (stderr.trim()) {
+        logger.debug({ stderr: stderr.slice(0, 2000) }, 'Claude CLI stderr')
+      }
+
       if (code !== 0) {
         reject(new Error(stderr.trim() || `claude exited with code ${code}`))
         return
@@ -134,6 +140,8 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
         const text = parsed.result ?? parsed.content ?? parsed.response ?? stdout.trim()
         resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: MODEL })
       } catch {
+        // Log raw stdout when JSON parse fails — helps debug unexpected output formats
+        logger.debug({ stdoutLength: stdout.length, stdoutHead: stdout.slice(0, 500) }, 'Claude CLI non-JSON output')
         resolve({ text: stdout.trim(), model: MODEL })
       }
     })
