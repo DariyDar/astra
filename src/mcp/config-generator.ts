@@ -140,6 +140,12 @@ export function generateMcpConfig(outputPath: string): void {
   if (env.GOOGLE_ACCOUNTS) {
     briefingEnv.GOOGLE_ACCOUNTS = env.GOOGLE_ACCOUNTS
   }
+  if (env.CLOCKIFY_API_KEY) {
+    briefingEnv.CLOCKIFY_API_KEY = env.CLOCKIFY_API_KEY
+  }
+  if (env.CLOCKIFY_WORKSPACE_ID) {
+    briefingEnv.CLOCKIFY_WORKSPACE_ID = env.CLOCKIFY_WORKSPACE_ID
+  }
   servers['astra-briefing'] = {
     type: 'stdio',
     command: tsxPath,

@@ -156,6 +156,13 @@ jobs:
             grep -q '^NOTION_TOKEN=' .env || echo 'NOTION_TOKEN=' >> .env
             sed -i 's|^NOTION_TOKEN=.*|NOTION_TOKEN=${{ secrets.NOTION_TOKEN }}|' .env
 
+            # Clockify integration
+            grep -q '^CLOCKIFY_API_KEY=' .env || echo 'CLOCKIFY_API_KEY=' >> .env
+            sed -i 's|^CLOCKIFY_API_KEY=.*|CLOCKIFY_API_KEY=${{ secrets.CLOCKIFY_API_KEY }}|' .env
+
+            grep -q '^CLOCKIFY_WORKSPACE_ID=' .env || echo 'CLOCKIFY_WORKSPACE_ID=' >> .env
+            sed -i 's|^CLOCKIFY_WORKSPACE_ID=.*|CLOCKIFY_WORKSPACE_ID=${{ secrets.CLOCKIFY_WORKSPACE_ID }}|' .env
+
             # Restart to pick up new env
             pm2 restart astra-bot --update-env
           ENVEOF

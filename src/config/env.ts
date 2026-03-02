@@ -26,6 +26,8 @@ const envSchema = z.object({
   // JSON array of Google accounts: '["dariy@astrocat.co","dshatskikh@highground.games"]'
   GOOGLE_ACCOUNTS: z.string().optional(),
   NOTION_TOKEN: z.string().optional(),
+  CLOCKIFY_API_KEY: z.string().optional(),
+  CLOCKIFY_WORKSPACE_ID: z.string().optional(),
   QDRANT_URL: z.string().url().default('http://localhost:6333'),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
