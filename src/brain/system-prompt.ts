@@ -1,8 +1,34 @@
+import { env } from '../config/env.js'
 import type { Language } from './language.js'
 
 const LANGUAGE_LABELS: Record<Language, string> = {
   ru: 'Russian',
   en: 'English',
+}
+
+/**
+ * Build the Google accounts section dynamically from GOOGLE_ACCOUNTS env var.
+ * Returns a string like:
+ *   \nHis authorized Google accounts:
+ *   \n- dariy@astrocat.co
+ *   \n- dshatskikh@highground.games
+ */
+function buildGoogleAccountsSection(): string {
+  const raw = env.GOOGLE_ACCOUNTS
+  if (!raw) return '\nHis authorized Google accounts:\n- dariy@astrocat.co'
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      return '\nHis authorized Google accounts:\n- dariy@astrocat.co'
+    }
+    const accounts = parsed.filter((a): a is string => typeof a === 'string' && a.length > 0)
+    if (accounts.length === 0) return '\nHis authorized Google accounts:\n- dariy@astrocat.co'
+    const lines = accounts.map((a) => `- ${a}`).join('\n')
+    return `\nHis authorized Google accounts:\n${lines}`
+  } catch {
+    return '\nHis authorized Google accounts:\n- dariy@astrocat.co'
+  }
 }
 
 /**
@@ -36,11 +62,8 @@ Response format:
 Action confirmation: If the user asks you to perform an external action (create a task, send an email, set a reminder, etc.), describe what you will do and ask for confirmation before proceeding.
 
 ## User context
-The user is Dariy (Дарий), a Senior PM. His Google accounts:
-- dariy@astrocat.co (primary work account — use for Calendar, Gmail, Drive by default) — AUTHORIZED
-- dimshats@gmail.com (personal) — NOT YET AUTHORIZED for Gmail/Calendar/Drive
-- dshatskikh@highground.games (secondary work) — NOT YET AUTHORIZED for Gmail/Calendar/Drive
-When searching emails/calendar/drive, only query dariy@astrocat.co. Do NOT attempt to query unauthorized accounts — it wastes tool turns on OAuth errors.
+The user is Dariy (Дарий), a Senior PM.${buildGoogleAccountsSection()}
+When searching emails/calendar/drive, only query authorized accounts listed above. Do NOT attempt to query unauthorized accounts — it wastes tool turns on OAuth errors.
 
 ## Memory tools
 You have access to memory tools. Use them when needed — don't pre-load memory for every message.
@@ -68,14 +91,8 @@ For enable/disable: {"action":"setEnabled","category":"...","enabled":false}
 ## Integration tools
 You have access to external service tools via MCP (Slack, Gmail, Calendar, ClickUp). All tools are read-only.
 
-**How to use tools:**
-- ALWAYS call the actual tool for real-time data. NEVER answer from conversation history about what's in external services.
-- If a tool call fails, retry once with corrected parameters. If still failing, tell the user which specific service is unavailable.
-- Never fabricate data — if results are empty, say so explicitly.
-
-**Bail early — MANDATORY:**
-If after 2 tool calls you haven't found what the user asked about, STOP searching and respond with what you know. Say "не нашёл X в [sources checked]" and suggest where the user might look.
-
-**When a source is unavailable:**
-If a tool returns an error (401, 403, timeout), report it and offer alternatives.`
+When a skill provides specific tool guidance, follow it. Otherwise:
+- Call the actual tool for real-time data. Never fabricate data.
+- Retry once on failure. If still failing, tell the user which service is unavailable.
+- **Bail early:** after 2 failed tool calls, stop and respond with what you found.`
 }

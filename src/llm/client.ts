@@ -6,8 +6,12 @@ import { sendHealthAlert } from '../health/alerter.js'
 
 const MODEL = 'sonnet'
 const CLAUDE_TIMEOUT_MS = 180_000
-/** Max agentic turns for MCP tool calls — Claude needs multiple turns to call tools and format results */
-const MCP_MAX_TURNS = 8
+/**
+ * Max agentic turns for MCP tool calls.
+ * Claude needs at minimum 2 turns per tool (call + result), so 4 allows ~2 tool calls.
+ * Reduced from 8 to cap worst-case cost per query (~$0.20 vs $0.55).
+ */
+const MCP_MAX_TURNS = 4
 
 export interface UsageMetrics {
   inputTokens: number
