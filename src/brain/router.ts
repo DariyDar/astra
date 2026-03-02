@@ -12,6 +12,9 @@ import type { ShortTermMemory } from '../memory/short-term.js'
 import type { StoredMessage } from '../memory/types.js'
 import type { NotificationPreferences } from '../notifications/preferences.js'
 import type { UrgencyLevel } from '../notifications/urgency.js'
+import { SkillEngine } from '../skills/engine.js'
+import type { SkillEngineResult } from '../skills/engine.js'
+import type { SkillRegistry } from '../skills/registry.js'
 import { buildRecentContext } from './context-builder.js'
 import { detectLanguage } from './language.js'
 import { buildSystemPrompt } from './system-prompt.js'
@@ -41,6 +44,8 @@ interface MessageRouterConfig {
   preferences?: NotificationPreferences
   /** Whether to enable MCP memory tools for Claude (requires MCP server running on port 3100) */
   mcpEnabled?: boolean
+  /** Skill registry for dynamic skill matching and execution */
+  skillRegistry?: SkillRegistry
 }
 
 /**
@@ -58,6 +63,7 @@ export class MessageRouter {
   private readonly adapters: ChannelAdapter[]
   private readonly preferences?: NotificationPreferences
   private readonly mcpEnabled: boolean
+  private readonly skillEngine?: SkillEngine
 
   constructor(config: MessageRouterConfig) {
     this.shortTerm = config.shortTerm
@@ -66,6 +72,7 @@ export class MessageRouter {
     this.adapters = config.adapters
     this.preferences = config.preferences
     this.mcpEnabled = config.mcpEnabled ?? false
+    this.skillEngine = config.skillRegistry ? new SkillEngine(config.skillRegistry) : undefined
   }
 
   /**
@@ -102,17 +109,30 @@ export class MessageRouter {
     // 2. Build compact recent context from Redis (current session only)
     const recentContext = await buildRecentContext(message, this.shortTerm)
 
-    // 3. Build system prompt with channelId and tool guidance
-    const systemPrompt = buildSystemPrompt(language, message.channelId)
-    const systemWithContext = recentContext
-      ? `${systemPrompt}\n\n---\n\n${recentContext}`
-      : systemPrompt
+    // 3. Run through skill engine (match + preProcess)
+    const skillResult: SkillEngineResult = this.skillEngine
+      ? await this.skillEngine.process(message, language)
+      : { prompt: message.text }
 
-    // 4. Call Claude (with MCP tools if enabled)
+    if (skillResult.skill) {
+      requestLogger.info({ skill: skillResult.skill.name }, 'Skill matched for message')
+    }
+
+    // 4. Build system prompt with channelId, skill catalog, and skill-specific extra
+    const systemPrompt = buildSystemPrompt(language, message.channelId)
+    let fullSystem = systemPrompt
+    if (skillResult.systemPromptExtra) {
+      fullSystem += `\n\n${skillResult.systemPromptExtra}`
+    }
+    if (recentContext) {
+      fullSystem += `\n\n---\n\n${recentContext}`
+    }
+
+    // 5. Call Claude (with MCP tools if enabled)
     const response = await callClaude(
-      message.text,
+      skillResult.prompt,
       {
-        system: systemWithContext,
+        system: fullSystem,
         ...(this.mcpEnabled ? { mcpConfigPath: MCP_CONFIG_PATH } : {}),
       },
       requestLogger,
@@ -123,8 +143,17 @@ export class MessageRouter {
       'Claude response received',
     )
 
-    // 4b. Process preference updates from Claude's response (if preferences wired)
+    // 5b. Run skill post-processing if skill was matched
     let responseText = response.text
+    if (this.skillEngine && skillResult.skill) {
+      responseText = await this.skillEngine.postProcess(
+        responseText,
+        skillResult.skill,
+        { message, language, channelId: message.channelId },
+      )
+    }
+
+    // 5c. Process preference updates from Claude's response (if preferences wired)
     if (this.preferences) {
       responseText = await this.processPreferenceUpdates(
         responseText,
@@ -133,7 +162,7 @@ export class MessageRouter {
       )
     }
 
-    // 5. Store user message in all three tiers
+    // 6. Store user message in all three tiers
     const userStored: StoredMessage = {
       id: message.id,
       channelType: message.channelType,
@@ -147,7 +176,7 @@ export class MessageRouter {
 
     await this.storeMessage(userStored, requestLogger)
 
-    // 6. Store assistant response in all three tiers
+    // 7. Store assistant response in all three tiers
     const assistantStored: StoredMessage = {
       id: `${message.id}-response`,
       channelType: message.channelType,
@@ -161,7 +190,7 @@ export class MessageRouter {
 
     await this.storeMessage(assistantStored, requestLogger)
 
-    // 7. Write audit entry for the exchange
+    // 8. Write audit entry for the exchange
     await writeAuditEntry({
       correlationId,
       userId: message.userId,
@@ -173,11 +202,12 @@ export class MessageRouter {
         responseTextLength: responseText.length,
         channelId: message.channelId,
         mcpEnabled: this.mcpEnabled,
+        ...(skillResult.skill ? { skill: skillResult.skill.name } : {}),
       },
       status: 'success',
     })
 
-    // 8. Return outbound message
+    // 9. Return outbound message
     // Pass through inbound metadata (e.g. Slack placeholderTs for typing indicator update)
     return {
       channelType: message.channelType,

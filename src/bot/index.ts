@@ -24,6 +24,7 @@ import { NotificationDispatcher } from '../notifications/dispatcher.js'
 import { DigestScheduler } from '../notifications/digest.js'
 import { startMcpServer } from '../mcp/server.js'
 import { generateMcpConfig } from '../mcp/config-generator.js'
+import { SkillRegistry } from '../skills/registry.js'
 import { ClickUpDeadlineMonitor } from '../integrations/monitors/clickup-deadlines.js'
 
 // --- Create core instances ---
@@ -104,7 +105,10 @@ const mcpConfigPath = resolve(
 )
 generateMcpConfig(mcpConfigPath)
 
-// --- Message router (with notification preferences and MCP memory tools) ---
+// --- Skill registry (auto-discovers skill modules from src/skills/) ---
+const skillRegistry = new SkillRegistry()
+
+// --- Message router (with notification preferences, MCP memory tools, and skills) ---
 const messageRouter = new MessageRouter({
   shortTerm: shortTermMemory,
   mediumTerm: mediumTermMemory,
@@ -112,6 +116,7 @@ const messageRouter = new MessageRouter({
   adapters,
   preferences: notificationPreferences,
   mcpEnabled: true,
+  skillRegistry,
 })
 
 // --- MCP server handle (for graceful shutdown) ---
@@ -291,6 +296,9 @@ async function startup(): Promise<void> {
   } catch (error) {
     logger.warn({ error }, 'MCP server failed to start, memory tools unavailable')
   }
+
+  // 4b. Load skill modules (auto-discovers from src/skills/)
+  await skillRegistry.loadSkills()
 
   // 5. Start health checker
   healthChecker.startPeriodicChecks(60_000)
