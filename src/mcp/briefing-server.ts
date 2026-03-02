@@ -52,7 +52,7 @@ function log(msg: string): void {
 
 type Source = 'slack' | 'gmail' | 'calendar' | 'clickup'
 type QueryType = 'recent' | 'digest' | 'search' | 'unread'
-type FieldName = 'author' | 'date' | 'text' | 'text_preview' | 'subject' | 'links' | 'thread_info' | 'status' | 'assignee' | 'due_date' | 'channel' | 'account'
+type FieldName = 'author' | 'date' | 'text' | 'text_preview' | 'subject' | 'links' | 'thread_info' | 'status' | 'assignee' | 'due_date' | 'channel' | 'account' | 'list'
 
 interface BriefingRequest {
   sources: Source[]
@@ -60,6 +60,8 @@ interface BriefingRequest {
   period?: string        // "today", "last_week", "last_3_days", or ISO date range "2026-01-01/2026-01-20"
   search_term?: string   // for query_type "search"
   slack_channels?: string[]  // specific channels (default: all active)
+  clickup_list_names?: string[]  // specific ClickUp lists/projects by name (fuzzy matched)
+  include_closed?: boolean       // include closed/completed tasks (default: false)
   limit_per_source?: number  // max items per source (default: 10)
   fields?: FieldName[]       // which fields to include (default: all)
 }
@@ -550,6 +552,92 @@ async function fetchCalendarAccount(
   }))
 }
 
+// ── ClickUp list resolution ──
+
+interface ClickUpList {
+  id: string
+  name: string
+  folderName?: string
+  spaceName?: string
+}
+
+/** Cached ClickUp lists. Refreshed at most once per 10 minutes. */
+let clickUpListCache: ClickUpList[] = []
+let clickUpListCacheTs = 0
+const CLICKUP_CACHE_TTL_MS = 10 * 60_000
+
+async function resolveClickUpLists(headers: Record<string, string>, teamId: string): Promise<ClickUpList[]> {
+  if (Date.now() - clickUpListCacheTs < CLICKUP_CACHE_TTL_MS && clickUpListCache.length > 0) {
+    return clickUpListCache
+  }
+
+  const lists: ClickUpList[] = []
+
+  // Get all spaces
+  const spacesResp = await fetch(
+    `https://api.clickup.com/api/v2/team/${teamId}/space?archived=false`,
+    { headers, signal: AbortSignal.timeout(15_000) },
+  )
+  const spacesData = await jsonOrThrow<{ spaces?: Array<{ id: string; name: string }> }>(spacesResp, 'ClickUp spaces')
+
+  // For each space, get folders and folderless lists in parallel
+  const spaceResults = await Promise.allSettled(
+    (spacesData.spaces ?? []).map(async (space) => {
+      const [foldersResp, listsResp] = await Promise.all([
+        fetch(`https://api.clickup.com/api/v2/space/${space.id}/folder?archived=false`, { headers, signal: AbortSignal.timeout(15_000) }),
+        fetch(`https://api.clickup.com/api/v2/space/${space.id}/list?archived=false`, { headers, signal: AbortSignal.timeout(15_000) }),
+      ])
+
+      const foldersData = await jsonOrThrow<{ folders?: Array<{ id: string; name: string; lists?: Array<{ id: string; name: string }> }> }>(foldersResp, `ClickUp folders (${space.name})`)
+      const listsData = await jsonOrThrow<{ lists?: Array<{ id: string; name: string }> }>(listsResp, `ClickUp lists (${space.name})`)
+
+      const spaceLists: ClickUpList[] = []
+
+      // Folderless lists
+      for (const list of listsData.lists ?? []) {
+        spaceLists.push({ id: list.id, name: list.name, spaceName: space.name })
+      }
+
+      // Lists inside folders
+      for (const folder of foldersData.folders ?? []) {
+        for (const list of folder.lists ?? []) {
+          spaceLists.push({ id: list.id, name: list.name, folderName: folder.name, spaceName: space.name })
+        }
+      }
+
+      return spaceLists
+    }),
+  )
+
+  for (const r of spaceResults) {
+    if (r.status === 'fulfilled') lists.push(...r.value)
+  }
+
+  clickUpListCache = lists
+  clickUpListCacheTs = Date.now()
+  log(`ClickUp list cache refreshed: ${lists.length} lists`)
+  return lists
+}
+
+/** Fuzzy-match list names: case-insensitive substring match against list name, folder name, or space name. */
+function matchClickUpLists(allLists: ClickUpList[], names: string[]): ClickUpList[] {
+  const matched: ClickUpList[] = []
+  for (const name of names) {
+    const term = name.toLowerCase()
+    for (const list of allLists) {
+      if (matched.some(m => m.id === list.id)) continue
+      if (
+        list.name.toLowerCase().includes(term) ||
+        (list.folderName?.toLowerCase().includes(term) ?? false) ||
+        (list.spaceName?.toLowerCase().includes(term) ?? false)
+      ) {
+        matched.push(list)
+      }
+    }
+  }
+  return matched
+}
+
 async function fetchClickUp(
   req: BriefingRequest,
   period: { after: Date; before: Date },
@@ -560,12 +648,57 @@ async function fetchClickUp(
 
   const headers = { Authorization: apiKey }
   const limit = req.limit_per_source ?? 10
+  const includeClosed = req.include_closed ? 'true' : 'false'
 
+  // If specific lists requested, resolve them and query per-list
+  if (req.clickup_list_names && req.clickup_list_names.length > 0) {
+    const allLists = await resolveClickUpLists(headers, teamId)
+    const matched = matchClickUpLists(allLists, req.clickup_list_names)
+    if (matched.length === 0) {
+      log(`ClickUp: no lists matched for ${JSON.stringify(req.clickup_list_names)}. Available: ${allLists.map(l => l.name).join(', ')}`)
+      throw new Error(`No ClickUp lists found matching: ${req.clickup_list_names.join(', ')}. Available lists: ${allLists.slice(0, 20).map(l => l.name).join(', ')}`)
+    }
+
+    log(`ClickUp: matched lists: ${matched.map(l => `${l.name} (${l.id})`).join(', ')}`)
+
+    // Fetch tasks from each matched list in parallel
+    const listResults = await Promise.allSettled(
+      matched.map(async (list) => {
+        const params = new URLSearchParams({
+          include_closed: includeClosed,
+          subtasks: 'true',
+        })
+        const resp = await fetch(
+          `https://api.clickup.com/api/v2/list/${list.id}/task?${params}`,
+          { headers, signal: AbortSignal.timeout(15_000) },
+        )
+        const data = await jsonOrThrow<{ tasks?: Array<Record<string, unknown>> }>(resp, `ClickUp list ${list.name}`)
+        return (data.tasks ?? []).map(t => ({ ...mapClickUpTask(t), list: list.name }))
+      }),
+    )
+
+    let items: BriefingItem[] = []
+    for (const r of listResults) {
+      if (r.status === 'fulfilled') items.push(...r.value)
+    }
+
+    // Apply search_term filter if also provided
+    if (req.search_term) {
+      const term = req.search_term.toLowerCase()
+      items = items.filter(t =>
+        ((t.subject as string) ?? '').toLowerCase().includes(term) ||
+        ((t.text_preview as string) ?? '').toLowerCase().includes(term),
+      )
+    }
+
+    return items.slice(0, limit)
+  }
+
+  // Search by term across entire workspace
   if (req.search_term) {
-    // ClickUp task list endpoint has no full-text search — fetch page 0 and filter client-side
     const resp = await fetch(
       `https://api.clickup.com/api/v2/team/${teamId}/task?${new URLSearchParams({
-        include_closed: 'false',
+        include_closed: includeClosed,
         subtasks: 'true',
         page: '0',
       })}`,
@@ -573,7 +706,6 @@ async function fetchClickUp(
     )
     const data = await jsonOrThrow<{ tasks?: Array<Record<string, unknown>> }>(resp, 'ClickUp search')
 
-    // Filter by search term client-side (ClickUp task list endpoint has no full-text search param)
     const term = req.search_term.toLowerCase()
     const filtered = (data.tasks ?? []).filter(t =>
       ((t.name as string) ?? '').toLowerCase().includes(term) ||
@@ -586,7 +718,7 @@ async function fetchClickUp(
   // For "recent" / "digest" — fetch tasks with due dates in period
   const resp = await fetch(
     `https://api.clickup.com/api/v2/team/${teamId}/task?${new URLSearchParams({
-      include_closed: 'false',
+      include_closed: includeClosed,
       subtasks: 'true',
       due_date_gt: String(period.after.getTime()),
       due_date_lt: String(period.before.getTime()),
@@ -602,6 +734,7 @@ async function fetchClickUp(
 // ── Helpers ──
 
 function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
+  const listInfo = t.list as { name?: string } | undefined
   return {
     source: 'clickup' as Source,
     subject: (t.name as string) ?? '',
@@ -610,6 +743,7 @@ function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
     due_date: t.due_date ? new Date(parseInt(t.due_date as string)).toISOString() : '',
     text_preview: truncate((t.description as string) ?? '', 200),
     links: t.url ? [t.url as string] : [],
+    list: listInfo?.name ?? '',
   }
 }
 
@@ -723,6 +857,16 @@ period options: "today", "yesterday", "last_3_days", "last_week", "last_month", 
         items: { type: 'string' as const },
         description: 'Specific Slack channels to query (by name). If omitted, queries top 5 active channels.',
       },
+      clickup_list_names: {
+        type: 'array' as const,
+        items: { type: 'string' as const },
+        description: 'Specific ClickUp lists/projects to query (fuzzy-matched by name against list, folder, or space names). Example: ["Ohbibi Creatives"]',
+      },
+      include_closed: {
+        type: 'boolean' as const,
+        description: 'Include closed/completed tasks in ClickUp results (default: false). Set to true when checking task completion status.',
+        default: false,
+      },
       limit_per_source: {
         type: 'number' as const,
         description: 'Max items per source (default 10)',
@@ -732,7 +876,7 @@ period options: "today", "yesterday", "last_3_days", "last_week", "last_month", 
         type: 'array' as const,
         items: {
           type: 'string' as const,
-          enum: ['author', 'date', 'text', 'text_preview', 'subject', 'links', 'thread_info', 'status', 'assignee', 'due_date', 'channel', 'account'],
+          enum: ['author', 'date', 'text', 'text_preview', 'subject', 'links', 'thread_info', 'status', 'assignee', 'due_date', 'channel', 'account', 'list'],
         },
         description: 'Which fields to include in results. Omit for all fields.',
       },
@@ -801,6 +945,8 @@ async function main(): Promise<void> {
           period: (args.period as string) ?? 'today',
           search_term: args.search_term as string | undefined,
           slack_channels: args.slack_channels as string[] | undefined,
+          clickup_list_names: args.clickup_list_names as string[] | undefined,
+          include_closed: (args.include_closed as boolean) ?? false,
           limit_per_source: Math.max(1, Math.min(rawLimit, 50)),
           fields: args.fields as FieldName[] | undefined,
         })
@@ -813,7 +959,7 @@ async function main(): Promise<void> {
           period: (args.period as string) ?? 'last_month',
           search_term: args.search_term as string,
           limit_per_source: searchLimit,
-          fields: ['author', 'date', 'subject', 'text_preview', 'channel', 'status', 'links', 'account'],
+          fields: ['author', 'date', 'subject', 'text_preview', 'channel', 'status', 'links', 'account', 'list'],
         })
       } else {
         throw new Error(`Unknown tool: ${toolName}`)

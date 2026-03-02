@@ -8,10 +8,10 @@ const MODEL = 'sonnet'
 const CLAUDE_TIMEOUT_MS = 180_000
 /**
  * Max agentic turns for MCP tool calls.
- * Claude needs at minimum 2 turns per tool (call + result), so 4 allows ~2 tool calls.
- * Reduced from 8 to cap worst-case cost per query (~$0.20 vs $0.55).
+ * Each tool call consumes ~2 turns (request + result), so 10 allows ~5 tool calls.
+ * Enough for complex multi-source queries while bail-early prompt keeps simple queries lean.
  */
-const MCP_MAX_TURNS = 4
+const MCP_MAX_TURNS = 10
 
 export interface UsageMetrics {
   inputTokens: number
