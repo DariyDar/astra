@@ -82,9 +82,9 @@ jobs:
             pm2 save
           DEPLOY
 
-      - name: Sync env vars
+      - name: Migrate old env vars
         run: |
-          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << ENVEOF
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'MIGRATE'
             cd /home/clawdbot/personal-assistant
 
             # Ensure NODE_ENV=production
@@ -111,6 +111,12 @@ jobs:
               OLD_VAL=$(grep '^SLACK_TEAM_ID=' .env | cut -d= -f2-)
               [ -n "$OLD_VAL" ] && echo "SLACK_AC_TEAM_ID=$OLD_VAL" >> .env
             }
+          MIGRATE
+
+      - name: Sync env vars
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << ENVEOF
+            cd /home/clawdbot/personal-assistant
 
             # ClickUp integration
             grep -q '^CLICKUP_API_KEY=' .env || echo 'CLICKUP_API_KEY=' >> .env
