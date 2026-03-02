@@ -169,7 +169,7 @@ class SlackClient {
   async getChannels(limit = 1000, cursor) {
     const params = new URLSearchParams({
       types: 'public_channel,private_channel',
-      exclude_archived: 'true',
+      exclude_archived: 'false',
       limit: Math.min(limit, 1000).toString(),
       team_id: process.env.SLACK_TEAM_ID,
     })
@@ -302,7 +302,7 @@ class SlackClient {
     do {
       const params = new URLSearchParams({
         types: 'public_channel,private_channel',
-        exclude_archived: 'true',
+        exclude_archived: 'false',
         limit: '1000',
         team_id: process.env.SLACK_TEAM_ID,
       })

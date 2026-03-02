@@ -7,15 +7,25 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().length(64, 'Must be 32 bytes hex-encoded'),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TELEGRAM_ADMIN_CHAT_ID: z.string().min(1),
-  SLACK_BOT_TOKEN: z.string().optional(),
-  SLACK_APP_TOKEN: z.string().optional(),
-  SLACK_USER_TOKEN: z.string().optional(),
-  SLACK_ADMIN_USER_ID: z.string().optional(),
-  SLACK_TEAM_ID: z.string().optional(),
+  // Slack — AstroCat workspace
+  SLACK_AC_BOT_TOKEN: z.string().optional(),
+  SLACK_AC_APP_TOKEN: z.string().optional(),
+  SLACK_AC_USER_TOKEN: z.string().optional(),
+  SLACK_AC_ADMIN_USER_ID: z.string().optional(),
+  SLACK_AC_TEAM_ID: z.string().optional(),
+  // Slack — Highground workspace
+  SLACK_HG_BOT_TOKEN: z.string().optional(),
+  SLACK_HG_APP_TOKEN: z.string().optional(),
+  SLACK_HG_USER_TOKEN: z.string().optional(),
+  SLACK_HG_ADMIN_USER_ID: z.string().optional(),
+  SLACK_HG_TEAM_ID: z.string().optional(),
   CLICKUP_API_KEY: z.string().optional(),
   CLICKUP_TEAM_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
+  // JSON array of Google accounts: '["dariy@astrocat.co","dshatskikh@highground.games"]'
+  GOOGLE_ACCOUNTS: z.string().optional(),
+  NOTION_TOKEN: z.string().optional(),
   QDRANT_URL: z.string().url().default('http://localhost:6333'),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])

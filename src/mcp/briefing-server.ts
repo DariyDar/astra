@@ -52,7 +52,7 @@ function log(msg: string): void {
 
 type Source = 'slack' | 'gmail' | 'calendar' | 'clickup'
 type QueryType = 'recent' | 'digest' | 'search' | 'unread'
-type FieldName = 'author' | 'date' | 'text' | 'text_preview' | 'subject' | 'links' | 'thread_info' | 'status' | 'assignee' | 'due_date' | 'channel'
+type FieldName = 'author' | 'date' | 'text' | 'text_preview' | 'subject' | 'links' | 'thread_info' | 'status' | 'assignee' | 'due_date' | 'channel' | 'account'
 
 interface BriefingRequest {
   sources: Source[]
@@ -170,20 +170,38 @@ function loadGoogleTokens(account: string): GoogleTokens | null {
   }
 }
 
-const GOOGLE_ACCOUNT = process.env.GOOGLE_ACCOUNT ?? 'dariy@astrocat.co'
-if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(GOOGLE_ACCOUNT)) {
-  throw new Error(`Invalid GOOGLE_ACCOUNT format: "${GOOGLE_ACCOUNT}"`)
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
+function parseGoogleAccounts(): string[] {
+  const raw = process.env.GOOGLE_ACCOUNTS
+  if (!raw) return ['dariy@astrocat.co']
+  try {
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed) || !parsed.every(e => typeof e === 'string')) {
+      log('WARN: GOOGLE_ACCOUNTS is not a string array, using default')
+      return ['dariy@astrocat.co']
+    }
+    for (const account of parsed) {
+      if (!EMAIL_RE.test(account)) {
+        log(`WARN: Invalid GOOGLE_ACCOUNTS entry: "${account}", skipping`)
+      }
+    }
+    return parsed.filter((a: string) => EMAIL_RE.test(a))
+  } catch (e) {
+    log(`WARN: GOOGLE_ACCOUNTS is not valid JSON: ${e}, using default`)
+    return ['dariy@astrocat.co']
+  }
 }
+
+const GOOGLE_ACCOUNTS = parseGoogleAccounts()
 
 const TOKEN_EXPIRY_BUFFER_MS = 5 * 60_000 // refresh 5 min before actual expiry
 
-async function refreshGoogleToken(tokens: GoogleTokens): Promise<string> {
-  // Check if token is still valid (with buffer to avoid mid-request expiry)
+async function refreshGoogleToken(tokens: GoogleTokens, account: string): Promise<string> {
   if (new Date(tokens.expiry).getTime() - TOKEN_EXPIRY_BUFFER_MS > Date.now()) {
     return tokens.token
   }
 
-  // Refresh
   const resp = await fetch(tokens.token_uri, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -197,32 +215,40 @@ async function refreshGoogleToken(tokens: GoogleTokens): Promise<string> {
   })
   const data = await jsonOrThrow<{ access_token?: string; error?: string }>(resp, 'Google token refresh')
   if (!data.access_token) {
-    throw new Error(`Google token refresh failed: ${data.error ?? 'no access_token'}`)
+    throw new Error(`Google token refresh failed for ${account}: ${data.error ?? 'no access_token'}`)
   }
-  // Update in-memory + persist to disk so subsequent spawns reuse the fresh token
   tokens.token = data.access_token
   tokens.expiry = new Date(Date.now() + 3500_000).toISOString()
   try {
-    const credPath = resolve(homedir(), '.google_workspace_mcp', 'credentials', `${GOOGLE_ACCOUNT}.json`)
+    const credPath = resolve(homedir(), '.google_workspace_mcp', 'credentials', `${account}.json`)
     const fullData = JSON.parse(readFileSync(credPath, 'utf-8'))
     fullData.token = tokens.token
     fullData.expiry = tokens.expiry
-    // Atomic write: temp file + rename to avoid corruption on crash
     const tmpPath = credPath + '.tmp'
     writeFileSync(tmpPath, JSON.stringify(fullData, null, 2), 'utf-8')
     renameSync(tmpPath, credPath)
-    log('Google token refreshed and persisted to disk')
+    log(`Google token refreshed for ${account}`)
   } catch (e) {
-    log(`WARN: could not persist refreshed Google token: ${e}`)
+    log(`WARN: could not persist refreshed Google token for ${account}: ${e}`)
   }
   return data.access_token
 }
 
-/** Pre-resolve Google access token once (avoids duplicate refresh when both Gmail + Calendar requested). */
-async function resolveGoogleToken(): Promise<string | null> {
-  const tokens = loadGoogleTokens(GOOGLE_ACCOUNT)
-  if (!tokens) return null
-  return refreshGoogleToken(tokens)
+/** Pre-resolve Google access tokens for all configured accounts. */
+async function resolveGoogleTokens(): Promise<Map<string, string>> {
+  const tokenMap = new Map<string, string>()
+  for (const account of GOOGLE_ACCOUNTS) {
+    const tokens = loadGoogleTokens(account)
+    if (tokens) {
+      try {
+        const accessToken = await refreshGoogleToken(tokens, account)
+        tokenMap.set(account, accessToken)
+      } catch (e) {
+        log(`WARN: failed to resolve token for ${account}: ${e}`)
+      }
+    }
+  }
+  return tokenMap
 }
 
 /** Parse JSON from a fetch response, throwing a clear error on non-OK status. */
@@ -234,24 +260,60 @@ async function jsonOrThrow<T>(resp: Response, label: string): Promise<T> {
   return resp.json() as Promise<T>
 }
 
+// ── Slack multi-workspace ──
+
+interface SlackWorkspace {
+  label: string
+  token: string
+  teamId: string
+}
+
+function buildSlackWorkspaces(): SlackWorkspace[] {
+  const workspaces: SlackWorkspace[] = []
+  for (const label of ['AC', 'HG']) {
+    const token = process.env[`SLACK_${label}_USER_TOKEN`] ?? process.env[`SLACK_${label}_BOT_TOKEN`]
+    const teamId = process.env[`SLACK_${label}_TEAM_ID`]
+    if (token && teamId) {
+      workspaces.push({ label: label.toLowerCase(), token, teamId })
+    }
+  }
+  return workspaces
+}
+
+const SLACK_WORKSPACES = buildSlackWorkspaces()
+
 // ── Source fetchers ──
 
 async function fetchSlack(
   req: BriefingRequest,
   period: { after: Date; before: Date },
 ): Promise<BriefingItem[]> {
-  const token = process.env.SLACK_USER_TOKEN ?? process.env.SLACK_BOT_TOKEN
-  const teamId = process.env.SLACK_TEAM_ID
-  if (!token || !teamId) throw new Error('Slack not configured')
+  if (SLACK_WORKSPACES.length === 0) throw new Error('Slack not configured')
 
-  const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+  const results = await Promise.allSettled(
+    SLACK_WORKSPACES.map(ws => fetchSlackWorkspace(req, period, ws)),
+  )
 
-  // Determine which channels to query
+  let items: BriefingItem[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+
+  const limit = req.limit_per_source ?? 10
+  return items.slice(0, limit)
+}
+
+async function fetchSlackWorkspace(
+  req: BriefingRequest,
+  period: { after: Date; before: Date },
+  ws: SlackWorkspace,
+): Promise<BriefingItem[]> {
+  const headers = { Authorization: `Bearer ${ws.token}`, 'Content-Type': 'application/json' }
+
   let channelIds: { id: string; name: string }[] = []
 
   if (req.slack_channels && req.slack_channels.length > 0) {
-    // Resolve names to IDs
-    const allChannels = await fetchSlackChannels(headers, teamId)
+    const allChannels = await fetchSlackChannels(headers, ws.teamId)
     for (const ch of req.slack_channels) {
       const found = allChannels.find(c =>
         c.name.toLowerCase() === ch.toLowerCase().replace(/^#/, '') || c.id === ch,
@@ -259,8 +321,7 @@ async function fetchSlack(
       if (found) channelIds.push(found)
     }
   } else if (req.search_term) {
-    // For search: include channels whose name matches the search term + top active channels
-    const allChannels = await fetchSlackChannels(headers, teamId)
+    const allChannels = await fetchSlackChannels(headers, ws.teamId)
     const term = req.search_term.toLowerCase()
     const nameMatches = allChannels.filter(c => c.name.toLowerCase().includes(term))
     const topActive = allChannels
@@ -269,9 +330,7 @@ async function fetchSlack(
       .slice(0, Math.max(1, 5 - nameMatches.length))
     channelIds = [...nameMatches, ...topActive]
   } else {
-    // For "recent" / "unread" without specific channels, get top active channels
-    const allChannels = await fetchSlackChannels(headers, teamId)
-    // Sort by member count (proxy for activity), take top 5
+    const allChannels = await fetchSlackChannels(headers, ws.teamId)
     channelIds = allChannels
       .sort((a, b) => (b.num_members ?? 0) - (a.num_members ?? 0))
       .slice(0, 5)
@@ -282,7 +341,6 @@ async function fetchSlack(
   const limit = req.limit_per_source ?? 10
   const perChannel = Math.max(3, Math.ceil(limit / channelIds.length))
 
-  // Fetch messages from all channels in parallel
   const results = await Promise.allSettled(
     channelIds.map(async (ch) => {
       const params = new URLSearchParams({
@@ -298,7 +356,7 @@ async function fetchSlack(
 
       return (data.messages ?? []).map(msg => ({
         source: 'slack' as Source,
-        channel: ch.name,
+        channel: `${ws.label}/${ch.name}`,
         author: msg.user ?? 'unknown',
         text: msg.text ?? '',
         text_preview: truncate(msg.text ?? '', 200),
@@ -314,7 +372,6 @@ async function fetchSlack(
     if (r.status === 'fulfilled') items.push(...r.value)
   }
 
-  // For search queries, filter messages by search term
   if (req.search_term) {
     const term = req.search_term.toLowerCase()
     items = items.filter(item =>
@@ -323,7 +380,7 @@ async function fetchSlack(
     )
   }
 
-  return items.slice(0, limit)
+  return items
 }
 
 async function fetchSlackChannels(
@@ -332,7 +389,7 @@ async function fetchSlackChannels(
 ): Promise<Array<{ id: string; name: string; num_members?: number }>> {
   const params = new URLSearchParams({
     types: 'public_channel,private_channel',
-    exclude_archived: 'true',
+    exclude_archived: 'false',
     limit: '200',
     team_id: teamId,
   })
@@ -346,14 +403,32 @@ async function fetchSlackChannels(
 async function fetchGmail(
   req: BriefingRequest,
   period: { after: Date; before: Date },
-  googleToken?: string | null,
+  googleTokens: Map<string, string>,
 ): Promise<BriefingItem[]> {
-  const accessToken = googleToken ?? await resolveGoogleToken()
-  if (!accessToken) throw new Error('Gmail: dariy@astrocat.co not authorized')
+  if (googleTokens.size === 0) throw new Error('Gmail: no Google accounts authorized')
 
+  const results = await Promise.allSettled(
+    [...googleTokens.entries()].map(([account, token]) =>
+      fetchGmailAccount(req, period, token, account),
+    ),
+  )
+
+  const items: BriefingItem[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+  const limit = req.limit_per_source ?? 10
+  return items.slice(0, limit)
+}
+
+async function fetchGmailAccount(
+  req: BriefingRequest,
+  period: { after: Date; before: Date },
+  accessToken: string,
+  account: string,
+): Promise<BriefingItem[]> {
   const headers = { Authorization: `Bearer ${accessToken}` }
 
-  // Build Gmail search query
   const queryParts: string[] = []
   if (req.query_type === 'unread') queryParts.push('is:unread')
   if (req.search_term) queryParts.push(req.search_term)
@@ -370,10 +445,9 @@ async function fetchGmail(
     `https://gmail.googleapis.com/gmail/v1/users/me/messages?${params}`,
     { headers, signal: AbortSignal.timeout(15_000) },
   )
-  const listData = await jsonOrThrow<{ messages?: Array<{ id: string }> }>(listResp, 'Gmail list')
+  const listData = await jsonOrThrow<{ messages?: Array<{ id: string }> }>(listResp, `Gmail list (${account})`)
   if (!listData.messages || listData.messages.length === 0) return []
 
-  // Fetch message metadata (not full body — saves tokens)
   const msgResults = await Promise.allSettled(
     listData.messages.slice(0, limit).map(async (msg) => {
       const msgResp = await fetch(
@@ -392,6 +466,7 @@ async function fetchGmail(
 
       return {
         source: 'gmail' as Source,
+        account,
         author: getHeader('From'),
         subject: getHeader('Subject'),
         date: getHeader('Date'),
@@ -411,11 +486,30 @@ async function fetchGmail(
 async function fetchCalendar(
   req: BriefingRequest,
   period: { after: Date; before: Date },
-  googleToken?: string | null,
+  googleTokens: Map<string, string>,
 ): Promise<BriefingItem[]> {
-  const accessToken = googleToken ?? await resolveGoogleToken()
-  if (!accessToken) throw new Error('Calendar: dariy@astrocat.co not authorized')
+  if (googleTokens.size === 0) throw new Error('Calendar: no Google accounts authorized')
 
+  const results = await Promise.allSettled(
+    [...googleTokens.entries()].map(([account, token]) =>
+      fetchCalendarAccount(req, period, token, account),
+    ),
+  )
+
+  const items: BriefingItem[] = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') items.push(...r.value)
+  }
+  const limit = req.limit_per_source ?? 10
+  return items.slice(0, limit)
+}
+
+async function fetchCalendarAccount(
+  req: BriefingRequest,
+  period: { after: Date; before: Date },
+  accessToken: string,
+  account: string,
+): Promise<BriefingItem[]> {
   const headers = { Authorization: `Bearer ${accessToken}` }
 
   const limit = req.limit_per_source ?? 10
@@ -442,10 +536,11 @@ async function fetchCalendar(
       htmlLink?: string
       status?: string
     }>
-  }>(resp, 'Calendar')
+  }>(resp, `Calendar (${account})`)
 
   return (data.items ?? []).map(event => ({
     source: 'calendar' as Source,
+    account,
     subject: event.summary ?? '(no title)',
     date: event.start?.dateTime ?? event.start?.date ?? '',
     end_date: event.end?.dateTime ?? event.end?.date ?? '',
@@ -529,14 +624,14 @@ async function executeBriefing(req: BriefingRequest): Promise<BriefingResult> {
   const startTime = Date.now()
   const period = parsePeriod(req.period)
 
-  // Pre-resolve Google token once if any Google source is requested
+  // Pre-resolve Google tokens once if any Google source is requested
   const needsGoogle = req.sources.some(s => s === 'gmail' || s === 'calendar')
-  const googleToken = needsGoogle ? await resolveGoogleToken() : null
+  const googleTokens = needsGoogle ? await resolveGoogleTokens() : new Map<string, string>()
 
   const sourceFetchers: Record<Source, () => Promise<BriefingItem[]>> = {
     slack: () => fetchSlack(req, period),
-    gmail: () => fetchGmail(req, period, googleToken),
-    calendar: () => fetchCalendar(req, period, googleToken),
+    gmail: () => fetchGmail(req, period, googleTokens),
+    calendar: () => fetchCalendar(req, period, googleTokens),
     clickup: () => fetchClickUp(req, period),
   }
 
@@ -637,7 +732,7 @@ period options: "today", "yesterday", "last_3_days", "last_week", "last_month", 
         type: 'array' as const,
         items: {
           type: 'string' as const,
-          enum: ['author', 'date', 'text', 'text_preview', 'subject', 'links', 'thread_info', 'status', 'assignee', 'due_date', 'channel'],
+          enum: ['author', 'date', 'text', 'text_preview', 'subject', 'links', 'thread_info', 'status', 'assignee', 'due_date', 'channel', 'account'],
         },
         description: 'Which fields to include in results. Omit for all fields.',
       },
@@ -718,7 +813,7 @@ async function main(): Promise<void> {
           period: (args.period as string) ?? 'last_month',
           search_term: args.search_term as string,
           limit_per_source: searchLimit,
-          fields: ['author', 'date', 'subject', 'text_preview', 'channel', 'status', 'links'],
+          fields: ['author', 'date', 'subject', 'text_preview', 'channel', 'status', 'links', 'account'],
         })
       } else {
         throw new Error(`Unknown tool: ${toolName}`)

@@ -63,25 +63,29 @@ export function generateMcpConfig(outputPath: string): void {
     logger.info('MCP: google-workspace server skipped (GOOGLE_OAUTH_CLIENT_ID or GOOGLE_OAUTH_CLIENT_SECRET not set)')
   }
 
-  // Conditionally add slack stdio server (read-only channel history)
-  // Prefer SLACK_USER_TOKEN (xoxp-) — sees all channels the user belongs to, including private.
-  // Falls back to SLACK_BOT_TOKEN (xoxb-) — only sees channels where the bot is invited.
-  const slackToken = env.SLACK_USER_TOKEN ?? env.SLACK_BOT_TOKEN
-  if (slackToken && env.SLACK_TEAM_ID) {
-    const nodePath = resolveCommand('node', ['/usr/local/bin/node', '/usr/bin/node'])
-    servers['slack'] = {
-      type: 'stdio',
-      command: nodePath,
-      args: [SLACK_SERVER_PATH],
-      env: {
-        SLACK_BOT_TOKEN: slackToken,
-        SLACK_TEAM_ID: env.SLACK_TEAM_ID,
-      },
+  // Slack MCP servers — one per workspace (AC, HG).
+  // Prefer user token (xoxp-) — sees private channels. Falls back to bot token (xoxb-).
+  const nodePath = resolveCommand('node', ['/usr/local/bin/node', '/usr/bin/node'])
+  const slackWorkspaces = [
+    { label: 'ac', token: env.SLACK_AC_USER_TOKEN ?? env.SLACK_AC_BOT_TOKEN, teamId: env.SLACK_AC_TEAM_ID },
+    { label: 'hg', token: env.SLACK_HG_USER_TOKEN ?? env.SLACK_HG_BOT_TOKEN, teamId: env.SLACK_HG_TEAM_ID },
+  ]
+  for (const ws of slackWorkspaces) {
+    if (ws.token && ws.teamId) {
+      servers[`slack-${ws.label}`] = {
+        type: 'stdio',
+        command: nodePath,
+        args: [SLACK_SERVER_PATH],
+        env: {
+          SLACK_BOT_TOKEN: ws.token,
+          SLACK_TEAM_ID: ws.teamId,
+        },
+      }
+      logger.info({ workspace: ws.label }, `MCP: slack-${ws.label} server configured`)
     }
-    const tokenType = env.SLACK_USER_TOKEN ? 'user token' : 'bot token'
-    logger.info({ tokenType }, 'MCP: slack server configured')
-  } else {
-    logger.info('MCP: slack server skipped (SLACK_BOT_TOKEN/SLACK_USER_TOKEN or SLACK_TEAM_ID not set)')
+  }
+  if (!slackWorkspaces.some(ws => ws.token && ws.teamId)) {
+    logger.info('MCP: no slack workspaces configured')
   }
 
   // Conditionally add clickup stdio server
@@ -101,6 +105,21 @@ export function generateMcpConfig(outputPath: string): void {
     logger.info('MCP: clickup server skipped (CLICKUP_API_KEY or CLICKUP_TEAM_ID not set)')
   }
 
+  // Conditionally add notion stdio server (read-only archive)
+  if (env.NOTION_TOKEN) {
+    servers['notion'] = {
+      type: 'stdio',
+      command: 'npx',
+      args: ['-y', '@notionhq/notion-mcp-server'],
+      env: {
+        NOTION_TOKEN: env.NOTION_TOKEN,
+      },
+    }
+    logger.info('MCP: notion server configured')
+  } else {
+    logger.info('MCP: notion server skipped (NOTION_TOKEN not set)')
+  }
+
   // Always add astra-briefing server (aggregated multi-source queries).
   // It reads Google tokens from disk and uses Slack/ClickUp tokens from env.
   // Needs tsx to run .ts file directly.
@@ -108,13 +127,18 @@ export function generateMcpConfig(outputPath: string): void {
   const localTsx = resolve(fileURLToPath(import.meta.url), '../../../node_modules/.bin/tsx')
   const tsxPath = resolveCommand('tsx', [localTsx, '/usr/local/bin/tsx', '/usr/bin/tsx'])
   const briefingEnv: Record<string, string> = {}
-  if (slackToken && env.SLACK_TEAM_ID) {
-    briefingEnv.SLACK_USER_TOKEN = slackToken
-    briefingEnv.SLACK_TEAM_ID = env.SLACK_TEAM_ID
+  for (const ws of slackWorkspaces) {
+    if (ws.token && ws.teamId) {
+      briefingEnv[`SLACK_${ws.label.toUpperCase()}_USER_TOKEN`] = ws.token
+      briefingEnv[`SLACK_${ws.label.toUpperCase()}_TEAM_ID`] = ws.teamId
+    }
   }
   if (env.CLICKUP_API_KEY && env.CLICKUP_TEAM_ID) {
     briefingEnv.CLICKUP_API_KEY = env.CLICKUP_API_KEY
     briefingEnv.CLICKUP_TEAM_ID = env.CLICKUP_TEAM_ID
+  }
+  if (env.GOOGLE_ACCOUNTS) {
+    briefingEnv.GOOGLE_ACCOUNTS = env.GOOGLE_ACCOUNTS
   }
   servers['astra-briefing'] = {
     type: 'stdio',

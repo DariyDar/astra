@@ -52,17 +52,29 @@ const adapters: ChannelAdapter[] = [telegramAdapter]
 const adapterMap = new Map<string, ChannelAdapter>()
 adapterMap.set('telegram', telegramAdapter)
 
-if (env.SLACK_BOT_TOKEN && env.SLACK_APP_TOKEN && env.SLACK_ADMIN_USER_ID) {
-  const slackAdapter = new SlackAdapter({
-    botToken: env.SLACK_BOT_TOKEN,
-    appToken: env.SLACK_APP_TOKEN,
-    adminUserId: env.SLACK_ADMIN_USER_ID,
+// Slack adapters — one per workspace (AC primary, HG secondary)
+if (env.SLACK_AC_BOT_TOKEN && env.SLACK_AC_APP_TOKEN && env.SLACK_AC_ADMIN_USER_ID) {
+  const slackAcAdapter = new SlackAdapter({
+    botToken: env.SLACK_AC_BOT_TOKEN,
+    appToken: env.SLACK_AC_APP_TOKEN,
+    adminUserId: env.SLACK_AC_ADMIN_USER_ID,
   })
-  adapters.push(slackAdapter)
-  adapterMap.set('slack', slackAdapter)
-  logger.info('Slack adapter configured')
-} else {
-  logger.info('Slack not configured, running Telegram-only mode')
+  adapters.push(slackAcAdapter)
+  adapterMap.set('slack', slackAcAdapter) // 'slack' key for notification compat
+  logger.info('Slack AC adapter configured')
+}
+if (env.SLACK_HG_BOT_TOKEN && env.SLACK_HG_APP_TOKEN && env.SLACK_HG_ADMIN_USER_ID) {
+  const slackHgAdapter = new SlackAdapter({
+    botToken: env.SLACK_HG_BOT_TOKEN,
+    appToken: env.SLACK_HG_APP_TOKEN,
+    adminUserId: env.SLACK_HG_ADMIN_USER_ID,
+  })
+  adapters.push(slackHgAdapter)
+  adapterMap.set('slack-hg', slackHgAdapter)
+  logger.info('Slack HG adapter configured')
+}
+if (!adapterMap.has('slack')) {
+  logger.info('No Slack workspace configured, running Telegram-only mode')
 }
 
 // --- Notification dispatcher and digest scheduler ---
@@ -71,7 +83,7 @@ const notificationDispatcher = new NotificationDispatcher({
   preferences: notificationPreferences,
   defaultChannelId: {
     telegram: env.TELEGRAM_ADMIN_CHAT_ID,
-    slack: env.SLACK_ADMIN_USER_ID,
+    slack: env.SLACK_AC_ADMIN_USER_ID,
   },
 })
 
@@ -81,7 +93,7 @@ const digestScheduler = new DigestScheduler({
   defaultUserId: env.TELEGRAM_ADMIN_CHAT_ID,
   defaultChannelId: {
     telegram: env.TELEGRAM_ADMIN_CHAT_ID,
-    slack: env.SLACK_ADMIN_USER_ID,
+    slack: env.SLACK_AC_ADMIN_USER_ID,
   },
 })
 

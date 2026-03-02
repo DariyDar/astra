@@ -90,6 +90,28 @@ jobs:
             # Ensure NODE_ENV=production
             sed -i 's/NODE_ENV=development/NODE_ENV=production/' .env
 
+            # Migrate old Slack var names to AC-prefixed (one-time)
+            grep -q '^SLACK_AC_BOT_TOKEN=' .env || {
+              OLD_VAL=$(grep '^SLACK_BOT_TOKEN=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_BOT_TOKEN=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_APP_TOKEN=' .env || {
+              OLD_VAL=$(grep '^SLACK_APP_TOKEN=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_APP_TOKEN=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_USER_TOKEN=' .env || {
+              OLD_VAL=$(grep '^SLACK_USER_TOKEN=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_USER_TOKEN=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_ADMIN_USER_ID=' .env || {
+              OLD_VAL=$(grep '^SLACK_ADMIN_USER_ID=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_ADMIN_USER_ID=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_TEAM_ID=' .env || {
+              OLD_VAL=$(grep '^SLACK_TEAM_ID=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_TEAM_ID=$OLD_VAL" >> .env
+            }
+
             # ClickUp integration
             grep -q '^CLICKUP_API_KEY=' .env || echo 'CLICKUP_API_KEY=' >> .env
             sed -i 's|^CLICKUP_API_KEY=.*|CLICKUP_API_KEY=${{ secrets.CLICKUP_API_KEY }}|' .env
@@ -103,6 +125,30 @@ jobs:
 
             grep -q '^GOOGLE_OAUTH_CLIENT_SECRET=' .env || echo 'GOOGLE_OAUTH_CLIENT_SECRET=' >> .env
             sed -i 's|^GOOGLE_OAUTH_CLIENT_SECRET=.*|GOOGLE_OAUTH_CLIENT_SECRET=${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}|' .env
+
+            # Google multi-account (JSON array — avoid sed due to special chars)
+            sed -i '/^GOOGLE_ACCOUNTS=/d' .env
+            printf 'GOOGLE_ACCOUNTS=%s\n' '${{ secrets.GOOGLE_ACCOUNTS }}' >> .env
+
+            # Slack HG workspace (AC tokens managed manually on server)
+            grep -q '^SLACK_HG_BOT_TOKEN=' .env || echo 'SLACK_HG_BOT_TOKEN=' >> .env
+            sed -i 's|^SLACK_HG_BOT_TOKEN=.*|SLACK_HG_BOT_TOKEN=${{ secrets.SLACK_HG_BOT_TOKEN }}|' .env
+
+            grep -q '^SLACK_HG_APP_TOKEN=' .env || echo 'SLACK_HG_APP_TOKEN=' >> .env
+            sed -i 's|^SLACK_HG_APP_TOKEN=.*|SLACK_HG_APP_TOKEN=${{ secrets.SLACK_HG_APP_TOKEN }}|' .env
+
+            grep -q '^SLACK_HG_USER_TOKEN=' .env || echo 'SLACK_HG_USER_TOKEN=' >> .env
+            sed -i 's|^SLACK_HG_USER_TOKEN=.*|SLACK_HG_USER_TOKEN=${{ secrets.SLACK_HG_USER_TOKEN }}|' .env
+
+            grep -q '^SLACK_HG_ADMIN_USER_ID=' .env || echo 'SLACK_HG_ADMIN_USER_ID=' >> .env
+            sed -i 's|^SLACK_HG_ADMIN_USER_ID=.*|SLACK_HG_ADMIN_USER_ID=${{ secrets.SLACK_HG_ADMIN_USER_ID }}|' .env
+
+            grep -q '^SLACK_HG_TEAM_ID=' .env || echo 'SLACK_HG_TEAM_ID=' >> .env
+            sed -i 's|^SLACK_HG_TEAM_ID=.*|SLACK_HG_TEAM_ID=${{ secrets.SLACK_HG_TEAM_ID }}|' .env
+
+            # Notion integration
+            grep -q '^NOTION_TOKEN=' .env || echo 'NOTION_TOKEN=' >> .env
+            sed -i 's|^NOTION_TOKEN=.*|NOTION_TOKEN=${{ secrets.NOTION_TOKEN }}|' .env
 
             # Restart to pick up new env
             pm2 restart astra-bot --update-env
