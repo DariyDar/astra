@@ -58,7 +58,11 @@ export class SkillRegistry {
   /**
    * Find the best matching skill for a message text.
    * Uses weighted scoring: multi-word triggers score higher than single-word.
-   * Requires a minimum score of 2 to avoid false positives on common words.
+   * Minimum score of 1 — any matching trigger activates the skill.
+   *
+   * Single-word triggers use word-boundary matching to avoid substring false positives
+   * (e.g. "канал" should not match "канализация"). Multi-word triggers use substring
+   * matching since they are already specific enough.
    */
   match(text: string): Skill | null {
     const lower = text.toLowerCase()
@@ -68,12 +72,22 @@ export class SkillRegistry {
     for (const skill of this.skills) {
       let score = 0
       for (const trigger of skill.triggers) {
-        if (lower.includes(trigger)) {
-          // Multi-word triggers are more specific → weight by word count
-          score += trigger.split(/\s+/).length
+        const isMultiWord = trigger.includes(' ')
+        if (isMultiWord) {
+          // Multi-word triggers: substring match is specific enough
+          if (lower.includes(trigger)) {
+            score += trigger.split(/\s+/).length
+          }
+        } else {
+          // Single-word triggers: word-boundary match to avoid substring collisions
+          const escaped = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          const re = new RegExp(`(?<![a-zA-Zа-яёА-ЯЁ])${escaped}(?![a-zA-Zа-яёА-ЯЁ])`)
+          if (re.test(lower)) {
+            score += 1
+          }
         }
       }
-      if (score > bestScore && score >= 2) {
+      if (score > bestScore && score >= 1) {
         bestScore = score
         bestSkill = skill
       }

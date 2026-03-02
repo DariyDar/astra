@@ -17,6 +17,7 @@ const briefingSkill: Skill = {
     'задачи', 'задач', 'tasks', 'проект', 'project',
     'выполнены', 'сделано', 'статус', 'status',
     'кликап', 'clickup',
+    'знаешь', 'расскажи', 'инфо', 'info',
   ],
 
   async preProcess(ctx) {
@@ -46,6 +47,12 @@ When the user asks about a specific project (e.g. "задачи по Ohbibi Crea
 3. Set \`include_closed=true\` when checking completion status — otherwise completed tasks won't appear
 4. The briefing tool fuzzy-matches list names against ClickUp lists, folders, AND spaces — so "Ohbibi" will match a list named "Ohbibi Creatives"
 5. Combine Slack discussions + ClickUp task statuses to give a complete picture
+
+**Knowledge queries (what do you know about X?):**
+When user asks about a project, person, or topic:
+1. Start with search_everywhere(search_term="Bow") for a broad scan
+2. If you need more detail: briefing(sources=["slack","clickup"], slack_channels=["bow"], clickup_list_names=["Bow"])
+- Example: "Что знаешь о Bow?" → search_everywhere(search_term="Bow"), then briefing if needed
 
 **Keyword search:** \`search_everywhere(search_term="Симфония")\` — searches across all sources.
 
