@@ -1,17 +1,15 @@
 import { resolveGoogleTokens } from '../../mcp/briefing/google-auth.js'
 import { jsonOrThrow } from '../../mcp/briefing/utils.js'
-import { splitText } from '../chunker.js'
 import type { KBChunkInput } from '../types.js'
 import type { SourceAdapter, RawItem } from './types.js'
 import { logger } from '../../logging/logger.js'
 
 const FILES_PER_PAGE = 100
 
-// Google MIME types that can be exported as text
-const EXPORTABLE_MIME_TYPES: Record<string, string> = {
-  'application/vnd.google-apps.document': 'text/plain',
-  'application/vnd.google-apps.spreadsheet': 'text/csv',
-  'application/vnd.google-apps.presentation': 'text/plain',
+const MIME_LABELS: Record<string, string> = {
+  'application/vnd.google-apps.document': 'Google Doc',
+  'application/vnd.google-apps.spreadsheet': 'Google Sheet',
+  'application/vnd.google-apps.presentation': 'Google Slides',
 }
 
 interface DriveFile {
@@ -22,7 +20,9 @@ interface DriveFile {
   owners?: Array<{ displayName: string; emailAddress: string }>
 }
 
-/** Creates one DriveIngestionAdapter per Google account. */
+/** Creates one DriveIngestionAdapter per Google account.
+ *  Indexes file metadata only (name, type, owner, date) — one chunk per file.
+ *  Full content is fetched on-demand when the user asks to "go deeper". */
 export async function createDriveAdapters(): Promise<SourceAdapter[]> {
   const tokens = await resolveGoogleTokens()
   if (tokens.size === 0) return []
@@ -38,9 +38,9 @@ export async function createDriveAdapters(): Promise<SourceAdapter[]> {
 
       const headers = { Authorization: `Bearer ${accessToken}` }
 
-      // Query: Google Docs/Sheets/Presentations modified since watermark
+      const mimeTypes = Object.keys(MIME_LABELS)
       const qParts = [
-        `(${Object.keys(EXPORTABLE_MIME_TYPES).map((m) => `mimeType='${m}'`).join(' or ')})`,
+        `(${mimeTypes.map((m) => `mimeType='${m}'`).join(' or ')})`,
         'trashed=false',
       ]
       if (watermark) {
@@ -67,40 +67,24 @@ export async function createDriveAdapters(): Promise<SourceAdapter[]> {
         const data = await jsonOrThrow<{ files?: DriveFile[]; nextPageToken?: string }>(resp, 'Drive files')
 
         for (const file of data.files ?? []) {
-          try {
-            const exportMime = EXPORTABLE_MIME_TYPES[file.mimeType]
-            if (!exportMime) continue
+          const typeLabel = MIME_LABELS[file.mimeType] ?? file.mimeType
+          const owner = file.owners?.[0]?.displayName ?? file.owners?.[0]?.emailAddress ?? ''
 
-            const exportResp = await fetch(
-              `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=${encodeURIComponent(exportMime)}`,
-              { headers, signal: AbortSignal.timeout(30_000) },
-            )
+          const modDate = new Date(file.modifiedTime)
+          if (file.modifiedTime > maxModified) maxModified = file.modifiedTime
 
-            if (!exportResp.ok) {
-              logger.warn({ file: file.name, status: exportResp.status }, 'Drive export failed')
-              continue
-            }
-
-            const text = await exportResp.text()
-            if (text.trim().length === 0) continue
-
-            const modDate = new Date(file.modifiedTime)
-            if (file.modifiedTime > maxModified) maxModified = file.modifiedTime
-
-            items.push({
-              id: `${account}:${file.id}`,
-              text,
-              metadata: {
-                account,
-                fileName: file.name,
-                mimeType: file.mimeType,
-                owner: file.owners?.[0]?.displayName ?? file.owners?.[0]?.emailAddress ?? '',
-              },
-              date: modDate,
-            })
-          } catch (error) {
-            logger.warn({ file: file.name, error }, 'Drive file ingestion failed, continuing')
-          }
+          // Store only metadata — no content export
+          items.push({
+            id: `${account}:${file.id}`,
+            text: `${typeLabel}: ${file.name}`,
+            metadata: {
+              account,
+              fileName: file.name,
+              mimeType: file.mimeType,
+              owner,
+            },
+            date: modDate,
+          })
         }
 
         pageToken = data.nextPageToken
@@ -111,18 +95,20 @@ export async function createDriveAdapters(): Promise<SourceAdapter[]> {
     },
 
     toChunks(item: RawItem): KBChunkInput[] {
-      const header = `Document: ${item.metadata.fileName as string}\n`
-      const chunks = splitText(header + item.text)
+      // One chunk per file — just the metadata summary
+      const owner = item.metadata.owner as string
+      const date = item.date?.toISOString().slice(0, 10) ?? ''
+      const text = `${item.text}\nOwner: ${owner}\nModified: ${date}`
 
-      return chunks.map((chunkText, i) => ({
+      return [{
         source: 'drive' as const,
         sourceId: item.id,
-        chunkIndex: i,
-        text: chunkText,
+        chunkIndex: 0,
+        text,
         chunkType: 'document' as const,
         metadata: item.metadata,
         sourceDate: item.date,
-      }))
+      }]
     },
   }))
 }
