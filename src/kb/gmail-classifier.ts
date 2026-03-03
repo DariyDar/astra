@@ -11,11 +11,12 @@ export const SYSTEM_PATTERNS: string[] = [
   'no-reply@',
   'testflight@apple.com',
   'appstoreconnect@apple.com',
-  'clockify',
+  'clockify@',
+  '@clockify.',
   'noreply@google',
-  'atlassian',
-  'clickup',
-  'pagerduty',
+  'atlassian.com',
+  'clickup.com',
+  'pagerduty.com',
   'comments-noreply@docs.google.com',
   'spaces-noreply@google.com',
   'feedback@mail.slack.com',
@@ -23,12 +24,12 @@ export const SYSTEM_PATTERNS: string[] = [
 
 /**
  * Senders that match system patterns but MUST be classified as human.
- * Partial matches on From header (case-insensitive).
+ * Email-domain partial matches on From header (case-insensitive).
  */
 export const KEEP_SENDERS: string[] = [
-  'nisha',
-  'jijo',
-  'andrianne',
+  'nisha@indium',
+  'jijo@indium',
+  'andrianne@tiltingpoint',
 ]
 
 /**

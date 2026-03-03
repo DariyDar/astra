@@ -83,9 +83,9 @@ async function main(): Promise<void> {
     for (const [account, emails] of Array.from(byAccount.entries())) {
       // Sort by sourceDate DESC (most recent first)
       emails.sort((a, b) => {
-        const da = a.sourceDate?.getTime() ?? 0
+        const dateA = a.sourceDate?.getTime() ?? 0
         const dateB = b.sourceDate?.getTime() ?? 0
-        return dateB - da
+        return dateB - dateA
       })
 
       const systemCount = emails.filter((e) => e.emailType === 'system').length
@@ -174,41 +174,41 @@ async function main(): Promise<void> {
         pgChunksDeleted += (result as unknown as { rowCount: number }).rowCount ?? 0
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : String(error)
-        logger.error({ batch: batch.slice(0, 3), error: errMsg }, 'PG chunk deletion failed — aborting')
-        await pool.end()
-        process.exit(1)
+        logger.error({ batch: batch.slice(0, 3), error: errMsg }, 'PG chunk deletion failed')
+        throw new Error(`PG chunk deletion failed: ${errMsg}`)
       }
     }
     logger.info({ pgChunksDeleted }, 'Extra PG chunks deleted')
 
-    // Step 7 — Update chunk_index=0 stubs for downgraded emails
+    // Step 7 — Update chunk_index=0 stubs for downgraded emails (batch SELECT)
     logger.info('Step 7: Updating stubs for downgraded emails...')
     let stubsUpdated = 0
     for (let i = 0; i < sourceIdsToDowngrade.length; i += BATCH_SIZE) {
       const batch = sourceIdsToDowngrade.slice(i, i + BATCH_SIZE)
-      for (const sourceId of batch) {
-        try {
-          const [row] = await db.select({ id: kbChunks.id, metadata: kbChunks.metadata })
-            .from(kbChunks)
-            .where(and(
-              eq(kbChunks.source, 'gmail'),
-              eq(kbChunks.sourceId, sourceId),
-              eq(kbChunks.chunkIndex, 0),
-            ))
-            .limit(1)
+      try {
+        const rows = await db.select({
+          id: kbChunks.id,
+          sourceId: kbChunks.sourceId,
+          metadata: kbChunks.metadata,
+        })
+          .from(kbChunks)
+          .where(and(
+            eq(kbChunks.source, 'gmail'),
+            inArray(kbChunks.sourceId, batch),
+            eq(kbChunks.chunkIndex, 0),
+          ))
 
-          if (!row) continue
-
+        for (const row of rows) {
           const meta = (row.metadata ?? {}) as Record<string, unknown>
           const stubText = formatEmail({
-            from: meta.from as string ?? '',
-            to: meta.to as string ?? '',
-            subject: meta.subject as string ?? '',
+            from: (meta.from as string) ?? '',
+            to: (meta.to as string) ?? '',
+            subject: (meta.subject as string) ?? '',
             body: '[metadata-only stub]',
             date: meta.date as string,
           })
           const hash = contentHash(stubText)
-          const emailType = allEmailClassifications.get(sourceId) ?? 'human'
+          const emailType = allEmailClassifications.get(row.sourceId) ?? 'human'
 
           await db.update(kbChunks)
             .set({
@@ -220,12 +220,11 @@ async function main(): Promise<void> {
             .where(eq(kbChunks.id, row.id))
 
           stubsUpdated++
-        } catch (error) {
-          const errMsg = error instanceof Error ? error.message : String(error)
-          logger.error({ sourceId, error: errMsg }, 'Stub update failed — aborting')
-          await pool.end()
-          process.exit(1)
         }
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error)
+        logger.error({ batch: batch.slice(0, 3), error: errMsg }, 'Stub update failed')
+        throw new Error(`Stub update failed: ${errMsg}`)
       }
       logger.info(
         { progress: `${Math.min(i + BATCH_SIZE, sourceIdsToDowngrade.length)}/${sourceIdsToDowngrade.length}` },
@@ -234,23 +233,26 @@ async function main(): Promise<void> {
     }
     logger.info({ stubsUpdated }, 'Stubs updated')
 
-    // Step 8 — Tag deep-indexed emails (top 200) with emailType
+    // Step 8 — Tag deep-indexed emails (top 200) with emailType (batched by type)
     logger.info('Step 8: Tagging deep-indexed emails with emailType...')
     let deepTagged = 0
-    for (let i = 0; i < deepIndexedSourceIds.length; i += BATCH_SIZE) {
-      const batch = deepIndexedSourceIds.slice(i, i + BATCH_SIZE)
-      for (const sourceId of batch) {
-        const emailType = allEmailClassifications.get(sourceId) ?? 'human'
+    const humanIds = deepIndexedSourceIds.filter((id) => allEmailClassifications.get(id) !== 'system')
+    const systemIds = deepIndexedSourceIds.filter((id) => allEmailClassifications.get(id) === 'system')
+
+    for (const [emailType, ids] of [['human', humanIds], ['system', systemIds]] as const) {
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const batch = ids.slice(i, i + BATCH_SIZE)
         try {
+          const patch = JSON.stringify({ emailType })
           await db.execute(sql`
             UPDATE kb_chunks
-            SET metadata = metadata || ${JSON.stringify({ emailType })}::jsonb
-            WHERE source = 'gmail' AND source_id = ${sourceId}
+            SET metadata = metadata || ${patch}::jsonb
+            WHERE source = 'gmail' AND source_id = ANY(${batch})
           `)
-          deepTagged++
+          deepTagged += batch.length
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error)
-          logger.warn({ sourceId, error: errMsg }, 'Deep-index tagging failed (continuing)')
+          logger.warn({ emailType, batchSize: batch.length, error: errMsg }, 'Deep-index tagging failed (continuing)')
         }
       }
     }
