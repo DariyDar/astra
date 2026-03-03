@@ -243,11 +243,12 @@ async function main(): Promise<void> {
         const batch = ids.slice(i, i + BATCH_SIZE)
         try {
           const patch = JSON.stringify({ emailType })
-          await db.execute(sql`
-            UPDATE kb_chunks
-            SET metadata = metadata || ${patch}::jsonb
-            WHERE source = 'gmail' AND source_id = ANY(${batch})
-          `)
+          await db.update(kbChunks)
+            .set({ metadata: sql`metadata || ${patch}::jsonb` })
+            .where(and(
+              eq(kbChunks.source, 'gmail'),
+              inArray(kbChunks.sourceId, batch),
+            ))
           deepTagged += batch.length
         } catch (error) {
           const errMsg = error instanceof Error ? error.message : String(error)
