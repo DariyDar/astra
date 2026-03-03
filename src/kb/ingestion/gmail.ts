@@ -2,6 +2,7 @@ import { resolveGoogleTokens } from '../../mcp/briefing/google-auth.js'
 import { toGmailDate } from '../../mcp/briefing/period.js'
 import { jsonOrThrow } from '../../mcp/briefing/utils.js'
 import { formatEmail, splitText } from '../chunker.js'
+import { classifyEmail } from '../gmail-classifier.js'
 import type { KBChunkInput } from '../types.js'
 import type { SourceAdapter, RawItem } from './types.js'
 import { logger } from '../../logging/logger.js'
@@ -202,10 +203,36 @@ export async function createGmailAdapters(): Promise<SourceAdapter[]> {
     },
 
     toChunks(item: RawItem): KBChunkInput[] {
+      const from = item.metadata.from as string
+      const subject = item.metadata.subject as string
+      const emailType = classifyEmail(from, subject)
+      const enrichedMetadata = { ...item.metadata, emailType }
+
+      if (emailType === 'system') {
+        // System emails: single metadata-only stub (1 chunk instead of ~94)
+        const text = formatEmail({
+          from,
+          to: item.metadata.to as string,
+          subject,
+          body: '[system email — metadata only]',
+          date: item.date?.toISOString(),
+        })
+        return [{
+          source: 'gmail' as const,
+          sourceId: item.id,
+          chunkIndex: 0,
+          text,
+          chunkType: 'email' as const,
+          metadata: enrichedMetadata,
+          sourceDate: item.date,
+        }]
+      }
+
+      // Human emails: full content with splitting
       const text = formatEmail({
-        from: item.metadata.from as string,
+        from,
         to: item.metadata.to as string,
-        subject: item.metadata.subject as string,
+        subject,
         body: item.text,
         date: item.date?.toISOString(),
       })
@@ -217,7 +244,7 @@ export async function createGmailAdapters(): Promise<SourceAdapter[]> {
         chunkIndex: i,
         text: chunkText,
         chunkType: 'email' as const,
-        metadata: item.metadata,
+        metadata: enrichedMetadata,
         sourceDate: item.date,
       }))
     },
