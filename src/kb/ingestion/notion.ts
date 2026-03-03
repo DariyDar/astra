@@ -46,14 +46,6 @@ export function createNotionAdapter(): SourceAdapter | null {
     source: 'notion' as const,
 
     async fetchSince(watermark: string): Promise<{ items: RawItem[]; nextWatermark: string }> {
-      const filter: Record<string, unknown> = {}
-      if (watermark) {
-        filter.filter = {
-          timestamp: 'last_edited_time',
-          last_edited_time: { after: watermark },
-        }
-      }
-
       const items: RawItem[] = []
       let cursor: string | undefined
       let maxDate = watermark || ''
@@ -62,14 +54,18 @@ export function createNotionAdapter(): SourceAdapter | null {
       do {
         await sleep(RATE_LIMIT_MS)
 
-        const body: Record<string, unknown> = { ...filter, page_size: 100 }
+        const body: Record<string, unknown> = {
+          page_size: 100,
+          filter: { property: 'object', value: 'page' },
+          sort: { direction: 'descending', timestamp: 'last_edited_time' },
+        }
         if (cursor) body.start_cursor = cursor
 
         const resp = await fetch(`${NOTION_API}/search`, {
           method: 'POST',
           headers,
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(15_000),
+          signal: AbortSignal.timeout(30_000),
         })
         const data = await jsonOrThrow<{
           results: Array<NotionPage & { object: string }>
@@ -77,8 +73,15 @@ export function createNotionAdapter(): SourceAdapter | null {
           has_more: boolean
         }>(resp, 'Notion search')
 
+        let stoppedEarly = false
         for (const page of data.results) {
           if (page.object !== 'page') continue
+
+          // Skip pages not edited since watermark (results sorted desc by last_edited_time)
+          if (watermark && page.last_edited_time <= watermark) {
+            stoppedEarly = true
+            break
+          }
 
           try {
             await sleep(RATE_LIMIT_MS)
@@ -86,7 +89,7 @@ export function createNotionAdapter(): SourceAdapter | null {
             // Fetch page blocks (content)
             const blocksResp = await fetch(
               `${NOTION_API}/blocks/${page.id}/children?page_size=100`,
-              { headers, signal: AbortSignal.timeout(15_000) },
+              { headers, signal: AbortSignal.timeout(30_000) },
             )
             const blocksData = await jsonOrThrow<{ results: NotionBlock[] }>(blocksResp, `Notion blocks ${page.id}`)
 
@@ -116,6 +119,7 @@ export function createNotionAdapter(): SourceAdapter | null {
           }
         }
 
+        if (stoppedEarly) break
         cursor = data.next_cursor ?? undefined
       } while (cursor)
 
