@@ -29,18 +29,58 @@ function getHeader(msg: GmailMessage, name: string): string {
   return msg.payload?.headers?.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? ''
 }
 
+const MAX_BODY_CHARS = 5000  // Cap email body to avoid huge thread quotes
+
 function extractBody(msg: GmailMessage): string {
+  let body = ''
+
   // Try top-level body first
   if (msg.payload?.body?.data) {
-    return decodeBase64Url(msg.payload.body.data)
+    body = decodeBase64Url(msg.payload.body.data)
+  } else {
+    // Search parts for text/plain
+    const plain = findPart(msg.payload?.parts, 'text/plain')
+    if (plain) {
+      body = decodeBase64Url(plain)
+    } else {
+      // Fallback to text/html, strip tags
+      const html = findPart(msg.payload?.parts, 'text/html')
+      if (html) body = stripHtml(decodeBase64Url(html))
+    }
   }
-  // Search parts for text/plain
-  const plain = findPart(msg.payload?.parts, 'text/plain')
-  if (plain) return decodeBase64Url(plain)
-  // Fallback to text/html, strip tags
-  const html = findPart(msg.payload?.parts, 'text/html')
-  if (html) return stripHtml(decodeBase64Url(html))
-  return ''
+
+  // Strip quoted reply content
+  body = stripQuotedReplies(body)
+
+  // Cap length to avoid enormous thread dumps
+  if (body.length > MAX_BODY_CHARS) {
+    body = body.slice(0, MAX_BODY_CHARS) + '\n[... truncated]'
+  }
+
+  return body
+}
+
+/** Remove quoted reply lines from email body. */
+function stripQuotedReplies(text: string): string {
+  const lines = text.split('\n')
+  const result: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // Stop at "On ... wrote:" style quote headers
+    if (/^On .+ wrote:\s*$/.test(line)) break
+    if (/^[0-9]{1,2}[\./][0-9]{1,2}[\./][0-9]{2,4}.*wrote:\s*$/.test(line)) break
+    // Gmail quote marker
+    if (line.trim() === '---------- Forwarded message ---------') break
+
+    // Skip individual quoted lines (> prefix)
+    if (line.startsWith('>')) continue
+
+    result.push(line)
+  }
+
+  return result.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 function findPart(parts: GmailPart[] | undefined, mimeType: string): string | null {
