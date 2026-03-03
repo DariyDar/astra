@@ -1,6 +1,6 @@
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type * as schema from '../../db/schema.js'
-import { embed } from '../../memory/embedder.js'
+import { embed, initEmbedder } from '../../memory/embedder.js'
 import { logger } from '../../logging/logger.js'
 import { KBVectorStore } from '../vector-store.js'
 import { contentHash } from '../chunker.js'
@@ -69,7 +69,8 @@ async function runAdapter(
         allChunks.push(...chunks)
       } catch (error) {
         stats.errors++
-        logger.warn({ adapter: adapter.name, itemId: item.id, error }, 'Chunk conversion failed')
+        const errMsg = error instanceof Error ? error.message : String(error)
+        logger.warn({ adapter: adapter.name, itemId: item.id, error: errMsg }, 'Chunk conversion failed')
       }
     }
 
@@ -128,7 +129,8 @@ async function runAdapter(
           stats.chunksCreated++
         } catch (error) {
           stats.errors++
-          logger.warn({ adapter: adapter.name, sourceId: chunk.sourceId, error }, 'Chunk processing failed')
+          const errMsg = error instanceof Error ? error.message : String(error)
+          logger.warn({ adapter: adapter.name, sourceId: chunk.sourceId, error: errMsg }, 'Chunk processing failed')
         }
       }
     }
@@ -165,6 +167,9 @@ export async function runIngestion(
   adapters: SourceAdapter[],
 ): Promise<IngestionStats[]> {
   logger.info({ adapterCount: adapters.length }, 'Starting KB ingestion')
+
+  // Ensure embedder is initialized (downloads model on first run)
+  await initEmbedder()
 
   const results: IngestionStats[] = []
 

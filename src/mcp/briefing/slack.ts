@@ -30,17 +30,25 @@ export async function fetchSlackChannels(
   headers: Record<string, string>,
   teamId: string,
 ): Promise<Array<{ id: string; name: string; num_members?: number }>> {
-  const params = new URLSearchParams({
-    types: 'public_channel,private_channel',
-    exclude_archived: 'false',
-    limit: '200',
-    team_id: teamId,
-  })
-  const resp = await fetch(`https://slack.com/api/conversations.list?${params}`, { headers, signal: AbortSignal.timeout(15_000) })
-  if (!resp.ok) throw new Error(`Slack channels HTTP ${resp.status}`)
-  const data = await resp.json() as { ok: boolean; channels?: Array<{ id: string; name: string; num_members?: number }> }
-  if (!data.ok) return []
-  return data.channels ?? []
+  type Channel = { id: string; name: string; num_members?: number }
+  const allChannels: Channel[] = []
+  let cursor = ''
+  do {
+    const params = new URLSearchParams({
+      types: 'public_channel,private_channel',
+      exclude_archived: 'false',
+      limit: '200',
+      team_id: teamId,
+    })
+    if (cursor) params.set('cursor', cursor)
+    const resp = await fetch(`https://slack.com/api/conversations.list?${params}`, { headers, signal: AbortSignal.timeout(15_000) })
+    if (!resp.ok) throw new Error(`Slack channels HTTP ${resp.status}`)
+    const data = await resp.json() as { ok: boolean; channels?: Channel[]; response_metadata?: { next_cursor?: string } }
+    if (!data.ok) break
+    allChannels.push(...(data.channels ?? []))
+    cursor = data.response_metadata?.next_cursor || ''
+  } while (cursor)
+  return allChannels
 }
 
 // ── Briefing fetcher ──

@@ -61,6 +61,15 @@ const projects: SeedEntity[] = [
   { type: 'project', name: 'Tough Guy', company: 'ac', aliases: ['Таф Гай'] },
 ]
 
+// ── Processes ──
+
+const processes: SeedEntity[] = [
+  { type: 'process', name: 'Character Art Brief', metadata: { project: 'Star Trek Timelines', description: 'Character art creation pipeline for STT' } },
+  { type: 'process', name: 'Content Planning', metadata: { project: 'Star Trek Timelines', description: 'Content release planning for STT' } },
+  { type: 'process', name: 'Buddy Check', metadata: { project: 'Star Trek Timelines', description: 'Peer review process for STT' } },
+  { type: 'process', name: 'Live Operations Scheduling', aliases: ['LiveOps', 'Live Ops'], metadata: { project: 'Star Trek Timelines', description: 'Live event scheduling for STT' } },
+]
+
 // ── People ──
 
 const people: SeedEntity[] = [
@@ -217,6 +226,12 @@ const relations: SeedRelation[] = [
   { from: 'Relevate Health', to: 'Level Two', relation: 'client_of' },
   { from: 'Relevate Health', to: 'HTML5 Banners', relation: 'client_of' },
   { from: 'Relevate Health', to: 'Playable Ads', relation: 'client_of' },
+
+  // Process → Project relationships
+  { from: 'Character Art Brief', to: 'Star Trek Timelines', relation: 'member_of' },
+  { from: 'Content Planning', to: 'Star Trek Timelines', relation: 'member_of' },
+  { from: 'Buddy Check', to: 'Star Trek Timelines', relation: 'member_of' },
+  { from: 'Live Operations Scheduling', to: 'Star Trek Timelines', relation: 'member_of' },
 ]
 
 // ── Main ──
@@ -232,7 +247,7 @@ async function main() {
   let relationsCreated = 0
 
   // Seed all entities
-  const allEntities = [...companies, ...projects, ...people]
+  const allEntities = [...companies, ...projects, ...processes, ...people]
   for (const entity of allEntities) {
     const id = await createEntity(db, {
       type: entity.type,
