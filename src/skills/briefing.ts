@@ -56,7 +56,9 @@ When user asks about a project, person, or topic:
 
 **Keyword search:** \`search_everywhere(search_term="Симфония")\` — searches across all sources.
 
-**Raw tools** (slack_get_channel_history, search_gmail_messages, etc.) — only for follow-up questions needing deeper data (thread replies, full email text).
+**Drill-down tools (thread/email details):**
+- \`get_slack_thread(channel_name, thread_ts)\` — read all replies in a Slack thread. Use when briefing shows a message with thread_info. The \`thread_ts\` field is included in briefing Slack results.
+- \`get_email_content(message_id, account?)\` — get full email body by ID. Use when briefing shows an email snippet. The \`gmail_id\` field is included in briefing Gmail results.
 
 **Query philosophy — be lean and autonomous:**
 Think before calling a tool. Decide exactly what data you need, then request only that. Deliver a complete answer with minimal tool calls. Don't ask the user to clarify before searching — just find the answer.
