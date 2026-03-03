@@ -134,7 +134,6 @@ async function main(): Promise<void> {
 
     if (isDryRun) {
       logger.info('Dry-run mode — no changes made')
-      await pool.end()
       return
     }
 
