@@ -26,6 +26,7 @@ import { startMcpServer } from '../mcp/server.js'
 import { generateMcpConfig } from '../mcp/config-generator.js'
 import { SkillRegistry } from '../skills/registry.js'
 import { ClickUpDeadlineMonitor } from '../integrations/monitors/clickup-deadlines.js'
+import { KBVectorStore } from '../kb/vector-store.js'
 
 // --- Create core instances ---
 const bot = new Bot(env.TELEGRAM_BOT_TOKEN)
@@ -294,10 +295,12 @@ async function startup(): Promise<void> {
     logger.warn({ error }, 'Embedder initialization failed, long-term memory degraded')
   }
 
-  // 3. Ensure Qdrant collection exists
+  // 3. Ensure Qdrant collections exist (memory + knowledge base)
   try {
     await longTermMemory.ensureCollection()
-    logger.info('Qdrant collection ready')
+    const kbVectorStore = new KBVectorStore(qdrantClient)
+    await kbVectorStore.ensureCollection()
+    logger.info('Qdrant collections ready (astra_messages + astra_knowledge)')
   } catch (error) {
     logger.warn({ error }, 'Qdrant collection setup failed, long-term memory degraded')
   }

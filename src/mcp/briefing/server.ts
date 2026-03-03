@@ -5,6 +5,10 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 
+import { drizzle } from 'drizzle-orm/node-postgres'
+import pg from 'pg'
+import { QdrantClient } from '@qdrant/js-client-rest'
+
 import type { Source, QueryType, FieldName, BriefingRequest, BriefingItem, BriefingResult } from './types.js'
 import { log, filterFields } from './utils.js'
 import { parsePeriod } from './period.js'
@@ -14,6 +18,9 @@ import { fetchGmail, fetchEmailContent, getEmailContentTool } from './gmail.js'
 import { fetchCalendar } from './calendar.js'
 import { fetchClickUp } from './clickup.js'
 import { executeClockifyReport, clockifyReportTool, type ClockifyReportType } from './clockify.js'
+import * as schema from '../../db/schema.js'
+import { KBVectorStore } from '../../kb/vector-store.js'
+import { kbSearchTool, kbEntitiesTool, handleKBSearch, handleKBEntities } from '../../kb/mcp-tools.js'
 
 // ── Main briefing logic ──
 
@@ -178,13 +185,23 @@ const searchEverywhereTool = {
 export async function main(): Promise<void> {
   log('\n--- astra-briefing starting ---')
 
+  // Connect to PostgreSQL and Qdrant for KB tools
+  const { Pool } = pg
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+  const db = drizzle(pool, { schema })
+  const qdrantUrl = process.env.QDRANT_URL ?? 'http://localhost:6333'
+  const qdrantClient = new QdrantClient({ url: qdrantUrl })
+  const vectorStore = new KBVectorStore(qdrantClient)
+  await vectorStore.ensureCollection()
+  log('KB: database and vector store connected')
+
   const server = new Server(
     { name: 'Astra Briefing Server', version: '1.0.0' },
     { capabilities: { tools: {} } },
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool],
+    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbSearchTool, kbEntitiesTool],
   }))
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -259,6 +276,14 @@ export async function main(): Promise<void> {
         )
         const text = JSON.stringify(emailResult, null, 0)
         log(`tool=${toolName} id=${emailResult.id} account=${emailResult.account}`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'kb_search') {
+        const text = await handleKBSearch(db, vectorStore, args)
+        log(`tool=${toolName} done`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'kb_entities') {
+        const text = await handleKBEntities(db, args)
+        log(`tool=${toolName} done`)
         return { content: [{ type: 'text', text }] }
       } else {
         throw new Error(`Unknown tool: ${toolName}`)
