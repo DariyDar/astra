@@ -13,7 +13,7 @@ import { createClickUpAdapter } from '../kb/ingestion/clickup.js'
 import { createCalendarAdapters } from '../kb/ingestion/calendar.js'
 import { createDriveAdapters } from '../kb/ingestion/drive.js'
 import { createNotionAdapter } from '../kb/ingestion/notion.js'
-import { extractEntities } from '../kb/entity-extractor.js'
+import { extractEntitiesBatch, markLowValueChunks } from '../kb/entity-extractor.js'
 import type { SourceAdapter } from '../kb/ingestion/types.js'
 
 const AUDIT_RETENTION_DAYS = 30
@@ -40,7 +40,8 @@ const auditCleanupJob = cron.schedule('0 3 * * *', async () => {
 /**
  * KB ingestion + entity extraction: daily at 20:00 UTC (04:00 Bali).
  * 1. Fetch new data from all sources (REST, no LLM)
- * 2. Extract entities from new chunks (single LLM call)
+ * 2. Mark low-value chunks as processed (no LLM)
+ * 3. Extract entities from remaining chunks (multi-batch LLM loop, budget-controlled)
  */
 const qdrantClient = new QdrantClient({ url: env.QDRANT_URL })
 const kbVectorStore = new KBVectorStore(qdrantClient)
@@ -68,15 +69,22 @@ const kbIngestionJob = cron.schedule('0 20 * * *', async () => {
 
     const ingestionStats = await runIngestion(db, kbVectorStore, adapters)
     const totalCreated = ingestionStats.reduce((sum, s) => sum + s.chunksCreated, 0)
+    logger.info({ totalCreated }, 'KB ingestion complete')
 
-    // Run entity extraction on new chunks (single LLM call)
-    if (totalCreated > 0) {
-      logger.info({ totalCreated }, 'KB ingestion done, starting entity extraction')
-      const extractionStats = await extractEntities(db)
-      logger.info(extractionStats, 'KB entity extraction complete')
-    } else {
-      logger.info('KB ingestion: no new chunks, skipping entity extraction')
+    // Mark any new low-value chunks as processed
+    const marked = await markLowValueChunks(db)
+    if (marked > 0) {
+      logger.info({ marked }, 'KB: marked low-value chunks as processed')
     }
+
+    // Run multi-batch entity extraction with nightly budget
+    logger.info('KB: starting nightly entity extraction')
+    const extractionStats = await extractEntitiesBatch(db, {
+      maxBatches: 100,
+      maxTimeMinutes: 120,
+      maxCostUsd: 5.0,
+    }, qdrantClient)
+    logger.info(extractionStats, 'KB nightly entity extraction complete')
   } catch (error) {
     logger.error({ error }, 'KB nightly ingestion failed')
   }

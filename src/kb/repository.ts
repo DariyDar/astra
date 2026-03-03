@@ -280,21 +280,85 @@ export async function findChunksBySource(
   return rows.map((r) => ({ ...r, id: r.id.toString() }))
 }
 
+/** Shared quality filter conditions for extractable chunks. */
+function extractableChunkConditions(minTextLength: number = 100) {
+  return and(
+    sql`${kbChunks.entityIds} IS NULL`,
+    sql`length(${kbChunks.text}) > ${minTextLength}`,
+    sql`${kbChunks.text} NOT LIKE '%[metadata-only stub]%'`,
+    sql`${kbChunks.text} NOT LIKE '%[system email -- metadata only]%'`,
+    sql`${kbChunks.source} != 'drive'`,
+  )
+}
+
 export async function findUnprocessedChunks(
   db: DB,
   limit: number = 50,
-): Promise<Array<{ id: string; source: string; sourceId: string; text: string; metadata: unknown }>> {
+  options?: { minTextLength?: number },
+): Promise<Array<{ id: string; source: string; sourceId: string; text: string; qdrantId: string | null; metadata: unknown }>> {
   const rows = await db.select({
     id: kbChunks.id,
     source: kbChunks.source,
     sourceId: kbChunks.sourceId,
     text: kbChunks.text,
+    qdrantId: kbChunks.qdrantId,
     metadata: kbChunks.metadata,
   }).from(kbChunks)
-    .where(sql`${kbChunks.entityIds} IS NULL`)
+    .where(extractableChunkConditions(options?.minTextLength))
+    .orderBy(
+      sql`CASE ${kbChunks.source}
+        WHEN 'slack' THEN 1
+        WHEN 'clickup' THEN 2
+        WHEN 'notion' THEN 3
+        WHEN 'gmail' THEN 4
+        WHEN 'calendar' THEN 5
+        ELSE 6
+      END`,
+      sql`${kbChunks.sourceDate} DESC NULLS LAST`,
+    )
     .limit(limit)
 
-  return rows.map((r) => ({ ...r, id: r.id.toString() }))
+  return rows.map((r) => ({ ...r, id: r.id.toString(), qdrantId: r.qdrantId ?? null }))
+}
+
+export async function countUnprocessedChunks(db: DB): Promise<number> {
+  const [row] = await db.select({
+    count: sql<number>`count(*)::int`,
+  }).from(kbChunks)
+    .where(extractableChunkConditions())
+  return row?.count ?? 0
+}
+
+export async function getAllEntityNames(
+  db: DB,
+): Promise<Array<{ name: string; type: string }>> {
+  return db.select({
+    name: kbEntities.name,
+    type: kbEntities.type,
+  }).from(kbEntities).orderBy(kbEntities.name)
+}
+
+export async function markChunksProcessed(
+  db: DB,
+  filter: 'low-value',
+): Promise<number> {
+  if (filter !== 'low-value') return 0
+
+  // Mark chunks that DON'T pass the extractable filter (inverse of extractableChunkConditions)
+  const updated = await db.update(kbChunks)
+    .set({ entityIds: sql`'{}'::int[]` })
+    .where(and(
+      sql`${kbChunks.entityIds} IS NULL`,
+      sql`(
+        length(${kbChunks.text}) < 100
+        OR ${kbChunks.text} LIKE '%[metadata-only stub]%'
+        OR ${kbChunks.text} LIKE '%[system email -- metadata only]%'
+        OR ${kbChunks.source} = 'drive'
+      )`,
+    ))
+    .returning({ id: kbChunks.id })
+
+  return updated.length
 }
 
 export async function updateChunkEntityIds(
