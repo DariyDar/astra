@@ -49,10 +49,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Google Drive
 
-- [ ] **DRIVE-01**: Bot indexes documents from specified Drive folders into RAG knowledge base
+- [x] **DRIVE-01**: Bot indexes documents from specified Drive folders into RAG knowledge base
 - [x] **DRIVE-02**: User can ask questions about document content ("what does the GDD say about monetization?")
-- [ ] **DRIVE-03**: Bot tracks document freshness and flags potentially outdated documents (not modified in N months)
-- [ ] **DRIVE-04**: Bot re-indexes documents incrementally when they change (via Drive Changes API)
+- [x] **DRIVE-03**: Bot tracks document freshness and flags potentially outdated documents (not modified in N months)
+- [x] **DRIVE-04**: Bot re-indexes documents incrementally when they change (via Drive Changes API)
 
 ### Knowledge Base
 
