@@ -1,5 +1,6 @@
 import { SLACK_WORKSPACES, fetchSlackChannels } from '../../mcp/briefing/slack.js'
 import { formatSlackMessage, splitText } from '../chunker.js'
+import { buildSlackUserCache, resolveSlackMentions } from '../slack-user-cache.js'
 import type { KBChunkInput } from '../types.js'
 import type { SourceAdapter, RawItem } from './types.js'
 import { logger } from '../../logging/logger.js'
@@ -85,20 +86,24 @@ async function getLatestMessageTs(
   return data.messages[0].ts ?? null
 }
 
-/** Convert a Slack message into a RawItem. */
+/** Convert a Slack message into a RawItem, resolving user IDs via cache. */
 function toRawItem(
   wsLabel: string,
   ch: { id: string; name: string },
   msg: SlackMessage,
+  userCache: Map<string, string>,
 ): RawItem {
+  const resolvedText = resolveSlackMentions(msg.text ?? '', userCache)
+  const resolvedUser = (msg.user ? userCache.get(msg.user) : undefined) ?? msg.user ?? 'unknown'
+
   return {
     id: `${wsLabel}:${ch.id}:${msg.ts}`,
-    text: msg.text ?? '',
+    text: resolvedText,
     metadata: {
       channel: `${wsLabel}/${ch.name}`,
       channelId: ch.id,
       workspace: wsLabel,
-      user: msg.user ?? 'unknown',
+      user: resolvedUser,
     },
     date: msg.ts ? new Date(parseFloat(msg.ts) * 1000) : undefined,
   }
@@ -113,6 +118,9 @@ export function createSlackAdapters(): SourceAdapter[] {
     async fetchSince(watermark: string): Promise<{ items: RawItem[]; nextWatermark: string }> {
       const headers = { Authorization: `Bearer ${ws.token}`, 'Content-Type': 'application/json' }
       const isInitialRun = !watermark
+
+      // Build user cache once per ingestion run (covers both workspaces)
+      const userCache = await buildSlackUserCache()
 
       // For incremental runs, just use the watermark
       const activeOldest = watermark || String((Date.now() - ACTIVE_LOOKBACK_DAYS * 86400_000) / 1000)
@@ -135,7 +143,7 @@ export function createSlackAdapters(): SourceAdapter[] {
             activeCount++
             for (const msg of msgs) {
               if (!msg.text || msg.text.trim().length === 0) continue
-              items.push(toRawItem(ws.label, ch, msg))
+              items.push(toRawItem(ws.label, ch, msg, userCache))
               if (msg.ts && msg.ts > maxTs) maxTs = msg.ts
             }
           } else if (isInitialRun) {
@@ -150,7 +158,7 @@ export function createSlackAdapters(): SourceAdapter[] {
               inactiveCount++
               for (const msg of archiveMsgs) {
                 if (!msg.text || msg.text.trim().length === 0) continue
-                items.push(toRawItem(ws.label, ch, msg))
+                items.push(toRawItem(ws.label, ch, msg, userCache))
                 if (msg.ts && msg.ts > maxTs) maxTs = msg.ts
               }
               logger.info({ channel: ch.name, msgs: archiveMsgs.length }, 'Fetched archive from inactive channel')
