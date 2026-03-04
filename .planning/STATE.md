@@ -10,8 +10,8 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 ## Current Position
 
 Milestone: 1 of 3 (Information Assistant)
-Phase: 4 of 12 (Knowledge Base — planned, not started)
-Status: Phase 3 complete, Phase 4 planning done
+Phase: 4 of 12 (Knowledge Base — in progress, context gathered)
+Status: Phase 3 formally closed, Phase 4 Wave 1+2 code deployed, quality verification pending
 
 Progress (M1): [██████░░░░] 50% (3/6 phases complete)
 Progress (overall): [███░░░░░░░] 25% (3/12 phases complete)
@@ -35,9 +35,30 @@ Progress (overall): [███░░░░░░░] 25% (3/12 phases complete)
 - Clockify time tracking integration
 - Prompt optimization (A/B/C/D/E testing → Variant E winner)
 
-## Next: Phase 4 — Knowledge Base
+## Phase 4 — Knowledge Base (In Progress)
 
-Plan file: `.claude/plans/optimized-conjuring-wall.md`
-Sub-plans: 04-01 through 04-06 (schema, ingestion, MCP+search, entity extraction, nightly cron, E2E)
+### Completed Work
+- Gmail cleanup: 113K → 37K chunks (system/human classification)
+- Drive smart-index: 3-tier indexing (full/acquaintance/metadata)
+- Entity extraction code: multi-batch budget loop, CLI, nightly cron
+- 199 entities, 398 relations (62 seed + extracted from 1 Slack batch)
+- 116K total chunks across 6 sources
 
-Last activity: 2026-03-03
+### Identified Issues (from 2026-03-04 context review)
+- 70+ person entities stored as Slack IDs instead of names — need re-ingest
+- Cross-source mapping only covers Slack (218 chunks) — need extraction from all sources
+- Entity duplicates: LifeQuest/Life Quest, Motor World/Ohbibi MWCF — need merge
+
+### Next Steps
+1. Build Slack user ID→name lookup cache
+2. Re-ingest all Slack chunks with ID resolution (25K chunks)
+3. Test extraction: 2-3 batches → quality review with user
+4. If OK: 10 batches per source → quality review
+5. If OK: bulk extraction → final review
+6. Entity dedup/merge pass
+
+### Context
+Context file: .planning/phases/04-knowledge-base/04-CONTEXT.md
+Plans: gmail-cleanup-PLAN.md, drive-smart-index-PLAN.md, entity-extraction-PLAN.md
+
+Last activity: 2026-03-04
