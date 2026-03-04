@@ -11,7 +11,8 @@ import { createSlackAdapters } from '../kb/ingestion/slack.js'
 import { createGmailAdapters } from '../kb/ingestion/gmail.js'
 import { createClickUpAdapter } from '../kb/ingestion/clickup.js'
 import { createCalendarAdapters } from '../kb/ingestion/calendar.js'
-import { createDriveAdapters } from '../kb/ingestion/drive.js'
+import { createDriveAdapters, syncDriveChanges } from '../kb/ingestion/drive.js'
+import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
 import { createNotionAdapter } from '../kb/ingestion/notion.js'
 import { extractEntitiesBatch, markLowValueChunks } from '../kb/entity-extractor.js'
 import type { SourceAdapter } from '../kb/ingestion/types.js'
@@ -70,6 +71,18 @@ const kbIngestionJob = cron.schedule('0 20 * * *', async () => {
     const ingestionStats = await runIngestion(db, kbVectorStore, adapters)
     const totalCreated = ingestionStats.reduce((sum, s) => sum + s.chunksCreated, 0)
     logger.info({ totalCreated }, 'KB ingestion complete')
+
+    // Drive incremental sync — poll Changes API for modified files
+    try {
+      const tokens = await resolveGoogleTokens()
+      for (const account of tokens.keys()) {
+        const result = await syncDriveChanges(db, account, qdrantClient)
+        logger.info({ account, ...result }, 'Drive incremental sync complete')
+      }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      logger.error({ error: errMsg }, 'Drive incremental sync failed (non-blocking)')
+    }
 
     // Mark any new low-value chunks as processed
     const marked = await markLowValueChunks(db)
