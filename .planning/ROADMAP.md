@@ -16,7 +16,7 @@ Astra is built across 3 milestones, 12 phases total. Each milestone represents a
 
 - [x] **Phase 1: Infrastructure and Security Foundation** — Docker Compose stack, encrypted credentials, structured logging, LLM client (completed 2026-02-23)
 - [x] **Phase 2: Bot Shell and Agent Brain** — Telegram + Slack bots, memory, conversation context, notification preferences (completed 2026-02-25)
-- [ ] **Phase 3: Core Integrations** — ClickUp, Gmail, Google Calendar, Google Drive via MCP; read-only access + optimized MCP queries (precise filters, minimal token waste)
+- [x] **Phase 3: Core Integrations** — ClickUp, Gmail, Google Calendar, Google Drive via MCP; read-only access + optimized MCP queries (precise filters, minimal token waste) (completed 2026-03-02)
 - [ ] **Phase 4: Data Harvest and Knowledge Base** — Ingest history from all sources, entity extraction, RAG with hybrid search, company terminology
 - [ ] **Phase 5: Reports and Digests** — Daily standups, weekly status, email digests, on-demand summaries, bilingual output
 - [ ] **Phase 6: Proactive Monitoring** — Deadline alerts, calendar reminders, overdue tracking, document freshness (all trigger-based, no cron LLM)
@@ -84,8 +84,8 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — MCP infrastructure: env vars, dynamic config generator, system prompt integration tool guidance
-- [ ] 03-02-PLAN.md — Proactive monitors: ClickUp deadline alerts, Google Calendar reminders via NotificationDispatcher
-- [ ] 03-03-PLAN.md — Server setup (Python/uvx, MCP pre-cache, Google OAuth consent) + end-to-end verification
+- [x] 03-02-PLAN.md — Proactive monitors: ClickUp deadline alerts, Google Calendar reminders via NotificationDispatcher
+- [x] 03-03-PLAN.md — Server setup (Python/uvx, MCP pre-cache, Google OAuth consent) + end-to-end verification
 
 ### Phase 4: Data Harvest and Knowledge Base
 **Goal**: Ingest bounded history from all connected sources, extract entities, build a RAG-powered knowledge base with hybrid search — the user can ask any question about their work data and get accurate answers with sources
@@ -222,8 +222,8 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 (M1) → 7 → 8 �
 |-------|-----------|----------------|--------|-----------|
 | 1. Infrastructure and Security Foundation | M1 | 2/2 | Complete | 2026-02-23 |
 | 2. Bot Shell and Agent Brain | M1 | 5/5 | Complete | 2026-02-25 |
-| 3. Core Integrations (read-only + MCP optimization) | M1 | 1/3 | In progress | - |
-| 4. Data Harvest and Knowledge Base | M1 | 0/? | Not started | - |
+| 3. Core Integrations (read-only + MCP optimization) | M1 | 3/3 | Complete | 2026-03-02 |
+| 4. Data Harvest and Knowledge Base | M1 | 3/? | In progress | - |
 | 5. Reports and Digests | M1 | 0/? | Not started | - |
 | 6. Proactive Monitoring | M1 | 0/? | Not started | - |
 | 7. Smart Recommendations | M2 | 0/? | Not started | - |
