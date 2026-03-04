@@ -3,6 +3,8 @@ export type RelationType = 'works_on' | 'manages' | 'owns' | 'member_of' | 'clie
 export type ChunkSource = 'slack' | 'gmail' | 'calendar' | 'clickup' | 'drive' | 'notion' | 'clockify'
 export type ChunkType = 'message' | 'email' | 'document' | 'task' | 'event'
 export type IngestionStatus = 'idle' | 'running' | 'failed'
+export type FactType = 'event' | 'decision' | 'status' | 'milestone' | 'release' | 'deadline'
+export type DocType = 'spec' | 'wiki' | 'report' | 'meeting_notes' | 'design' | 'other'
 
 export interface KBEntity {
   id: number
@@ -74,6 +76,62 @@ export interface KBSearchResult {
   score: number
   entityIds?: number[] | null
   metadata?: Record<string, unknown> | null
+}
+
+/** A time-stamped fact tied to an entity. */
+export interface KBFact {
+  id: number
+  entityId: number
+  factDate: Date | null
+  factType: FactType
+  text: string
+  source: ChunkSource
+  sourceChunkId: string | null
+  confidence: number
+  metadata?: Record<string, unknown> | null
+  createdAt: Date
+}
+
+/** A Notion/Drive document linked to an entity. */
+export interface KBDocument {
+  id: number
+  entityId: number
+  title: string
+  url: string
+  source: 'notion' | 'drive'
+  docType: DocType
+  sourceChunkId: string | null
+  metadata?: Record<string, unknown> | null
+  createdAt: Date
+}
+
+/** Result from unified knowledge extraction (one batch). */
+export interface KnowledgeExtractionResult {
+  entities: Array<{
+    name: string
+    type: EntityType
+    aliases?: string[]
+    company?: string
+  }>
+  relations: Array<{
+    from: string
+    to: string
+    relation: RelationType
+    role?: string
+  }>
+  facts: Array<{
+    entity: string
+    date?: string
+    type: FactType
+    text: string
+  }>
+  documents: Array<{
+    entity: string
+    title: string
+    url: string
+    source: 'notion' | 'drive'
+    type: DocType
+  }>
 }
 
 /** Filters for KB search. */

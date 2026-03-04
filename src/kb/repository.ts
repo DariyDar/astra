@@ -6,9 +6,11 @@ import {
   kbEntityRelations,
   kbChunks,
   kbIngestionState,
+  kbFacts,
+  kbDocuments,
 } from '../db/schema.js'
 import type * as schema from '../db/schema.js'
-import type { EntityType, RelationType, ChunkSource, IngestionStatus } from './types.js'
+import type { EntityType, RelationType, ChunkSource, IngestionStatus, FactType, DocType } from './types.js'
 
 type DB = NodePgDatabase<typeof schema>
 
@@ -295,7 +297,7 @@ export async function findUnprocessedChunks(
   db: DB,
   limit: number = 50,
   options?: { minTextLength?: number },
-): Promise<Array<{ id: string; source: string; sourceId: string; text: string; qdrantId: string | null; metadata: unknown }>> {
+): Promise<Array<{ id: string; source: string; sourceId: string; text: string; qdrantId: string | null; metadata: unknown; sourceDate: Date | null }>> {
   const rows = await db.select({
     id: kbChunks.id,
     source: kbChunks.source,
@@ -303,6 +305,7 @@ export async function findUnprocessedChunks(
     text: kbChunks.text,
     qdrantId: kbChunks.qdrantId,
     metadata: kbChunks.metadata,
+    sourceDate: kbChunks.sourceDate,
   }).from(kbChunks)
     .where(extractableChunkConditions(options?.minTextLength))
     .orderBy(
@@ -318,7 +321,7 @@ export async function findUnprocessedChunks(
     )
     .limit(limit)
 
-  return rows.map((r) => ({ ...r, id: r.id.toString(), qdrantId: r.qdrantId ?? null }))
+  return rows.map((r) => ({ ...r, id: r.id.toString(), qdrantId: r.qdrantId ?? null, sourceDate: r.sourceDate ?? null }))
 }
 
 export async function countUnprocessedChunks(db: DB): Promise<number> {
@@ -393,6 +396,151 @@ export async function searchChunksByKeyword(
   }).from(kbChunks).where(and(...conditions)).limit(limit)
 
   return rows.map((r) => ({ ...r, id: r.id.toString() }))
+}
+
+// ── Fact operations ──
+
+export async function addFact(
+  db: DB,
+  fact: {
+    entityId: number
+    factDate?: Date | null
+    factType: FactType
+    text: string
+    source: ChunkSource
+    sourceChunkId?: string | null
+    confidence?: number
+    metadata?: Record<string, unknown>
+  },
+): Promise<number> {
+  // Dedup: skip if identical fact already exists for this entity
+  const [existing] = await db.select({ id: kbFacts.id })
+    .from(kbFacts)
+    .where(and(
+      eq(kbFacts.entityId, fact.entityId),
+      eq(kbFacts.factType, fact.factType),
+      eq(kbFacts.text, fact.text),
+    ))
+    .limit(1)
+  if (existing) return existing.id
+
+  const [row] = await db.insert(kbFacts).values({
+    entityId: fact.entityId,
+    factDate: fact.factDate ?? null,
+    factType: fact.factType,
+    text: fact.text,
+    source: fact.source,
+    sourceChunkId: fact.sourceChunkId ? BigInt(fact.sourceChunkId) : undefined,
+    confidence: fact.confidence ?? 0.8,
+    metadata: fact.metadata ?? null,
+  }).returning({ id: kbFacts.id })
+
+  return row.id
+}
+
+export async function getFactsForEntity(
+  db: DB,
+  entityId: number,
+  options?: { limit?: number; factType?: FactType; after?: Date; before?: Date },
+): Promise<Array<{ id: number; factDate: Date | null; factType: string; text: string; source: string; confidence: number; createdAt: Date }>> {
+  const conditions = [eq(kbFacts.entityId, entityId)]
+  if (options?.factType) conditions.push(eq(kbFacts.factType, options.factType))
+  if (options?.after) conditions.push(sql`${kbFacts.factDate} >= ${options.after}`)
+  if (options?.before) conditions.push(sql`${kbFacts.factDate} <= ${options.before}`)
+
+  return db.select({
+    id: kbFacts.id,
+    factDate: kbFacts.factDate,
+    factType: kbFacts.factType,
+    text: kbFacts.text,
+    source: kbFacts.source,
+    confidence: kbFacts.confidence,
+    createdAt: kbFacts.createdAt,
+  })
+    .from(kbFacts)
+    .where(and(...conditions))
+    .orderBy(sql`${kbFacts.factDate} DESC NULLS LAST`)
+    .limit(options?.limit ?? 50)
+}
+
+// ── Document operations ──
+
+export async function addDocument(
+  db: DB,
+  doc: {
+    entityId: number
+    title: string
+    url: string
+    source: 'notion' | 'drive'
+    docType: DocType
+    sourceChunkId?: string | null
+    metadata?: Record<string, unknown>
+  },
+): Promise<number> {
+  const [row] = await db.insert(kbDocuments).values({
+    entityId: doc.entityId,
+    title: doc.title,
+    url: doc.url,
+    source: doc.source,
+    docType: doc.docType,
+    sourceChunkId: doc.sourceChunkId ? BigInt(doc.sourceChunkId) : undefined,
+    metadata: doc.metadata ?? null,
+  }).onConflictDoNothing().returning({ id: kbDocuments.id })
+
+  if (row) return row.id
+
+  // Already exists — fetch ID
+  const [existing] = await db.select({ id: kbDocuments.id })
+    .from(kbDocuments)
+    .where(and(eq(kbDocuments.url, doc.url), eq(kbDocuments.entityId, doc.entityId)))
+  return existing.id
+}
+
+export async function getDocumentsForEntity(
+  db: DB,
+  entityId: number,
+): Promise<Array<{ id: number; title: string; url: string; source: string; docType: string; createdAt: Date }>> {
+  return db.select({
+    id: kbDocuments.id,
+    title: kbDocuments.title,
+    url: kbDocuments.url,
+    source: kbDocuments.source,
+    docType: kbDocuments.docType,
+    createdAt: kbDocuments.createdAt,
+  })
+    .from(kbDocuments)
+    .where(eq(kbDocuments.entityId, entityId))
+    .orderBy(sql`${kbDocuments.createdAt} DESC`)
+}
+
+// ── Re-extraction support ──
+
+/**
+ * Reset entity_ids to NULL for chunks matching filters.
+ * This makes them eligible for re-extraction.
+ */
+export async function resetExtractionFlags(
+  db: DB,
+  filters?: { source?: ChunkSource; after?: Date; before?: Date },
+): Promise<number> {
+  const conditions = [sql`${kbChunks.entityIds} IS NOT NULL`]
+  if (filters?.source) conditions.push(eq(kbChunks.source, filters.source))
+  if (filters?.after) conditions.push(sql`${kbChunks.sourceDate} >= ${filters.after}`)
+  if (filters?.before) conditions.push(sql`${kbChunks.sourceDate} <= ${filters.before}`)
+
+  // Count first, then update — avoids loading all IDs into memory (can be 100K+ rows)
+  const [countRow] = await db.select({ count: sql<number>`count(*)::int` })
+    .from(kbChunks)
+    .where(and(...conditions))
+  const count = countRow?.count ?? 0
+
+  if (count > 0) {
+    await db.update(kbChunks)
+      .set({ entityIds: sql`NULL` })
+      .where(and(...conditions))
+  }
+
+  return count
 }
 
 // ── Ingestion state operations ──

@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   bigserial,
+  bigint,
   boolean,
   real,
   integer,
@@ -195,6 +196,54 @@ export const kbEntityRelations = pgTable(
     index('kb_entity_relations_from_idx').on(table.fromId),
     index('kb_entity_relations_to_idx').on(table.toId),
     index('kb_entity_relations_relation_idx').on(table.relation),
+  ],
+)
+
+/**
+ * KB facts — time-stamped events, decisions, milestones tied to entities.
+ * "когда мы доделали FBB2 на стартреке?" → query by entity_id + fact_date.
+ */
+export const kbFacts = pgTable(
+  'kb_facts',
+  {
+    id: serial('id').primaryKey(),
+    entityId: integer('entity_id').notNull().references(() => kbEntities.id, { onDelete: 'cascade' }),
+    factDate: timestamp('fact_date', { withTimezone: true }),
+    factType: text('fact_type').notNull(),
+    text: text('text').notNull(),
+    source: text('source').notNull(),
+    sourceChunkId: bigint('source_chunk_id', { mode: 'bigint' }),
+    confidence: real('confidence').default(0.8).notNull(),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('kb_facts_entity_date_idx').on(table.entityId, table.factDate),
+    index('kb_facts_type_idx').on(table.factType),
+    index('kb_facts_source_chunk_idx').on(table.sourceChunkId),
+  ],
+)
+
+/**
+ * KB documents — Notion/Drive docs linked to entities.
+ * Unique per (url, entity_id) to avoid duplicate links.
+ */
+export const kbDocuments = pgTable(
+  'kb_documents',
+  {
+    id: serial('id').primaryKey(),
+    entityId: integer('entity_id').notNull().references(() => kbEntities.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    url: text('url').notNull(),
+    source: text('source').notNull(),
+    docType: text('doc_type').notNull(),
+    sourceChunkId: bigint('source_chunk_id', { mode: 'bigint' }),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('kb_documents_url_entity_idx').on(table.url, table.entityId),
+    index('kb_documents_entity_idx').on(table.entityId),
   ],
 )
 

@@ -14,7 +14,7 @@ import { createCalendarAdapters } from '../kb/ingestion/calendar.js'
 import { createDriveAdapters, syncDriveChanges } from '../kb/ingestion/drive.js'
 import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
 import { createNotionAdapter } from '../kb/ingestion/notion.js'
-import { extractEntitiesBatch, markLowValueChunks } from '../kb/entity-extractor.js'
+import { extractKnowledgeBatch, markLowValueChunks } from '../kb/knowledge-extractor.js'
 import type { SourceAdapter } from '../kb/ingestion/types.js'
 
 const AUDIT_RETENTION_DAYS = 30
@@ -90,14 +90,14 @@ const kbIngestionJob = cron.schedule('0 20 * * *', async () => {
       logger.info({ marked }, 'KB: marked low-value chunks as processed')
     }
 
-    // Run multi-batch entity extraction with nightly budget
-    logger.info('KB: starting nightly entity extraction')
-    const extractionStats = await extractEntitiesBatch(db, {
+    // Run multi-batch knowledge extraction via Gemini (free, fast)
+    logger.info('KB: starting nightly knowledge extraction')
+    const extractionStats = await extractKnowledgeBatch(db, {
       maxBatches: 100,
-      maxTimeMinutes: 120,
-      maxCostUsd: 5.0,
+      maxTimeMinutes: 60,
+      chunkBatchSize: 100,
     }, qdrantClient)
-    logger.info(extractionStats, 'KB nightly entity extraction complete')
+    logger.info(extractionStats, 'KB nightly knowledge extraction complete')
   } catch (error) {
     logger.error({ error }, 'KB nightly ingestion failed')
   }
