@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-02-23)
 
 Milestone: 1 of 3 (Information Assistant)
 Phase: 4 of 12 (Knowledge Base — in progress, context gathered)
-Status: Phase 4 Wave 1+2 plans complete (gmail-cleanup, drive-smart-index, entity-extraction), Wave 3+ in progress
+Status: Phase 4 Waves 1-3 complete (gmail-cleanup, drive-smart-index, entity-extraction, drive-incremental, slack-user-cache), Wave 4+ in progress
 
 Progress (M1): [██████░░░░] 50% (3/6 phases complete)
 Progress (overall): [███░░░░░░░] 25% (3/12 phases complete)
@@ -41,6 +41,8 @@ Progress (overall): [███░░░░░░░] 25% (3/12 phases complete)
 - Gmail cleanup: 113K → 37K chunks (system/human classification)
 - Drive smart-index: 3-tier indexing (full/acquaintance/metadata)
 - Entity extraction code: multi-batch budget loop, CLI, nightly cron
+- Drive incremental: Changes API sync + stale document query (DRIVE-03/04)
+- Slack user cache: ID→name resolution + reset-slack-entities CLI
 - 199 entities, 398 relations (62 seed + extracted from 1 Slack batch)
 - 116K total chunks across 6 sources
 
@@ -59,8 +61,8 @@ Progress (overall): [███░░░░░░░] 25% (3/12 phases complete)
 
 ### Context
 Context file: .planning/phases/04-knowledge-base/04-CONTEXT.md
-Plans: gmail-cleanup-PLAN.md, drive-smart-index-PLAN.md, entity-extraction-PLAN.md
-Summaries: gmail-cleanup-SUMMARY.md, drive-smart-index-SUMMARY.md, entity-extraction-SUMMARY.md
+Plans: gmail-cleanup, drive-smart-index, entity-extraction, drive-incremental, slack-user-cache, bulk-extraction, entity-review, knowledge-map
+Summaries: gmail-cleanup, drive-smart-index, entity-extraction, drive-incremental, slack-user-cache
 
 ### Key Decisions
 - 3-tier Drive indexing: <=30d full content export, 31-90d acquaintance, >90d metadata-only
@@ -70,5 +72,9 @@ Summaries: gmail-cleanup-SUMMARY.md, drive-smart-index-SUMMARY.md, entity-extrac
 - Entity extraction: 300s timeout, batch size 20, entity context capped at 3000 chars
 - Low-value chunks marked with empty array (not null) to distinguish from unprocessed
 - Qdrant entity_ids sync failures are non-fatal (log warning, continue)
+- Drive Changes API uses separate watermark key (drive:changes:{account}) from files.list (drive:{account})
+- Drive sync is non-blocking in nightly cron — failure doesn't prevent entity extraction
+- Slack user cache built once per ingestion run (not per message) — covers both workspaces + deactivated users
+- Reset script does NOT auto-trigger re-ingestion — user runs manually or waits for nightly cron
 
 Last activity: 2026-03-04
