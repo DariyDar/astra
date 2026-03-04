@@ -32,7 +32,7 @@ export interface ClaudeResponse {
  */
 export async function callClaude(
   prompt: string,
-  options?: { system?: string; mcpConfigPath?: string },
+  options?: { system?: string; mcpConfigPath?: string; timeoutMs?: number },
   requestLogger?: pino.Logger,
 ): Promise<ClaudeResponse> {
   const log = requestLogger ?? logger
@@ -57,7 +57,7 @@ export async function callClaude(
   // a trailing positional argument — so we use stdin consistently for both cases.
 
   try {
-    const result = await execClaude(args, prompt)
+    const result = await execClaude(args, prompt, options?.timeoutMs)
 
     log.info(
       {
@@ -113,7 +113,7 @@ export async function callClaude(
   }
 }
 
-function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
+function execClaude(args: string[], prompt: string, timeoutMs?: number): Promise<ClaudeResponse> {
   return new Promise((resolve, reject) => {
     const proc = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -126,7 +126,7 @@ function execClaude(args: string[], prompt: string): Promise<ClaudeResponse> {
     proc.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
     proc.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
 
-    const timer = setTimeout(() => { proc.kill(); reject(new Error('Claude CLI timed out')) }, CLAUDE_TIMEOUT_MS)
+    const timer = setTimeout(() => { proc.kill(); reject(new Error('Claude CLI timed out')) }, timeoutMs ?? CLAUDE_TIMEOUT_MS)
 
     proc.on('close', (code) => {
       clearTimeout(timer)

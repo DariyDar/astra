@@ -20,6 +20,7 @@ type DB = NodePgDatabase<typeof schema>
 
 const COLLECTION_NAME = 'astra_knowledge'
 const DEFAULT_BATCH_SIZE = 50
+const EXTRACTION_TIMEOUT_MS = 300_000  // 5 min — extraction prompts are large
 const MAX_ENTITY_NAME_LENGTH = 200
 const ENTITY_CONTEXT_REFRESH_INTERVAL = 10
 const VALID_ENTITY_TYPES = new Set<string>(['person', 'project', 'channel', 'client', 'company', 'process'])
@@ -145,6 +146,7 @@ export async function extractEntities(
   try {
     const response = await callClaude(prompt, {
       system: 'You are a JSON-only entity extraction tool. Output valid JSON only, no markdown.',
+      timeoutMs: EXTRACTION_TIMEOUT_MS,
     })
 
     stats.costUsd = response.usage?.costUsd ?? 0
