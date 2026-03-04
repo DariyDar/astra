@@ -100,7 +100,17 @@ Plans:
   5. Bot understands company-specific terminology (project names, people, jargon)
   6. Google Drive documents are indexed and re-indexed when changed
   7. Ingestion is idempotent — re-running does not create duplicates
-**Plans**: TBD
+**Plans**: 8 plans
+
+Plans:
+- [x] gmail-cleanup-PLAN.md — Gmail cleanup: classify system/human emails, reduce 113K to 37K chunks
+- [x] drive-smart-index-PLAN.md — Drive smart-index: 3-tier content indexing (full/acquaintance/metadata)
+- [x] entity-extraction-PLAN.md — Entity extraction: multi-batch budget loop, CLI, nightly cron
+- [ ] slack-user-cache-PLAN.md — Slack user ID resolution: build lookup cache, re-ingest 25K chunks with names
+- [ ] drive-incremental-PLAN.md — Drive incremental sync via Changes API, stale document tracking
+- [ ] bulk-extraction-PLAN.md — Escalating entity extraction: small/medium/full with user quality gates
+- [ ] entity-review-PLAN.md — Interactive entity dedup/merge review with user
+- [ ] knowledge-map-PLAN.md — Knowledge map report: per-project/person/process views, RAG quality test
 
 ### Phase 5: Reports and Digests
 **Goal**: User can request project reports at any granularity and receive well-structured output in either language — daily standups, weekly status, email digests, on-demand summaries
@@ -223,7 +233,7 @@ Phases execute sequentially: 1 → 2 → 3 → 4 → 5 → 6 (M1) → 7 → 8 �
 | 1. Infrastructure and Security Foundation | M1 | 2/2 | Complete | 2026-02-23 |
 | 2. Bot Shell and Agent Brain | M1 | 5/5 | Complete | 2026-02-25 |
 | 3. Core Integrations (read-only + MCP optimization) | M1 | 3/3 | Complete | 2026-03-02 |
-| 4. Data Harvest and Knowledge Base | M1 | 3/? | In progress | - |
+| 4. Data Harvest and Knowledge Base | M1 | 3/8 | In progress | - |
 | 5. Reports and Digests | M1 | 0/? | Not started | - |
 | 6. Proactive Monitoring | M1 | 0/? | Not started | - |
 | 7. Smart Recommendations | M2 | 0/? | Not started | - |
