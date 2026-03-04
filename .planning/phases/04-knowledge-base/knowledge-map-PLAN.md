@@ -2,7 +2,7 @@
 phase: 04-knowledge-base
 plan: knowledge-map
 type: execute
-wave: 5
+wave: 6
 depends_on:
   - bulk-extraction
   - entity-review

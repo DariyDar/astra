@@ -114,7 +114,7 @@ Create `src/kb/reset-slack-entities.ts` — a CLI script (runnable via `npx tsx`
 
 3. **Delete existing Slack chunks:** Delete all rows from `kb_chunks` where `source = 'slack'`. Also delete corresponding Qdrant points (use `deleteByFilter` on collection `astra_knowledge` with `source: 'slack'`).
 
-4. **Trigger re-ingestion:** Import and call the Slack ingestion adapter's `fetchSince` with the reset watermark (empty/null). The adapter will now use the user cache (from Task 1) to resolve all IDs. Alternatively, print instructions to run ingestion manually via the existing CLI tools.
+4. **Trigger re-ingestion:** Import and call the Slack ingestion adapter's `fetchSince` with the reset watermark (empty/null). The adapter will now use the user cache (from Task 1) to resolve all IDs. The re-ingestion MUST be triggered directly by the script — do NOT skip this step or defer to manual action.
 
 Add `--dry-run` flag that shows what would be deleted without executing. Log totals at the end (entities deleted, chunks deleted, watermarks reset).
 

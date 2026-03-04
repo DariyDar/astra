@@ -129,7 +129,7 @@ Modify `src/worker/index.ts` to include Drive incremental sync in the nightly cr
 Do NOT remove the existing `files.list`-based ingestion. The Changes API sync is additive — it catches files modified between full ingestion runs. The full `files.list` run handles initial population and tier reassignment based on age.
   </action>
   <verify>
-    <automated>grep -c "syncDriveChanges" src/worker/index.ts</automated>
+    <automated>grep -q 'syncDriveChanges' src/worker/index.ts && echo 'PASS' || echo 'FAIL: syncDriveChanges not found in worker'</automated>
     <manual>Verify the nightly cron sequence: ingestion -> Drive changes sync -> entity extraction. Verify error handling wraps the sync call.</manual>
   </verify>
   <done>Nightly cron polls Drive Changes API for each account, re-indexes changed files at the correct tier, and the sync is resilient to failures</done>
