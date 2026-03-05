@@ -329,10 +329,13 @@ export async function compileDigest(company: Company): Promise<string> {
   })
 
   // Call Gemini to compile the digest
+  // thinkingBudget: 0 — disable thinking to maximize output token budget
+  // (thinking consumed ~8K tokens leaving only 326 for output)
   const response = await callGemini(userPrompt, {
     systemInstruction: DIGEST_SYSTEM_PROMPT,
     maxOutputTokens: 8192,
     timeoutMs: 120_000,
+    thinkingBudget: 0,
   })
 
   if (!response.text || response.text.trim().length === 0) {

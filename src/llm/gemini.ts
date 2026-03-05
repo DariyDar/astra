@@ -42,6 +42,8 @@ export interface GeminiOptions {
   timeoutMs?: number
   /** Max output tokens. Default: let model decide. */
   maxOutputTokens?: number
+  /** Thinking token budget. 0 = disable thinking, -1 = dynamic. Default: model decides. */
+  thinkingBudget?: number
 }
 
 export interface GeminiResponse {
@@ -106,12 +108,15 @@ export async function callGemini(
   let url = `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS
 
+  const generationConfig: Record<string, unknown> = {
+    ...(options?.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {}),
+    ...(options?.jsonMode ? { responseMimeType: 'application/json' } : {}),
+    ...(options?.thinkingBudget !== undefined ? { thinkingConfig: { thinkingBudget: options.thinkingBudget } } : {}),
+  }
+
   const body: Record<string, unknown> = {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: {
-      ...(options?.maxOutputTokens ? { maxOutputTokens: options.maxOutputTokens } : {}),
-      ...(options?.jsonMode ? { responseMimeType: 'application/json' } : {}),
-    },
+    generationConfig,
   }
 
   if (options?.systemInstruction) {
