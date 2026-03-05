@@ -84,7 +84,7 @@ export async function compileDigest(company: Company): Promise<string> {
       fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq('yesterday', 50), yesterdayPeriod, googleTokens)),
       fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq('yesterday', 50), yesterdayPeriod)),
       fetchWithRetry('my-tasks', () => fetchMyTasks()),
-      fetchWithRetry('kb', () => fetchKBContext(company)),
+      fetchWithRetry('kb', () => fetchKBContext(wsLabel)),
     ])
 
   // Collect results and check for critical failures
@@ -179,21 +179,19 @@ async function fetchSlackForCompany(
 }
 
 /** Fetch KB facts for projects belonging to a company. */
-async function fetchKBContext(company: Company): Promise<Array<{ project: string; facts: string[] }>> {
+async function fetchKBContext(companyCode: string): Promise<Array<{ project: string; facts: string[] }>> {
   const projects = await findEntitiesByType(db, 'project')
   const companyProjects = projects.filter((p) => {
     if (!p.company) return false
-    return p.company.toLowerCase() === company
+    return p.company.toLowerCase() === companyCode.toLowerCase()
   })
 
-  const sevenDaysAgo = new Date(Date.now() - 7 * 86400_000)
-
   // Fetch facts in parallel to avoid N+1
+  // No date filter — get the most recent facts regardless of age (extraction is still catching up)
   const results = await Promise.all(
     companyProjects.slice(0, MAX_KB_PROJECTS).map(async (project) => {
       const facts = await getFactsForEntity(db, project.id, {
         limit: 5,
-        after: sevenDaysAgo,
       })
       return facts.length > 0
         ? { project: project.name, facts: facts.map((f) => f.text) }
