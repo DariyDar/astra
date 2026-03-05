@@ -283,20 +283,24 @@ export async function findChunksBySource(
 }
 
 /** Shared quality filter conditions for extractable chunks. */
-function extractableChunkConditions(minTextLength: number = 100) {
-  return and(
+function extractableChunkConditions(minTextLength: number = 100, sources?: string[]) {
+  const conditions = [
     sql`${kbChunks.entityIds} IS NULL`,
     sql`length(${kbChunks.text}) > ${minTextLength}`,
     sql`${kbChunks.text} NOT LIKE '%[metadata-only stub]%'`,
     sql`${kbChunks.text} NOT LIKE '%[system email -- metadata only]%'`,
     sql`${kbChunks.source} != 'drive'`,
-  )
+  ]
+  if (sources && sources.length > 0) {
+    conditions.push(inArray(kbChunks.source, sources))
+  }
+  return and(...conditions)
 }
 
 export async function findUnprocessedChunks(
   db: DB,
   limit: number = 50,
-  options?: { minTextLength?: number },
+  options?: { minTextLength?: number; sources?: string[] },
 ): Promise<Array<{ id: string; source: string; sourceId: string; text: string; qdrantId: string | null; metadata: unknown; sourceDate: Date | null }>> {
   const rows = await db.select({
     id: kbChunks.id,
@@ -307,7 +311,7 @@ export async function findUnprocessedChunks(
     metadata: kbChunks.metadata,
     sourceDate: kbChunks.sourceDate,
   }).from(kbChunks)
-    .where(extractableChunkConditions(options?.minTextLength))
+    .where(extractableChunkConditions(options?.minTextLength, options?.sources))
     .orderBy(
       sql`CASE ${kbChunks.source}
         WHEN 'slack' THEN 1
@@ -324,11 +328,11 @@ export async function findUnprocessedChunks(
   return rows.map((r) => ({ ...r, id: r.id.toString(), qdrantId: r.qdrantId ?? null, sourceDate: r.sourceDate ?? null }))
 }
 
-export async function countUnprocessedChunks(db: DB): Promise<number> {
+export async function countUnprocessedChunks(db: DB, sources?: string[]): Promise<number> {
   const [row] = await db.select({
     count: sql<number>`count(*)::int`,
   }).from(kbChunks)
-    .where(extractableChunkConditions())
+    .where(extractableChunkConditions(100, sources))
   return row?.count ?? 0
 }
 

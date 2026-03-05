@@ -9,6 +9,7 @@
  *   --batch-size N    Chunks per batch (default: 100)
  *   --delay N         Seconds between batches to avoid rate limits (default: 10)
  *   --provider P      LLM provider: gemini (default) or claude
+ *   --sources S       Comma-separated sources to process (e.g. slack,clickup). All if omitted
  *   --skip-mark       Skip marking low-value chunks (if already done)
  *   --dry-run         Only count chunks and estimate, don't extract
  *   --reset-source S  Reset extraction flags for source S before running
@@ -42,6 +43,8 @@ const maxTime = parseArg('--max-time', 60)
 const batchSize = parseArg('--batch-size', 100)
 const delay = parseArg('--delay', 10)
 const provider = (parseStringArg('--provider') ?? 'gemini') as LlmProvider
+const sourcesArg = parseStringArg('--sources')
+const sources = sourcesArg ? sourcesArg.split(',').map((s) => s.trim()) : undefined
 const skipMark = process.argv.includes('--skip-mark')
 const dryRun = process.argv.includes('--dry-run')
 const resetSource = parseStringArg('--reset-source')
@@ -74,7 +77,7 @@ async function main(): Promise<void> {
     }
 
     // Step 2: Count remaining
-    const remaining = await countUnprocessedChunks(db)
+    const remaining = await countUnprocessedChunks(db, sources)
     const estBatches = Math.ceil(remaining / batchSize)
     const estTimeMin = Math.ceil(estBatches * 0.2) // ~12s per batch with rate limiter
 
@@ -83,6 +86,7 @@ async function main(): Promise<void> {
       estimatedBatches: estBatches,
       estimatedTimeMin: estTimeMin,
       provider,
+      sources: sources ?? 'all',
     }, 'Step 2: Chunk count and estimates')
 
     if (remaining === 0) {
@@ -110,6 +114,7 @@ async function main(): Promise<void> {
       chunkBatchSize: batchSize,
       interBatchDelaySec: delay,
       provider,
+      sources,
     }, qdrantClient)
 
     logger.info({

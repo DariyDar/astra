@@ -73,6 +73,8 @@ export interface BatchBudget {
   interBatchDelaySec: number
   /** LLM provider: 'gemini' (default) or 'claude'. */
   provider: LlmProvider
+  /** Only process chunks from these sources (e.g. ['slack','clickup']). All if empty. */
+  sources?: string[]
 }
 
 export interface BatchStats {
@@ -217,6 +219,7 @@ export async function extractKnowledge(
   qdrantClient?: QdrantClient,
   batchSize: number = DEFAULT_BATCH_SIZE,
   provider: LlmProvider = 'gemini',
+  sources?: string[],
 ): Promise<ExtractionBatchResult> {
   const stats: ExtractionBatchResult = {
     entitiesCreated: 0,
@@ -226,7 +229,7 @@ export async function extractKnowledge(
     chunksProcessed: 0,
   }
 
-  const chunks = await findUnprocessedChunks(db, batchSize)
+  const chunks = await findUnprocessedChunks(db, batchSize, { sources })
   if (chunks.length === 0) {
     logger.info('Knowledge extraction: no unprocessed chunks')
     return stats
@@ -251,10 +254,9 @@ export async function extractKnowledge(
     const extraction = parseKnowledgeExtraction(responseText)
     if (!extraction) {
       logger.warn({ responseHead: responseText.slice(0, 200) }, 'Knowledge extraction: failed to parse response')
-      for (const chunk of chunks) {
-        await updateChunkEntityIds(db, chunk.id, [])
-      }
-      stats.chunksProcessed = chunks.length
+      // Don't mark chunks — leave for retry (same as LLM error)
+      stats.chunksProcessed = 0
+      stats.errorCount = (stats.errorCount ?? 0) + 1
       return stats
     }
 
@@ -429,7 +431,7 @@ export async function extractKnowledgeBatch(
       entityContext = buildEntityContext(await getAllEntityNames(db))
     }
 
-    const result = await extractKnowledge(db, entityContext, qdrantClient, b.chunkBatchSize, b.provider)
+    const result = await extractKnowledge(db, entityContext, qdrantClient, b.chunkBatchSize, b.provider, b.sources)
     // chunksProcessed=0 means no more chunks to process (complete) —
     // but only if there's no error. On error, chunks are left unprocessed for retry.
     if (result.chunksProcessed === 0 && !result.errorCount) break
@@ -474,7 +476,7 @@ export async function extractKnowledgeBatch(
     stats.stoppedReason = 'budget_batches'
   }
 
-  stats.remainingUnprocessed = await countUnprocessedChunks(db)
+  stats.remainingUnprocessed = await countUnprocessedChunks(db, b.sources)
 
   logger.info(stats, 'Knowledge extraction: bulk run complete')
   return stats
