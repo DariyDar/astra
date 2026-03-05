@@ -7,6 +7,7 @@
  *   --max-batches N   Max number of batches (default: 200)
  *   --max-time N      Max time in minutes (default: 60)
  *   --batch-size N    Chunks per batch (default: 100)
+ *   --delay N         Seconds between batches to avoid rate limits (default: 10)
  *   --skip-mark       Skip marking low-value chunks (if already done)
  *   --dry-run         Only count chunks and estimate, don't extract
  *   --reset-source S  Reset extraction flags for source S before running
@@ -38,6 +39,7 @@ function parseStringArg(flag: string): string | null {
 const maxBatches = parseArg('--max-batches', 200)
 const maxTime = parseArg('--max-time', 60)
 const batchSize = parseArg('--batch-size', 100)
+const delay = parseArg('--delay', 10)
 const skipMark = process.argv.includes('--skip-mark')
 const dryRun = process.argv.includes('--dry-run')
 const resetSource = parseStringArg('--reset-source')
@@ -96,12 +98,14 @@ async function main(): Promise<void> {
       maxBatches,
       maxTimeMin: maxTime,
       batchSize,
-    }, 'Step 3: Starting knowledge extraction via Gemini...')
+      interBatchDelaySec: delay,
+    }, 'Step 3: Starting knowledge extraction...')
 
     const stats = await extractKnowledgeBatch(db, {
       maxBatches,
       maxTimeMinutes: maxTime,
       chunkBatchSize: batchSize,
+      interBatchDelaySec: delay,
     }, qdrantClient)
 
     logger.info({

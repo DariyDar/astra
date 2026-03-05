@@ -48,6 +48,8 @@ export interface BatchBudget {
   maxBatches: number
   maxTimeMinutes: number
   chunkBatchSize: number
+  /** Seconds to wait between batches (avoids rate limits). Default 0. */
+  interBatchDelaySec: number
 }
 
 export interface BatchStats {
@@ -365,6 +367,7 @@ const DEFAULT_BUDGET: BatchBudget = {
   maxBatches: 100,
   maxTimeMinutes: 60,
   chunkBatchSize: DEFAULT_BATCH_SIZE,
+  interBatchDelaySec: 0,
 }
 
 /**
@@ -392,7 +395,7 @@ export async function extractKnowledgeBatch(
 
   let entityContext = buildEntityContext(await getAllEntityNames(db))
   let consecutiveErrors = 0
-  const MAX_CONSECUTIVE_ERRORS = 3
+  const MAX_CONSECUTIVE_ERRORS = 5
 
   for (let batch = 0; batch < b.maxBatches; batch++) {
     const elapsedMin = (Date.now() - startTime) / 60_000
@@ -434,6 +437,10 @@ export async function extractKnowledgeBatch(
       facts: stats.totalFacts,
       elapsedMin: elapsedMin.toFixed(1),
     }, 'Knowledge extraction: progress')
+
+    if (b.interBatchDelaySec > 0) {
+      await new Promise((r) => setTimeout(r, b.interBatchDelaySec * 1000))
+    }
   }
 
   if (stats.stoppedReason === 'complete' && stats.totalBatches >= b.maxBatches) {

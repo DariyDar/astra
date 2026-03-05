@@ -4,7 +4,7 @@ import { env } from '../config/env.js'
 const GEMINI_MODEL = 'gemini-2.5-flash'
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 const DEFAULT_TIMEOUT_MS = 120_000
-const MAX_RETRIES = 3
+const MAX_RETRIES = 5
 
 // Rate limiter: 15 RPM for free tier
 const RPM_LIMIT = 15
@@ -100,7 +100,7 @@ export async function callGemini(
       })
 
       if (response.status === 429) {
-        const backoff = Math.min(2 ** attempt * 2000, 30_000)
+        const backoff = Math.min(2 ** attempt * 5000, 60_000)
         logger.warn({ attempt, backoffMs: backoff }, 'Gemini 429: rate limited, retrying')
         await new Promise((r) => setTimeout(r, backoff))
         continue
