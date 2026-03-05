@@ -2,6 +2,11 @@ import { SLACK_WORKSPACES } from '../mcp/briefing/slack.js'
 import { logger } from '../logging/logger.js'
 
 const USERS_PER_PAGE = 200
+const CACHE_TTL_MS = 10 * 60 * 1000  // 10 minutes
+
+/** Module-level cache to avoid re-fetching users from Slack API on every call. */
+let cachedResult: Map<string, string> | null = null
+let cacheTimestamp = 0
 
 interface SlackUser {
   id: string
@@ -24,6 +29,10 @@ interface UsersListResponse {
  * Includes deactivated users (they appear in historical messages).
  */
 export async function buildSlackUserCache(): Promise<Map<string, string>> {
+  if (cachedResult && Date.now() - cacheTimestamp < CACHE_TTL_MS) {
+    return cachedResult
+  }
+
   const cache = new Map<string, string>()
 
   for (const ws of SLACK_WORKSPACES) {
@@ -72,6 +81,8 @@ export async function buildSlackUserCache(): Promise<Map<string, string>> {
   }
 
   logger.info({ totalUsers: cache.size }, 'Slack user cache complete')
+  cachedResult = cache
+  cacheTimestamp = Date.now()
   return cache
 }
 

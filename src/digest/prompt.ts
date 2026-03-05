@@ -1,82 +1,149 @@
 /**
  * System prompt for daily digest LLM compilation.
  * "Краткое содержание предыдущих серий" — recap of yesterday only.
- * The LLM receives raw data from all sources + KB context and produces
+ * The LLM receives COMPANY-FILTERED data and produces
  * a formatted Telegram HTML message grouped by project.
  */
 
-export const DIGEST_SYSTEM_PROMPT = `You compile a daily recap digest ("Краткое содержание предыдущих серий") for Dariy (CPO / VP Production).
-This digest covers ONLY what happened yesterday. No future events, no today's schedule.
-Output language: Russian. Output format: Telegram HTML.
-ONLY use these HTML tags: <b>, <i>, <a href="...">.
-Do NOT use any other HTML tags (<p>, <br>, <h1>, <ul>, <li>, etc.). Use plain newlines for line breaks and • for bullets.
-Do NOT use markdown syntax (**, ##, etc.).
+import type { DigestSlackChannel } from './sources/slack.js'
+import type { BriefingItem } from '../mcp/briefing/types.js'
+import type { ClickUpTask } from './my-tasks.js'
 
-STRUCTURE:
-1. Header: <b>{CompanyName} — {date}</b>
-2. For each project with activity, a section:
-   <b>{ProjectName}</b>
-   • bullet points with key events from yesterday
-3. Section <b>Прочее</b> for non-project activity (general meetings, HR, admin emails)
-4. Final section <b>Мои задачи</b> with Dariy's tasks (overdue + due today)
+export const DIGEST_SYSTEM_PROMPT = `Ты компилируешь ежедневный дайджест ("Краткое содержание предыдущих серий") для Дария (CPO / VP Production).
+Дайджест покрывает ТОЛЬКО вчерашний день. Никаких планов на сегодня или будущее.
 
-RULES:
-- Group all activity by project. Use KB context to know which project an item belongs to.
-- If the same event appears in multiple sources (calendar + email + Slack), mention it ONCE.
-- Daily standups, recurring syncs — 1 line: "Дейли в HH:MM" unless something notable happened.
-- System/automated emails (ClickUp notifications, CI alerts, app store reports) — summarize as "N системных писем" unless something critical.
-- Human emails — include sender + subject + 1-line summary.
-- Slack messages — summarize key discussions, not every message. Focus on decisions, blockers, requests.
-- Calendar events — list with time; highlight if cancelled or has notable attendees.
-- ClickUp tasks — mention status changes, new tasks, completions.
-- If there are problems, blockers, or escalations — highlight them with ⚠️.
-- In "Мои задачи" section: overdue tasks first with ⏰, then due today.
-- Include <a href="url">clickable links</a> to tasks and messages where available.
-- FACTS ONLY. No judgments, no "отличная работа", no recommendations, no "стоит обратить внимание".
-- If a source returned an error or no data, skip it silently.
-- Keep the digest concise. Each project section: 2-5 bullet points max.
-- Do NOT add a greeting or sign-off. Start directly with the header.
+ФОРМАТ: Telegram HTML. Используй ТОЛЬКО теги <b>, <i>, <a href="...">.
+НЕ используй другие HTML-теги (<p>, <br>, <h1>, <ul>, <li>). Переносы строк — обычные \\n, буллеты — •.
+НЕ используй markdown-синтаксис (**, ##, и т.д.).
 
-KB CONTEXT FORMAT:
-You receive recent KB facts per project. Use them to add context (e.g., "soft-launch с 15 февраля").
-Do NOT list all KB facts — only use them when they add relevant context to yesterday's activity.
+СТРУКТУРА:
+1. Заголовок: <b>{CompanyName} — {дата}</b>
+2. По каждому проекту с активностью:
+   <b>{Название проекта}</b>
+   • буллеты с ключевыми событиями вчера
+3. Секция <b>Прочее</b> для непроектной активности (общие встречи, HR, админ)
+4. Финальная секция <b>Мои задачи</b> с задачами Дария (просроченные + на сегодня)
 
-If there is NO activity for a company, output: "<b>{CompanyName} — {date}</b>\n\nЗа вчера активности не было."
+ПРАВИЛА КОНТЕНТА:
+• Группируй ВСЮ активность по проектам. Используй KB-контекст чтобы знать к какому проекту что относится.
+• Если одно событие есть в нескольких источниках (calendar + email + Slack) — упомяни ОДИН раз.
+• Стендапы, дейли — ПОЛНОСТЬЮ ПРОПУСТИТЬ. Не упоминать что стендап был проведён, если на нём не было чего-то примечательного.
+• Системные письма (ClickUp нотификации, CI, отчёты App Store) — суммировать "N системных писем", если нет критичного.
+• Человеческие письма — отправитель + тема + 1 строка сути.
+• Slack — суммировать КЛЮЧЕВЫЕ обсуждения: решения, блокеры, запросы, статусы. НЕ пересказывать каждое сообщение.
+• Calendar — события со временем. Подсветить если отменено или важные участники.
+• ClickUp — смена статусов, новые задачи, завершения.
+• Проблемы, блокеры, эскалации — подсветить ⚠️.
+• В "Мои задачи": просроченные первые с ⏰, потом на сегодня.
+• Ссылки <a href="url">кликабельные</a> где доступны.
+
+КАЧЕСТВО ТЕКСТА:
+• ТОЛЬКО ФАКТЫ. Без оценок, без "отличная работа", без рекомендаций, без "стоит обратить внимание".
+• КОНКРЕТИКА: имена людей, числа, даты, версии, проценты. "Обсуждались вопросы" — ЗАПРЕЩЕНО.
+• Пиши кратко. 2-5 буллетов на проект максимум.
+• Используй KB-контекст для добавления релевантного контекста (ETA майлстоуна, текущий статус, приближающиеся дедлайны).
+• НЕ перечисляй все KB-факты — только когда они добавляют контекст к вчерашней активности.
+• Если источник вернул ошибку или пуст — пропусти молча.
+• НЕ добавляй приветствие или подпись. Начинай сразу с заголовка.
+
+ВАЖНО: тебе приходят данные ТОЛЬКО для одной компании. Все данные релевантны — используй их.
+
+Если НЕТ активности: "<b>{CompanyName} — {дата}</b>\\n\\nЗа вчера активности не было."
 `
 
-/** Build the user prompt with raw data for the LLM. */
+/** Build the user prompt with structured, company-filtered data. */
 export function buildDigestUserPrompt(params: {
   company: string
   date: string
-  slackData: unknown[]
-  gmailData: unknown[]
-  calendarYesterday: unknown[]
-  clickupData: unknown[]
-  myTasks: unknown[]
+  slackChannels: DigestSlackChannel[]
+  gmailData: BriefingItem[]
+  calendarData: BriefingItem[]
+  clickupData: BriefingItem[]
+  myTasks: ClickUpTask[]
   kbContext: Array<{ project: string; facts: string[] }>
 }): string {
   const sections: string[] = []
 
-  sections.push(`Company: ${params.company}`)
-  sections.push(`Date: ${params.date}`)
+  sections.push(`Компания: ${params.company}`)
+  sections.push(`Дата: ${params.date}`)
 
-  sections.push(`\n--- SLACK MESSAGES (yesterday) ---`)
-  sections.push(params.slackData.length > 0 ? JSON.stringify(params.slackData) : 'No data')
+  // Slack — structured per channel with resolved names
+  sections.push(`\n--- SLACK (вчерашние сообщения по каналам) ---`)
+  if (params.slackChannels.length > 0) {
+    for (const ch of params.slackChannels) {
+      sections.push(`\n#${ch.channelName} (${ch.messages.length} сообщений):`)
+      for (const msg of ch.messages) {
+        const thread = msg.threadInfo ? ` [${msg.threadInfo}]` : ''
+        sections.push(`  ${msg.author}: ${msg.text}${thread}`)
+      }
+    }
+  } else {
+    sections.push('Нет сообщений')
+  }
 
-  sections.push(`\n--- EMAILS (yesterday) ---`)
-  sections.push(params.gmailData.length > 0 ? JSON.stringify(params.gmailData) : 'No data')
+  // Gmail — subject + sender + preview
+  sections.push(`\n--- ПОЧТА (вчера) ---`)
+  if (params.gmailData.length > 0) {
+    for (const email of params.gmailData) {
+      const from = (email.author as string) ?? ''
+      const subject = (email.subject as string) ?? ''
+      const preview = (email.text_preview as string) ?? ''
+      const account = (email.account as string) ?? ''
+      sections.push(`  От: ${from} (${account})`)
+      sections.push(`  Тема: ${subject}`)
+      if (preview) sections.push(`  Превью: ${preview}`)
+      sections.push('')
+    }
+  } else {
+    sections.push('Нет писем')
+  }
 
-  sections.push(`\n--- CALENDAR (yesterday) ---`)
-  sections.push(params.calendarYesterday.length > 0 ? JSON.stringify(params.calendarYesterday) : 'No events')
+  // Calendar — events with time
+  sections.push(`\n--- КАЛЕНДАРЬ (вчера) ---`)
+  if (params.calendarData.length > 0) {
+    for (const event of params.calendarData) {
+      const subject = (event.subject as string) ?? ''
+      const date = (event.date as string) ?? ''
+      const attendees = (event.attendees as string) ?? ''
+      const status = (event.status as string) ?? ''
+      const cancelled = status === 'cancelled' ? ' [ОТМЕНЕНО]' : ''
+      sections.push(`  ${date} — ${subject}${cancelled}`)
+      if (attendees) sections.push(`    Участники: ${attendees}`)
+    }
+  } else {
+    sections.push('Нет событий')
+  }
 
-  sections.push(`\n--- CLICKUP TASKS (activity yesterday) ---`)
-  sections.push(params.clickupData.length > 0 ? JSON.stringify(params.clickupData) : 'No data')
+  // ClickUp — task activity
+  sections.push(`\n--- CLICKUP (активность вчера) ---`)
+  if (params.clickupData.length > 0) {
+    for (const task of params.clickupData) {
+      const subject = (task.subject as string) ?? ''
+      const status = (task.status as string) ?? ''
+      const list = (task.list as string) ?? ''
+      const assignee = (task.assignee as string) ?? ''
+      const links = (task.links as string[]) ?? []
+      const url = links[0] ?? ''
+      sections.push(`  [${list}] ${subject} — ${status}${assignee ? ` (${assignee})` : ''}${url ? ` ${url}` : ''}`)
+    }
+  } else {
+    sections.push('Нет активности')
+  }
 
-  sections.push(`\n--- MY TASKS (assigned to Dariy) ---`)
-  sections.push(params.myTasks.length > 0 ? JSON.stringify(params.myTasks) : 'No tasks')
+  // My Tasks
+  sections.push(`\n--- МОИ ЗАДАЧИ (назначены Дарию) ---`)
+  if (params.myTasks.length > 0) {
+    for (const task of params.myTasks) {
+      const overdue = task.is_overdue ? ' ⏰ ПРОСРОЧЕНА' : ''
+      sections.push(`  [${task.list}] ${task.subject} — ${task.status}${overdue}${task.due_date ? ` (до ${task.due_date})` : ''} ${task.url}`)
+    }
+  } else {
+    sections.push('Нет задач')
+  }
 
+  // KB Context — project facts for enrichment
   if (params.kbContext.length > 0) {
-    sections.push(`\n--- KB CONTEXT (recent facts per project) ---`)
+    sections.push(`\n--- KB КОНТЕКСТ (факты по проектам для добавления контекста) ---`)
     for (const entry of params.kbContext) {
       sections.push(`\n[${entry.project}]`)
       for (const fact of entry.facts) {

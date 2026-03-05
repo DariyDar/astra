@@ -1,6 +1,7 @@
 import type { Source, BriefingRequest, BriefingItem } from './types.js'
 import { log, truncate, extractUrls } from './utils.js'
 import { toSlackTs } from './period.js'
+import { buildSlackUserCache, resolveSlackMentions } from '../../kb/slack-user-cache.js'
 
 // ── Slack multi-workspace ──
 
@@ -78,6 +79,7 @@ async function fetchSlackWorkspace(
   ws: SlackWorkspace,
 ): Promise<BriefingItem[]> {
   const headers = { Authorization: `Bearer ${ws.token}`, 'Content-Type': 'application/json' }
+  const userCache = await buildSlackUserCache()
 
   let channelIds: { id: string; name: string }[] = []
 
@@ -123,18 +125,21 @@ async function fetchSlackWorkspace(
       const data = await resp.json() as { ok: boolean; messages?: Array<{ user?: string; text?: string; ts?: string; thread_ts?: string; reply_count?: number }> }
       if (!data.ok) return []
 
-      return (data.messages ?? []).map(msg => ({
-        source: 'slack' as Source,
-        channel: `${ws.label}/${ch.name}`,
-        author: msg.user ?? 'unknown',
-        text: msg.text ?? '',
-        text_preview: truncate(msg.text ?? '', 200),
-        date: msg.ts ? new Date(parseFloat(msg.ts) * 1000).toISOString() : '',
-        ts: msg.ts ?? '',
-        thread_ts: msg.thread_ts ?? msg.ts ?? '',
-        thread_info: msg.reply_count ? `${msg.reply_count} replies` : undefined,
-        links: extractUrls(msg.text ?? ''),
-      }))
+      return (data.messages ?? []).map(msg => {
+        const resolvedText = resolveSlackMentions(msg.text ?? '', userCache)
+        return {
+          source: 'slack' as Source,
+          channel: `${ws.label}/${ch.name}`,
+          author: (msg.user ? userCache.get(msg.user) : undefined) ?? msg.user ?? 'unknown',
+          text: resolvedText,
+          text_preview: truncate(resolvedText, 200),
+          date: msg.ts ? new Date(parseFloat(msg.ts) * 1000).toISOString() : '',
+          ts: msg.ts ?? '',
+          thread_ts: msg.thread_ts ?? msg.ts ?? '',
+          thread_info: msg.reply_count ? `${msg.reply_count} replies` : undefined,
+          links: extractUrls(msg.text ?? ''),
+        }
+      })
     }),
   )
 
@@ -163,6 +168,8 @@ export async function fetchSlackThread(
 ): Promise<{ channel: string; workspace: string; messages: Array<{ author: string; text: string; date: string }> }> {
   if (SLACK_WORKSPACES.length === 0) throw new Error('Slack not configured')
   if (!/^\d+\.\d+$/.test(threadTs)) throw new Error(`Invalid thread_ts format: "${threadTs}". Expected: "1709456789.123456"`)
+
+  const userCache = await buildSlackUserCache()
 
   for (const ws of SLACK_WORKSPACES) {
     const headers = { Authorization: `Bearer ${ws.token}`, 'Content-Type': 'application/json' }
@@ -194,8 +201,8 @@ export async function fetchSlackThread(
       channel: `${ws.label}/${found.name}`,
       workspace: ws.label,
       messages: (data.messages ?? []).map(msg => ({
-        author: msg.user ?? 'unknown',
-        text: msg.text ?? '',
+        author: (msg.user ? userCache.get(msg.user) : undefined) ?? msg.user ?? 'unknown',
+        text: resolveSlackMentions(msg.text ?? '', userCache),
         date: msg.ts ? new Date(parseFloat(msg.ts) * 1000).toISOString() : '',
       })),
     }

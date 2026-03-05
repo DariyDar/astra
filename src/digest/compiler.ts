@@ -3,22 +3,24 @@
  * Fetches YESTERDAY's data from all sources + KB context,
  * sends to Gemini LLM to produce a formatted Telegram HTML digest.
  *
- * Reliability: each source is fetched with retry + exponential backoff.
- * Critical sources (Slack, Gmail, Calendar, ClickUp) must all succeed —
- * if any critical source fails after all retries, the digest is NOT compiled.
+ * Data separation happens IN CODE: each company gets ONLY its own data.
+ * Gmail/Calendar/ClickUp are filtered by project name/alias matching.
+ * Slack is naturally separated by workspace.
  */
 
 import { db } from '../db/index.js'
+import { inArray } from 'drizzle-orm'
+import { kbEntityAliases } from '../db/schema.js'
 import { callGemini } from '../llm/gemini.js'
 import { logger } from '../logging/logger.js'
 import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
-import { fetchSlack } from '../mcp/briefing/slack.js'
 import { fetchGmail } from '../mcp/briefing/gmail.js'
 import { fetchCalendar } from '../mcp/briefing/calendar.js'
 import { fetchClickUp } from '../mcp/briefing/clickup.js'
 import { parsePeriod } from '../mcp/briefing/period.js'
 import { findEntitiesByType, getFactsForEntity } from '../kb/repository.js'
-import { fetchMyTasks } from './my-tasks.js'
+import { fetchDigestSlack, type DigestSlackChannel } from './sources/slack.js'
+import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
 import { DIGEST_SYSTEM_PROMPT, buildDigestUserPrompt } from './prompt.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
 
@@ -29,7 +31,7 @@ const COMPANY_LABELS: Record<Company, string> = {
   highground: 'Highground',
 }
 
-const SLACK_WORKSPACE_MAP: Record<Company, string> = {
+const SLACK_WORKSPACE_MAP: Record<Company, 'ac' | 'hg'> = {
   astrocat: 'ac',
   highground: 'hg',
 }
@@ -40,7 +42,10 @@ const RETRY_INITIAL_DELAY_MS = 5_000
 const RETRY_MAX_DELAY_MS = 60_000
 
 /** Max projects to include KB context for (limits LLM prompt size). */
-const MAX_KB_PROJECTS = 15
+const MAX_KB_PROJECTS = 20
+
+/** Max facts per project in KB context. */
+const MAX_FACTS_PER_PROJECT = 8
 
 /** Format date in Russian for the digest header. */
 function formatDateRu(date: Date): string {
@@ -60,10 +65,163 @@ interface SourceResult<T> {
   error: string | null
 }
 
+/** Project info from KB for matching and context. */
+interface ProjectInfo {
+  id: number
+  name: string
+  company: string
+  aliases: string[]
+  searchTerms: string[]  // lowercase name + aliases for matching
+}
+
+/**
+ * Build a map of company → project search terms for filtering
+ * Gmail/Calendar/ClickUp data per company.
+ */
+async function buildProjectMap(): Promise<Map<string, ProjectInfo[]>> {
+  const projects = await findEntitiesByType(db, 'project')
+  const projectIds = projects.map((p) => p.id)
+
+  // Fetch all aliases for all projects in one query
+  const aliases = projectIds.length > 0
+    ? await db.select({
+      entityId: kbEntityAliases.entityId,
+      alias: kbEntityAliases.alias,
+    }).from(kbEntityAliases).where(inArray(kbEntityAliases.entityId, projectIds))
+    : []
+
+  const aliasMap = new Map<number, string[]>()
+  for (const a of aliases) {
+    const list = aliasMap.get(a.entityId) ?? []
+    list.push(a.alias)
+    aliasMap.set(a.entityId, list)
+  }
+
+  const byCompany = new Map<string, ProjectInfo[]>()
+
+  for (const p of projects) {
+    if (!p.company) continue
+    const company = p.company.toLowerCase()
+    const projectAliases = aliasMap.get(p.id) ?? []
+    const searchTerms = [p.name, ...projectAliases].map((t) => t.toLowerCase())
+
+    const info: ProjectInfo = {
+      id: p.id,
+      name: p.name,
+      company,
+      aliases: projectAliases,
+      searchTerms,
+    }
+
+    const list = byCompany.get(company) ?? []
+    list.push(info)
+    byCompany.set(company, list)
+  }
+
+  return byCompany
+}
+
+/** Escape special regex characters. */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Check if a text string mentions any project from the given list.
+ * Short terms (<=3 chars) use word boundary matching to avoid false positives
+ * (e.g., "ot" in "notification", "sb" in "usb").
+ */
+function textMatchesCompany(text: string, companyProjects: ProjectInfo[]): boolean {
+  const lower = text.toLowerCase()
+  return companyProjects.some((p) =>
+    p.searchTerms.some((term) => {
+      if (term.length <= 3) {
+        const regex = new RegExp(`\\b${escapeRegex(term)}\\b`, 'i')
+        return regex.test(lower)
+      }
+      return lower.includes(term)
+    }),
+  )
+}
+
+/**
+ * Filter BriefingItems to those relevant to a specific company.
+ * Checks subject, text_preview, list, and account fields.
+ * Items that don't match any company go into "shared" bucket.
+ */
+function filterItemsForCompany(
+  items: BriefingItem[],
+  companyProjects: ProjectInfo[],
+  otherProjects: ProjectInfo[],
+): { matched: BriefingItem[]; shared: BriefingItem[] } {
+  const matched: BriefingItem[] = []
+  const shared: BriefingItem[] = []
+
+  for (const item of items) {
+    const searchableFields = [
+      item.subject as string ?? '',
+      item.text_preview as string ?? '',
+      item.list as string ?? '',
+      item.attendees as string ?? '',
+    ].join(' ')
+
+    if (textMatchesCompany(searchableFields, companyProjects)) {
+      matched.push(item)
+    } else if (textMatchesCompany(searchableFields, otherProjects)) {
+      // Belongs to the other company — skip
+    } else {
+      // Not project-specific — shared (general meetings, HR, admin)
+      shared.push(item)
+    }
+  }
+
+  return { matched, shared }
+}
+
+/** Filter Gmail items by account: dariy@astrocat.co → ac, dshatskikh@highground.games → hg. */
+function filterGmailByAccount(
+  items: BriefingItem[],
+  wsLabel: string,
+  companyProjects: ProjectInfo[],
+  otherProjects: ProjectInfo[],
+): BriefingItem[] {
+  const result: BriefingItem[] = []
+
+  for (const item of items) {
+    const account = (item.account as string ?? '').toLowerCase()
+    const searchable = [
+      item.subject as string ?? '',
+      item.text_preview as string ?? '',
+      item.author as string ?? '',
+    ].join(' ')
+
+    // If email matches a project, use project-based filtering
+    if (textMatchesCompany(searchable, companyProjects)) {
+      result.push(item)
+      continue
+    }
+    if (textMatchesCompany(searchable, otherProjects)) {
+      continue  // belongs to other company
+    }
+
+    // Non-project email: assign by account
+    if (wsLabel === 'ac' && account.includes('astrocat')) {
+      result.push(item)
+    } else if (wsLabel === 'hg' && account.includes('highground')) {
+      result.push(item)
+    } else if (wsLabel === 'ac') {
+      // Default non-project emails to AC (Dariy's primary)
+      result.push(item)
+    }
+  }
+
+  return result
+}
+
 /**
  * Compile a daily digest for a specific company.
  * Fetches YESTERDAY's data with retry, validates completeness, sends to LLM.
- * Throws if any critical source fails after all retries.
+ * Data is filtered PER COMPANY in code before sending to Gemini.
  */
 export async function compileDigest(company: Company): Promise<string> {
   const now = new Date()
@@ -73,16 +231,22 @@ export async function compileDigest(company: Company): Promise<string> {
 
   const yesterdayPeriod = parsePeriod('yesterday')
 
+  // Build project map for company-based filtering
+  const projectMap = await buildProjectMap()
+  const companyProjects = projectMap.get(wsLabel) ?? []
+  const otherWs = wsLabel === 'ac' ? 'hg' : 'ac'
+  const otherProjects = projectMap.get(otherWs) ?? []
+
   // Pre-resolve Google tokens (retry-wrapped — needed by gmail + calendar)
   const googleTokens = await fetchWithRetry('google-auth', () => resolveGoogleTokens())
 
   // Fetch all sources in parallel — each with its own retry logic
   const [slackResult, gmailResult, calResult, clickupResult, myTasksResult, kbResult] =
     await Promise.allSettled([
-      fetchWithRetry('slack', () => fetchSlackForCompany(yesterdayPeriod, wsLabel)),
-      fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq('yesterday', 50), yesterdayPeriod, googleTokens)),
-      fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq('yesterday', 50), yesterdayPeriod, googleTokens)),
-      fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq('yesterday', 50), yesterdayPeriod)),
+      fetchWithRetry('slack', () => fetchDigestSlack(wsLabel, yesterdayPeriod)),
+      fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
+      fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
+      fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq('yesterday', 100), yesterdayPeriod)),
       fetchWithRetry('my-tasks', () => fetchMyTasks()),
       fetchWithRetry('kb', () => fetchKBContext(wsLabel)),
     ])
@@ -106,11 +270,27 @@ export async function compileDigest(company: Company): Promise<string> {
     throw new Error(`Critical sources failed for ${company} digest: ${names}`)
   }
 
-  const slackData = (slackResult.status === 'fulfilled' ? slackResult.value : []) as BriefingItem[]
-  const gmailData = (gmailResult.status === 'fulfilled' ? gmailResult.value : []) as BriefingItem[]
-  const calendarYesterday = (calResult.status === 'fulfilled' ? calResult.value : []) as BriefingItem[]
-  const clickupData = (clickupResult.status === 'fulfilled' ? clickupResult.value : []) as BriefingItem[]
-  const myTasks = (myTasksResult.status === 'fulfilled' ? myTasksResult.value : []) as Array<{ subject: string; status: string; due_date: string; list: string; url: string; is_overdue: boolean }>
+  // Slack — already filtered by workspace
+  const slackChannels = (slackResult.status === 'fulfilled' ? slackResult.value : []) as DigestSlackChannel[]
+
+  // Gmail — filter by account + project matching
+  const allGmail = (gmailResult.status === 'fulfilled' ? gmailResult.value : []) as BriefingItem[]
+  const companyGmail = filterGmailByAccount(allGmail, wsLabel, companyProjects, otherProjects)
+
+  // Calendar — filter by project matching, shared goes to both
+  const allCalendar = (calResult.status === 'fulfilled' ? calResult.value : []) as BriefingItem[]
+  const { matched: projectCalendar, shared: sharedCalendar } = filterItemsForCompany(
+    allCalendar, companyProjects, otherProjects,
+  )
+  const companyCalendar = [...projectCalendar, ...sharedCalendar]
+
+  // ClickUp — filter by list name matching projects
+  const allClickup = (clickupResult.status === 'fulfilled' ? clickupResult.value : []) as BriefingItem[]
+  const { matched: companyClickup, shared: sharedClickup } = filterItemsForCompany(
+    allClickup, companyProjects, otherProjects,
+  )
+
+  const myTasks = (myTasksResult.status === 'fulfilled' ? myTasksResult.value : []) as ClickUpTask[]
   const kbContext = (kbResult.status === 'fulfilled' ? kbResult.value : []) as Array<{ project: string; facts: string[] }>
 
   // Log non-critical failures as warnings
@@ -121,31 +301,34 @@ export async function compileDigest(company: Company): Promise<string> {
     logger.warn({ source: f.name, error: f.error }, 'Digest: non-critical source failed, using empty fallback')
   }
 
+  const slackMsgCount = slackChannels.reduce((sum, ch) => sum + ch.messages.length, 0)
   logger.info({
     company,
-    slack: slackData.length,
-    gmail: gmailData.length,
-    calendar: calendarYesterday.length,
-    clickup: clickupData.length,
+    slackChannels: slackChannels.length,
+    slackMessages: slackMsgCount,
+    gmail: companyGmail.length,
+    gmailTotal: allGmail.length,
+    calendar: companyCalendar.length,
+    calendarTotal: allCalendar.length,
+    clickup: companyClickup.length + sharedClickup.length,
+    clickupTotal: allClickup.length,
     myTasks: myTasks.length,
     kbProjects: kbContext.length,
-  }, 'Digest: all data fetched successfully')
+  }, 'Digest: data fetched and filtered for company')
 
-  // Build LLM prompt
+  // Build LLM prompt with company-filtered data
   const userPrompt = buildDigestUserPrompt({
     company: companyLabel,
     date: dateStr,
-    slackData,
-    gmailData,
-    calendarYesterday,
-    clickupData,
+    slackChannels,
+    gmailData: companyGmail,
+    calendarData: companyCalendar,
+    clickupData: [...companyClickup, ...sharedClickup],
     myTasks,
     kbContext,
   })
 
   // Call Gemini to compile the digest
-  // Note: callGemini already has its own internal retry logic (5 attempts with backoff).
-  // The outer compileWithRetry in scheduler.ts provides additional full-compilation retries.
   const response = await callGemini(userPrompt, {
     systemInstruction: DIGEST_SYSTEM_PROMPT,
     maxOutputTokens: 4096,
@@ -159,23 +342,11 @@ export async function compileDigest(company: Company): Promise<string> {
   logger.info({
     company,
     outputLen: response.text.length,
+    promptLen: userPrompt.length,
     usage: response.usage,
   }, 'Digest: LLM compilation done')
 
   return response.text
-}
-
-/** Fetch Slack data filtered to a specific workspace. */
-async function fetchSlackForCompany(
-  period: { after: Date; before: Date },
-  wsLabel: string,
-): Promise<BriefingItem[]> {
-  const req = buildBriefingReq('yesterday', 100)
-  const items = await fetchSlack(req, period)
-  return items.filter((item) => {
-    const channel = item.channel as string | undefined
-    return channel?.startsWith(`${wsLabel}/`)
-  })
 }
 
 /** Fetch KB facts for projects belonging to a company. */
@@ -186,12 +357,10 @@ async function fetchKBContext(companyCode: string): Promise<Array<{ project: str
     return p.company.toLowerCase() === companyCode.toLowerCase()
   })
 
-  // Fetch facts in parallel to avoid N+1
-  // No date filter — get the most recent facts regardless of age (extraction is still catching up)
   const results = await Promise.all(
     companyProjects.slice(0, MAX_KB_PROJECTS).map(async (project) => {
       const facts = await getFactsForEntity(db, project.id, {
-        limit: 5,
+        limit: MAX_FACTS_PER_PROJECT,
       })
       return facts.length > 0
         ? { project: project.name, facts: facts.map((f) => f.text) }
