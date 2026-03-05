@@ -373,10 +373,10 @@ export async function extractKnowledge(
     const errMsg = error instanceof Error ? error.message : String(error)
     logger.error({ error: errMsg, chunkCount: chunks.length, provider }, 'Knowledge extraction: LLM call failed')
 
-    for (const chunk of chunks) {
-      await updateChunkEntityIds(db, chunk.id, [])
-    }
-    stats.chunksProcessed = chunks.length
+    // Do NOT mark chunks as processed on LLM error — leave entityIds=NULL so they
+    // can be retried in a future run. Previously we set entityIds=[] which permanently
+    // skipped these chunks.
+    stats.chunksProcessed = 0
     stats.errorCount = (stats.errorCount ?? 0) + 1
   }
 
@@ -430,7 +430,9 @@ export async function extractKnowledgeBatch(
     }
 
     const result = await extractKnowledge(db, entityContext, qdrantClient, b.chunkBatchSize, b.provider)
-    if (result.chunksProcessed === 0) break
+    // chunksProcessed=0 means no more chunks to process (complete) —
+    // but only if there's no error. On error, chunks are left unprocessed for retry.
+    if (result.chunksProcessed === 0 && !result.errorCount) break
 
     if (result.errorCount) {
       consecutiveErrors++
@@ -440,9 +442,13 @@ export async function extractKnowledgeBatch(
         logger.error('Knowledge extraction: too many consecutive errors, stopping')
         break
       }
-    } else {
-      consecutiveErrors = 0
+      // On error, wait longer before retrying (exponential: 30s, 60s, 90s, 120s)
+      const errorDelay = Math.min(consecutiveErrors * 30, 120)
+      logger.info({ delaySec: errorDelay }, 'Knowledge extraction: waiting after error')
+      await new Promise((r) => setTimeout(r, errorDelay * 1000))
+      continue
     }
+    consecutiveErrors = 0
 
     stats.totalChunks += result.chunksProcessed
     stats.totalEntities += result.entitiesCreated
