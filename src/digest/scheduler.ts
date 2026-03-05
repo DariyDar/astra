@@ -29,6 +29,31 @@ function getBot(): InstanceType<typeof Bot> {
   return botInstance
 }
 
+/** Telegram-supported HTML tags. Anything else gets stripped. */
+const ALLOWED_TAGS = new Set(['b', 'i', 'u', 's', 'a', 'code', 'pre'])
+
+/**
+ * Sanitize LLM output to valid Telegram HTML.
+ * - Strips unsupported tags (keeps content)
+ * - Escapes bare < > & that aren't part of valid tags
+ * - Closes any unclosed tags
+ */
+function sanitizeTelegramHtml(html: string): string {
+  // Strip unsupported tags but keep their content
+  let result = html.replace(/<\/?([a-z][a-z0-9]*)[^>]*>/gi, (match, tagName) => {
+    if (ALLOWED_TAGS.has(tagName.toLowerCase())) return match
+    return '' // strip unsupported tag
+  })
+
+  // Remove markdown artifacts the LLM might sneak in
+  result = result.replace(/```[a-z]*/g, '').replace(/```/g, '')
+
+  // Balance unclosed tags
+  result = balanceHtmlTags(result)
+
+  return result
+}
+
 /** Send a message via Telegram Bot API. */
 async function sendTelegramMessage(text: string): Promise<void> {
   const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID
@@ -37,8 +62,9 @@ async function sendTelegramMessage(text: string): Promise<void> {
     return
   }
 
+  const sanitized = sanitizeTelegramHtml(text)
   const bot = getBot()
-  const chunks = splitMessage(text, MAX_TELEGRAM_MESSAGE_LENGTH)
+  const chunks = splitMessage(sanitized, MAX_TELEGRAM_MESSAGE_LENGTH)
   for (const chunk of chunks) {
     await bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML' })
   }

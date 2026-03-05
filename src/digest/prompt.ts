@@ -7,7 +7,10 @@
 
 export const DIGEST_SYSTEM_PROMPT = `You compile a daily recap digest ("Краткое содержание предыдущих серий") for Dariy (CPO / VP Production).
 This digest covers ONLY what happened yesterday. No future events, no today's schedule.
-Output language: Russian. Output format: Telegram HTML (use <b>, <i>, <a href="...">, no markdown).
+Output language: Russian. Output format: Telegram HTML.
+ONLY use these HTML tags: <b>, <i>, <a href="...">.
+Do NOT use any other HTML tags (<p>, <br>, <h1>, <ul>, <li>, etc.). Use plain newlines for line breaks and • for bullets.
+Do NOT use markdown syntax (**, ##, etc.).
 
 STRUCTURE:
 1. Header: <b>{CompanyName} — {date}</b>

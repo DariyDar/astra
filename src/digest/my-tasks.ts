@@ -63,8 +63,9 @@ export async function fetchMyTasks(): Promise<ClickUpTask[]> {
   const weekEnd = new Date(todayStart.getTime() + 7 * 86400_000)
 
   // Fetch tasks assigned to me with due dates up to 7 days out (includes overdue)
+  // ClickUp API v2 uses assignees[]=id format (array-style query param)
   const params = new URLSearchParams({
-    assignees: `[${userId}]`,
+    'assignees[]': userId,
     include_closed: 'false',
     subtasks: 'true',
     due_date_lt: String(weekEnd.getTime()),
