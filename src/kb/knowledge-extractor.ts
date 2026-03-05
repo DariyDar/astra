@@ -77,6 +77,13 @@ Analyze the provided text chunks and extract 4 types of information:
    - Tied to an entity by name
    - Include date when mentioned (ISO format YYYY-MM-DD)
    - Types: event, decision, status, milestone, release, deadline
+   - CRITICAL: Each fact MUST be self-contained and understandable without the source text
+   - Always include the project/context in the fact text (e.g. "for SpongeBob", "on Star Trek 12.1.0")
+   - Include specific numbers, ETAs, versions, deadlines when mentioned
+   - BAD: "will discuss on Board Meeting" — no context about WHAT will be discussed
+   - GOOD: "will discuss SpongeBob Events fix funding and old game releases (Block Puzzle, Clash of God, Pong) on Board Meeting"
+   - BAD: "suggested delivering as planned" — no context about WHAT is being delivered
+   - GOOD: "suggested delivering Saves and Consents for SpongeBob as planned, with Семён focusing on Events fix bug instead"
 
 4. **Documents** — Notion/Drive documents linked to entities
    - Only when a URL is explicitly mentioned
@@ -96,7 +103,7 @@ Rules:
 - Prefer Russian names as canonical when available
 - Skip generic terms (e.g. "project", "team" without specific names)
 - Dates: use ISO format. If only month mentioned, use first day (e.g. "2026-03-01")
-- Facts: be specific and concise. "завершил интеграцию Galaxy Event v3" is better than "работал над проектом"
+- Facts: be SELF-CONTAINED. Reader must understand the fact without seeing the source. Include project name, what specifically happened, and any numbers/dates/versions. "Dariy предложил доставить Saves and Consents для SpongeBob по плану, Семёну сфокусироваться на баге Events fix" is good. "предложил доставить по плану" is useless.
 - If no facts/documents found, return empty arrays`
 
 /** Build metadata header for a chunk to help the LLM contextualize it. */
