@@ -39,14 +39,29 @@ const ALLOWED_TAGS = new Set(['b', 'i', 'u', 's', 'a', 'code', 'pre'])
  * - Closes any unclosed tags
  */
 function sanitizeTelegramHtml(html: string): string {
-  // Strip unsupported tags but keep their content
-  let result = html.replace(/<\/?([a-z][a-z0-9]*)[^>]*>/gi, (match, tagName) => {
-    if (ALLOWED_TAGS.has(tagName.toLowerCase())) return match
-    return '' // strip unsupported tag
-  })
-
   // Remove markdown artifacts the LLM might sneak in
-  result = result.replace(/```[a-z]*/g, '').replace(/```/g, '')
+  let result = html.replace(/```[a-z]*/g, '').replace(/```/g, '')
+
+  // Replace all < with a placeholder, then restore valid allowed tags
+  // This prevents bare < in text (e.g., "retention < 35%") from breaking Telegram
+  const PLACEHOLDER = '\x00LT\x00'
+  result = result.replace(/</g, PLACEHOLDER)
+
+  // Restore allowed opening tags: <b>, <i>, <a href="...">, etc.
+  for (const tag of ALLOWED_TAGS) {
+    // Opening tag with attributes (e.g., <a href="...">)
+    const openRegex = new RegExp(`${PLACEHOLDER}(${tag})(\\s[^>]*)?>`, 'gi')
+    result = result.replace(openRegex, '<$1$2>')
+    // Opening tag without attributes
+    const openSimple = new RegExp(`${PLACEHOLDER}(${tag})>`, 'gi')
+    result = result.replace(openSimple, '<$1>')
+    // Closing tag
+    const closeRegex = new RegExp(`${PLACEHOLDER}/(${tag})>`, 'gi')
+    result = result.replace(closeRegex, '</$1>')
+  }
+
+  // Escape any remaining < placeholders as &lt;
+  result = result.replace(new RegExp(PLACEHOLDER, 'g'), '&lt;')
 
   // Balance unclosed tags
   result = balanceHtmlTags(result)
@@ -66,7 +81,15 @@ async function sendTelegramMessage(text: string): Promise<void> {
   const bot = getBot()
   const chunks = splitMessage(sanitized, MAX_TELEGRAM_MESSAGE_LENGTH)
   for (const chunk of chunks) {
-    await bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML' })
+    try {
+      await bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML' })
+    } catch (htmlError) {
+      // If HTML parsing fails, strip all tags and send as plain text
+      const errMsg = htmlError instanceof Error ? htmlError.message : String(htmlError)
+      logger.warn({ error: errMsg, chunkLen: chunk.length }, 'Telegram HTML parse failed, sending as plain text')
+      const plainText = chunk.replace(/<[^>]+>/g, '')
+      await bot.api.sendMessage(chatId, plainText)
+    }
   }
 }
 
