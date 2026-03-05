@@ -6,10 +6,31 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models
 const DEFAULT_TIMEOUT_MS = 120_000
 const MAX_RETRIES = 5
 
-// Rate limiter: 15 RPM for free tier
+/** Collect all available Gemini API keys for round-robin rotation. */
+function getApiKeys(): string[] {
+  const keys: string[] = []
+  if (env.GEMINI_API_KEY_PERSONAL) keys.push(env.GEMINI_API_KEY_PERSONAL)
+  if (env.GEMINI_API_KEY_HG) keys.push(env.GEMINI_API_KEY_HG)
+  if (env.GEMINI_API_KEY_AC) keys.push(env.GEMINI_API_KEY_AC)
+  if (keys.length === 0 && env.GEMINI_API_KEY) keys.push(env.GEMINI_API_KEY)
+  return keys
+}
+
+let keyIndex = 0
+
+/** Get next API key via round-robin. */
+function nextApiKey(): string {
+  const keys = getApiKeys()
+  if (keys.length === 0) throw new Error('No GEMINI_API_KEY configured')
+  const key = keys[keyIndex % keys.length]
+  keyIndex++
+  return key
+}
+
+// Per-key rate limiter: track timestamps per key
+const perKeyTimestamps = new Map<string, number[]>()
 const RPM_LIMIT = 15
 const RPM_WINDOW_MS = 60_000
-const requestTimestamps: number[] = []
 
 export interface GeminiOptions {
   /** System instruction for the model. */
@@ -31,27 +52,32 @@ export interface GeminiResponse {
   }
 }
 
-/** Wait until we can make a request within the RPM limit. */
-async function waitForRateLimit(): Promise<void> {
+/** Wait until we can make a request within the per-key RPM limit. */
+async function waitForRateLimit(apiKey: string): Promise<void> {
+  if (!perKeyTimestamps.has(apiKey)) perKeyTimestamps.set(apiKey, [])
+  const timestamps = perKeyTimestamps.get(apiKey)!
+
   while (true) {
     const now = Date.now()
-    while (requestTimestamps.length > 0 && requestTimestamps[0] < now - RPM_WINDOW_MS) {
-      requestTimestamps.shift()
+    while (timestamps.length > 0 && timestamps[0] < now - RPM_WINDOW_MS) {
+      timestamps.shift()
     }
-    if (requestTimestamps.length < RPM_LIMIT) {
-      requestTimestamps.push(Date.now())
+    if (timestamps.length < RPM_LIMIT) {
+      timestamps.push(Date.now())
       return
     }
-    const waitMs = requestTimestamps[0] + RPM_WINDOW_MS - now + 100
-    logger.debug({ waitMs }, 'Gemini rate limit: waiting')
+    const waitMs = timestamps[0] + RPM_WINDOW_MS - now + 100
+    logger.debug({ waitMs, keyIndex: keyIndex - 1 }, 'Gemini rate limit: waiting')
     await new Promise((r) => setTimeout(r, waitMs))
   }
 }
 
-/** Strip API key from error messages to prevent leaking secrets. */
-function sanitizeError(error: Error, apiKey: string): Error {
-  if (error.message.includes(apiKey)) {
-    error.message = error.message.replaceAll(apiKey, '[REDACTED]')
+/** Strip API keys from error messages to prevent leaking secrets. */
+function sanitizeError(error: Error): Error {
+  for (const key of getApiKeys()) {
+    if (error.message.includes(key)) {
+      error.message = error.message.replaceAll(key, '[REDACTED]')
+    }
   }
   return error
 }
@@ -64,14 +90,11 @@ export async function callGemini(
   prompt: string,
   options?: GeminiOptions,
 ): Promise<GeminiResponse> {
-  const apiKey = env.GEMINI_API_KEY
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY not configured')
-  }
+  let apiKey = nextApiKey()
 
-  await waitForRateLimit()
+  await waitForRateLimit(apiKey)
 
-  const url = `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`
+  let url = `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${apiKey}`
   const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS
 
   const body: Record<string, unknown> = {
@@ -100,9 +123,18 @@ export async function callGemini(
       })
 
       if (response.status === 429) {
-        const backoff = Math.min(2 ** attempt * 5000, 60_000)
-        logger.warn({ attempt, backoffMs: backoff }, 'Gemini 429: rate limited, retrying')
-        await new Promise((r) => setTimeout(r, backoff))
+        const keys = getApiKeys()
+        if (keys.length > 1) {
+          const nextKey = nextApiKey()
+          logger.warn({ attempt, keysAvailable: keys.length }, 'Gemini 429: rotating to next API key')
+          await waitForRateLimit(nextKey)
+          url = `${GEMINI_BASE_URL}/${GEMINI_MODEL}:generateContent?key=${nextKey}`
+          apiKey = nextKey
+        } else {
+          const backoff = Math.min(2 ** attempt * 5000, 60_000)
+          logger.warn({ attempt, backoffMs: backoff }, 'Gemini 429: rate limited, retrying')
+          await new Promise((r) => setTimeout(r, backoff))
+        }
         continue
       }
 
@@ -135,7 +167,6 @@ export async function callGemini(
     } catch (error) {
       lastError = sanitizeError(
         error instanceof Error ? error : new Error(String(error)),
-        apiKey,
       )
 
       if (lastError.name === 'TimeoutError' || lastError.message.includes('timed out')) {
@@ -155,5 +186,6 @@ export async function callGemini(
 
 /** Reset rate limiter (for testing). */
 export function resetRateLimiter(): void {
-  requestTimestamps.length = 0
+  perKeyTimestamps.clear()
+  keyIndex = 0
 }

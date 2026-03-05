@@ -29,6 +29,9 @@ const envSchema = z.object({
   CLOCKIFY_API_KEY: z.string().optional(),
   CLOCKIFY_WORKSPACE_ID: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
+  GEMINI_API_KEY_PERSONAL: z.string().optional(),
+  GEMINI_API_KEY_HG: z.string().optional(),
+  GEMINI_API_KEY_AC: z.string().optional(),
   REDIS_PASSWORD: z.string().optional(),
   QDRANT_URL: z.string().url().default('http://localhost:6333'),
   LOG_LEVEL: z
