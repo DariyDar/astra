@@ -289,7 +289,7 @@ function extractableChunkConditions(minTextLength: number = 100, sources?: strin
     sql`length(${kbChunks.text}) > ${minTextLength}`,
     sql`${kbChunks.text} NOT LIKE '%[metadata-only stub]%'`,
     sql`${kbChunks.text} NOT LIKE '%[system email -- metadata only]%'`,
-    sql`${kbChunks.source} != 'drive'`,
+    sql`${kbChunks.source} NOT IN ('drive', 'gmail', 'calendar', 'notion')`,
   ]
   if (sources && sources.length > 0) {
     conditions.push(inArray(kbChunks.source, sources))
@@ -316,10 +316,7 @@ export async function findUnprocessedChunks(
       sql`CASE ${kbChunks.source}
         WHEN 'slack' THEN 1
         WHEN 'clickup' THEN 2
-        WHEN 'notion' THEN 3
-        WHEN 'gmail' THEN 4
-        WHEN 'calendar' THEN 5
-        ELSE 6
+        ELSE 3
       END`,
       sql`${kbChunks.sourceDate} DESC NULLS LAST`,
     )
@@ -360,7 +357,7 @@ export async function markChunksProcessed(
         length(${kbChunks.text}) < 100
         OR ${kbChunks.text} LIKE '%[metadata-only stub]%'
         OR ${kbChunks.text} LIKE '%[system email -- metadata only]%'
-        OR ${kbChunks.source} = 'drive'
+        OR ${kbChunks.source} IN ('drive', 'gmail', 'calendar', 'notion')
       )`,
     ))
     .returning({ id: kbChunks.id })

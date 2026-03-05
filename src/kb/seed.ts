@@ -52,7 +52,8 @@ const projects: SeedEntity[] = [
   { type: 'project', name: 'HTML5 Banners', company: 'hg', aliases: ['HTML5 баннеры', 'баннеры'] },
   { type: 'project', name: 'Playable Ads', company: 'hg', aliases: ['Playable Advertisement', 'плейаблы'] },
   { type: 'project', name: 'Star Trek Timelines', company: 'ac', aliases: ['STT', 'Стар Трек', 'стт'] },
-  { type: 'project', name: 'SpongeBob', company: 'ac', aliases: ['Губка Боб', 'SB'] },
+  { type: 'project', name: 'SpongeBob: Krusty Cook-Off', company: 'ac', aliases: ['SpongeBob', 'SBKCO', 'Губка Боб', 'SB', 'KCO', 'SpongeBob LiveOps', 'SBKCO F2P', 'Krusty Cook-Off'], metadata: { client: 'Tilting Point', description: 'SpongeBob F2P mobile game (LiveOps)' } },
+  { type: 'project', name: 'SpongeBob Get Cookin\'', company: 'ac', aliases: ['SB Netflix', 'SpongeBob Netflix', 'SpongeBob PE', 'SpongeBob KCO Netflix'], metadata: { client: 'Netflix Games', description: 'SpongeBob premium edition for Netflix Games' } },
   { type: 'project', name: 'Oregon Trail', company: 'ac', aliases: ['Oregon Trail The Boomtown', 'Орегон Трейл', 'OT'] },
   { type: 'project', name: 'Aquarium', company: 'ac', aliases: ['Аквариум'] },
   { type: 'project', name: 'Idle Axe Thrower', company: 'ac', aliases: ['IAT'] },
@@ -179,14 +180,18 @@ const relations: SeedRelation[] = [
   { from: 'Анна Буткеева', to: 'Star Trek Timelines', relation: 'works_on', role: 'Game Designer' },
   { from: 'Tilting Point', to: 'Star Trek Timelines', relation: 'client_of' },
 
-  // SpongeBob
-  { from: 'Анастасия', to: 'SpongeBob', relation: 'manages', role: 'PM' },
-  { from: 'Руслан', to: 'SpongeBob', relation: 'works_on', role: 'Developer' },
-  { from: 'Дмитрий', to: 'SpongeBob', relation: 'works_on', role: 'Developer' },
-  { from: 'Дияр', to: 'SpongeBob', relation: 'works_on', role: 'Developer' },
-  { from: 'Никита Щукин', to: 'SpongeBob', relation: 'works_on', role: 'Developer' },
-  { from: 'Юлия', to: 'SpongeBob', relation: 'works_on', role: 'Analytics' },
-  { from: 'Tilting Point', to: 'SpongeBob', relation: 'client_of' },
+  // SpongeBob: Krusty Cook-Off (F2P / LiveOps)
+  { from: 'Анастасия', to: 'SpongeBob: Krusty Cook-Off', relation: 'manages', role: 'PM' },
+  { from: 'Руслан', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
+  { from: 'Дмитрий', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
+  { from: 'Дияр', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
+  { from: 'Никита Щукин', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
+  { from: 'Юлия', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Analytics' },
+  { from: 'Tilting Point', to: 'SpongeBob: Krusty Cook-Off', relation: 'client_of' },
+
+  // SpongeBob Get Cookin' (Netflix Games)
+  { from: 'Анастасия', to: "SpongeBob Get Cookin'", relation: 'manages', role: 'PM' },
+  { from: 'Руслан', to: "SpongeBob Get Cookin'", relation: 'works_on', role: 'Developer' },
 
   // Oregon Trail
   { from: 'Иван', to: 'Oregon Trail', relation: 'works_on', role: 'Developer' },
