@@ -331,12 +331,21 @@ export async function compileDigest(company: Company): Promise<string> {
   // Call Gemini to compile the digest
   const response = await callGemini(userPrompt, {
     systemInstruction: DIGEST_SYSTEM_PROMPT,
-    maxOutputTokens: 4096,
-    timeoutMs: 60_000,
+    maxOutputTokens: 8192,
+    timeoutMs: 120_000,
   })
 
   if (!response.text || response.text.trim().length === 0) {
     throw new Error(`Gemini returned empty response for ${company} digest`)
+  }
+
+  // Warn if output was truncated (MAX_TOKENS finish reason)
+  if (response.finishReason && response.finishReason !== 'STOP') {
+    logger.warn({
+      company,
+      finishReason: response.finishReason,
+      outputLen: response.text.length,
+    }, 'Digest: Gemini output may be truncated')
   }
 
   logger.info({

@@ -46,6 +46,7 @@ export interface GeminiOptions {
 
 export interface GeminiResponse {
   text: string
+  finishReason?: string
   usage?: {
     promptTokens: number
     completionTokens: number
@@ -156,6 +157,7 @@ export async function callGemini(
       const data = await response.json() as {
         candidates?: Array<{
           content?: { parts?: Array<{ text?: string }> }
+          finishReason?: string
         }>
         usageMetadata?: {
           promptTokenCount?: number
@@ -165,9 +167,15 @@ export async function callGemini(
       }
 
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+      const finishReason = data.candidates?.[0]?.finishReason
+
+      if (finishReason && finishReason !== 'STOP') {
+        logger.warn({ finishReason, textLen: text.length }, 'Gemini: non-STOP finish reason')
+      }
 
       return {
         text,
+        finishReason,
         usage: data.usageMetadata ? {
           promptTokens: data.usageMetadata.promptTokenCount ?? 0,
           completionTokens: data.usageMetadata.candidatesTokenCount ?? 0,
