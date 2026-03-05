@@ -16,6 +16,7 @@ import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
 import { createNotionAdapter } from '../kb/ingestion/notion.js'
 import { extractKnowledgeBatch, markLowValueChunks } from '../kb/knowledge-extractor.js'
 import type { SourceAdapter } from '../kb/ingestion/types.js'
+import { deliverDailyDigest } from '../digest/scheduler.js'
 
 const AUDIT_RETENTION_DAYS = 30
 
@@ -36,18 +37,34 @@ const auditCleanupJob = cron.schedule('0 3 * * *', async () => {
   }
 })
 
-// Digest scheduling runs in bot process (has access to adapters). See src/bot/index.ts.
+/**
+ * Daily digest: 01:00 UTC = 09:00 WITA (Bali time).
+ * "Краткое содержание предыдущих серий" — recap of yesterday only.
+ * Each source has 5 retries with exponential backoff,
+ * plus 3 full-compilation retries with 5-min intervals.
+ * Worst-case delivery by ~09:30 Bali time.
+ */
+const digestJob = cron.schedule('0 1 * * *', async () => {
+  logger.info('Starting daily digest')
+  try {
+    await deliverDailyDigest()
+    logger.info('Daily digest delivered')
+  } catch (error) {
+    logger.error({ error }, 'Daily digest failed')
+  }
+})
 
 /**
- * KB ingestion + entity extraction: daily at 20:00 UTC (04:00 Bali).
- * 1. Fetch new data from all sources (REST, no LLM)
+ * KB ingestion + entity extraction: daily at 22:00 UTC = 06:00 WITA (Bali time).
+ * Runs 3 hours before digest (01:00 UTC) to ensure fresh data.
+ * 1. Fetch new data from all sources incl. Slack threads (REST, no LLM)
  * 2. Mark low-value chunks as processed (no LLM)
  * 3. Extract entities from remaining chunks (multi-batch LLM loop, budget-controlled)
  */
 const qdrantClient = new QdrantClient({ url: env.QDRANT_URL })
 const kbVectorStore = new KBVectorStore(qdrantClient)
 
-const kbIngestionJob = cron.schedule('0 20 * * *', async () => {
+const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
   logger.info('Starting KB nightly ingestion')
   try {
     await kbVectorStore.ensureCollection()
@@ -111,6 +128,7 @@ logger.info('Worker started')
 function shutdown(signal: string) {
   logger.info({ signal }, 'Shutting down worker')
   auditCleanupJob.stop()
+  digestJob.stop()
   kbIngestionJob.stop()
   closeDb()
     .then(() => {
