@@ -50,6 +50,7 @@ export interface ExtractionBatchResult {
   relationsCreated: number
   chunksProcessed: number
   costUsd: number
+  errorCount?: number
 }
 
 export interface BatchBudget {
@@ -67,7 +68,7 @@ export interface BatchStats {
   totalBatches: number
   totalCostUsd: number
   remainingUnprocessed: number
-  stoppedReason: 'complete' | 'budget_time' | 'budget_cost' | 'budget_batches'
+  stoppedReason: 'complete' | 'budget_time' | 'budget_cost' | 'budget_batches' | 'error'
 }
 
 const EXTRACTION_PROMPT = `You are an entity extraction system for a project management knowledge base.
@@ -153,8 +154,7 @@ export async function extractEntities(
 
     const extraction = parseExtraction(response.text)
     if (!extraction) {
-      logger.warn('Entity extraction: failed to parse LLM response')
-      // Mark chunks as processed with empty entity_ids to avoid re-processing
+      logger.warn('Entity extraction: failed to parse LLM response, skipping batch')
       for (const chunk of chunks) {
         await updateChunkEntityIds(db, chunk.id, [])
       }
@@ -244,7 +244,14 @@ export async function extractEntities(
     logger.info(stats, 'Entity extraction: batch complete')
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error)
-    logger.error({ error: errMsg }, 'Entity extraction: LLM call failed')
+    logger.error({ error: errMsg, chunkCount: chunks.length }, 'Entity extraction: LLM call failed, skipping batch')
+
+    // Mark chunks as processed to avoid re-processing the same failing batch forever
+    for (const chunk of chunks) {
+      await updateChunkEntityIds(db, chunk.id, [])
+    }
+    stats.chunksProcessed = chunks.length
+    stats.errorCount = (stats.errorCount ?? 0) + 1
   }
 
   return stats
@@ -282,6 +289,8 @@ export async function extractEntitiesBatch(
 
   // Build entity context (refreshed every N batches)
   let entityContext = buildEntityContext(await getAllEntityNames(db))
+  let consecutiveErrors = 0
+  const MAX_CONSECUTIVE_ERRORS = 3
 
   for (let batch = 0; batch < b.maxBatches; batch++) {
     // Check time budget
@@ -304,6 +313,19 @@ export async function extractEntitiesBatch(
 
     const result = await extractEntities(db, entityContext, qdrantClient, b.chunkBatchSize)
     if (result.chunksProcessed === 0) break
+
+    // Track consecutive errors — stop if LLM keeps failing
+    if (result.errorCount) {
+      consecutiveErrors++
+      logger.warn({ consecutiveErrors, max: MAX_CONSECUTIVE_ERRORS }, 'Entity extraction: batch had errors')
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        stats.stoppedReason = 'error'
+        logger.error('Entity extraction: too many consecutive errors, stopping')
+        break
+      }
+    } else {
+      consecutiveErrors = 0
+    }
 
     stats.totalChunks += result.chunksProcessed
     stats.totalEntities += result.entitiesCreated

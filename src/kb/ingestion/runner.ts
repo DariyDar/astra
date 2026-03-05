@@ -157,9 +157,51 @@ async function runAdapter(
   return stats
 }
 
+const ADAPTER_MAX_RETRIES = 3
+const ADAPTER_RETRY_DELAY_MS = 30_000 // 30s between retries
+
+/**
+ * Run a single adapter with retry logic for transient failures.
+ * Retries up to 3 times on failure (502, timeouts, etc.).
+ */
+async function runAdapterWithRetry(
+  db: DB,
+  vectorStore: KBVectorStore,
+  adapter: SourceAdapter,
+): Promise<IngestionStats> {
+  for (let attempt = 1; attempt <= ADAPTER_MAX_RETRIES; attempt++) {
+    const stats = await runAdapter(db, vectorStore, adapter)
+
+    // If no critical errors in fetch phase, return results
+    // (individual chunk processing errors are already handled)
+    const state = await getIngestionState(db, adapter.name)
+    if (state?.status !== 'failed') {
+      return stats
+    }
+
+    // Adapter failed — retry if attempts remain
+    if (attempt < ADAPTER_MAX_RETRIES) {
+      logger.warn(
+        { adapter: adapter.name, attempt, maxAttempts: ADAPTER_MAX_RETRIES },
+        'Adapter failed, retrying',
+      )
+      await new Promise((r) => setTimeout(r, ADAPTER_RETRY_DELAY_MS))
+    } else {
+      logger.error(
+        { adapter: adapter.name, attempts: ADAPTER_MAX_RETRIES },
+        'Adapter failed after all retries',
+      )
+      return stats
+    }
+  }
+
+  // Unreachable, but TypeScript needs a return
+  throw new Error(`Unreachable: adapter retry loop for ${adapter.name}`)
+}
+
 /**
  * Run ingestion for all adapters.
- * Each adapter runs independently — one failure doesn't stop others.
+ * Each adapter runs independently with retry — one failure doesn't stop others.
  */
 export async function runIngestion(
   db: DB,
@@ -175,7 +217,7 @@ export async function runIngestion(
 
   // Run adapters sequentially to avoid overwhelming APIs
   for (const adapter of adapters) {
-    const stats = await runAdapter(db, vectorStore, adapter)
+    const stats = await runAdapterWithRetry(db, vectorStore, adapter)
     results.push(stats)
 
     logger.info(
