@@ -66,8 +66,12 @@ Analyze the provided text chunks and extract 4 types of information:
 
 1. **Entities** — people, projects, channels, clients, companies, processes
    - name (canonical), type, aliases (alternate names/spellings), company (hg/ac/null)
-   - Normalize names: "Семён" and "Semyon" are the same person
+   - Transliteration aliases are OK: "Семён" and "Semyon" are the same person
    - Channel names: preserve with prefix (e.g. "ac/general", "hg/dev-chat")
+   - CRITICAL — NEVER merge people by first name alone! "Сергей" could be Сергей Клепицкий, Сергей Гуменюк, or someone else
+   - If only a first name appears (e.g. "Сергей", "Анастасия", "Марина") WITHOUT a last name or unique context, do NOT create a new entity and do NOT link to an existing one — skip it
+   - Only merge/reference a person if you have BOTH first+last name, or the name is globally unique in the company (e.g. "Дарий" — there is only one)
+   - When matching against EXISTING ENTITIES, only match if the name+context clearly identifies the same person. "Marina" alone does NOT match "Марина Ляндина" — there are multiple Marinas
 
 2. **Relations** — connections between entities
    - works_on, manages, owns, member_of, client_of
@@ -100,8 +104,9 @@ Return JSON:
 Rules:
 - Only extract what is clearly mentioned in the text
 - Do not invent relations or facts not supported by the text
-- Prefer Russian names as canonical when available
+- Prefer Russian names as canonical when available (full name: "Семён Чиненов", not just "Семён")
 - Skip generic terms (e.g. "project", "team" without specific names)
+- NEVER create or reference a person entity from first name alone — require last name or unique identifier
 - Dates: use ISO format. If only month mentioned, use first day (e.g. "2026-03-01")
 - Facts: be SELF-CONTAINED. Reader must understand the fact without seeing the source. Include project name, what specifically happened, and any numbers/dates/versions. "Dariy предложил доставить Saves and Consents для SpongeBob по плану, Семёну сфокусироваться на баге Events fix" is good. "предложил доставить по плану" is useless.
 - If no facts/documents found, return empty arrays`
