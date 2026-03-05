@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Manual knowledge extraction — unified extraction (entities + facts + documents) via Gemini.
+ * Manual knowledge extraction — unified extraction (entities + facts + documents).
  * Usage: npx tsx src/kb/extract-knowledge-manual.ts [options]
  *
  * Options:
@@ -8,6 +8,7 @@
  *   --max-time N      Max time in minutes (default: 60)
  *   --batch-size N    Chunks per batch (default: 100)
  *   --delay N         Seconds between batches to avoid rate limits (default: 10)
+ *   --provider P      LLM provider: gemini (default) or claude
  *   --skip-mark       Skip marking low-value chunks (if already done)
  *   --dry-run         Only count chunks and estimate, don't extract
  *   --reset-source S  Reset extraction flags for source S before running
@@ -18,7 +19,7 @@ import pg from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import { QdrantClient } from '@qdrant/js-client-rest'
 import * as schema from '../db/schema.js'
-import { extractKnowledgeBatch, markLowValueChunks } from './knowledge-extractor.js'
+import { extractKnowledgeBatch, markLowValueChunks, type LlmProvider } from './knowledge-extractor.js'
 import { countUnprocessedChunks, resetExtractionFlags } from './repository.js'
 import { logger } from '../logging/logger.js'
 import type { ChunkSource } from './types.js'
@@ -40,6 +41,7 @@ const maxBatches = parseArg('--max-batches', 200)
 const maxTime = parseArg('--max-time', 60)
 const batchSize = parseArg('--batch-size', 100)
 const delay = parseArg('--delay', 10)
+const provider = (parseStringArg('--provider') ?? 'gemini') as LlmProvider
 const skipMark = process.argv.includes('--skip-mark')
 const dryRun = process.argv.includes('--dry-run')
 const resetSource = parseStringArg('--reset-source')
@@ -80,7 +82,7 @@ async function main(): Promise<void> {
       remainingChunks: remaining,
       estimatedBatches: estBatches,
       estimatedTimeMin: estTimeMin,
-      cost: 'free (Gemini)',
+      provider,
     }, 'Step 2: Chunk count and estimates')
 
     if (remaining === 0) {
@@ -99,6 +101,7 @@ async function main(): Promise<void> {
       maxTimeMin: maxTime,
       batchSize,
       interBatchDelaySec: delay,
+      provider,
     }, 'Step 3: Starting knowledge extraction...')
 
     const stats = await extractKnowledgeBatch(db, {
@@ -106,6 +109,7 @@ async function main(): Promise<void> {
       maxTimeMinutes: maxTime,
       chunkBatchSize: batchSize,
       interBatchDelaySec: delay,
+      provider,
     }, qdrantClient)
 
     logger.info({

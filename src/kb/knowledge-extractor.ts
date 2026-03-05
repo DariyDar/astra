@@ -2,6 +2,7 @@ import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { QdrantClient } from '@qdrant/js-client-rest'
 import type * as schema from '../db/schema.js'
 import { callGemini } from '../llm/gemini.js'
+import { callClaude } from '../llm/client.js'
 import { logger } from '../logging/logger.js'
 import {
   findUnprocessedChunks,
@@ -31,6 +32,26 @@ const VALID_DOC_SOURCES = new Set<string>(['notion', 'drive'])
 const VALID_DOC_TYPES = new Set<string>(['spec', 'wiki', 'report', 'meeting_notes', 'design', 'other'])
 const MAX_CHUNK_TEXT_LENGTH = 1200
 
+export type LlmProvider = 'gemini' | 'claude'
+
+const SYSTEM_INSTRUCTION = 'You are a JSON-only knowledge extraction tool. Output valid JSON only.'
+
+async function callLlm(provider: LlmProvider, prompt: string): Promise<string> {
+  if (provider === 'claude') {
+    const response = await callClaude(prompt, {
+      system: SYSTEM_INSTRUCTION,
+      timeoutMs: 300_000,
+    })
+    return response.text
+  }
+  const response = await callGemini(prompt, {
+    systemInstruction: SYSTEM_INSTRUCTION,
+    jsonMode: true,
+    timeoutMs: 120_000,
+  })
+  return response.text
+}
+
 function isValidUrl(s: string): boolean {
   try { new URL(s); return true } catch { return false }
 }
@@ -50,6 +71,8 @@ export interface BatchBudget {
   chunkBatchSize: number
   /** Seconds to wait between batches (avoids rate limits). Default 0. */
   interBatchDelaySec: number
+  /** LLM provider: 'gemini' (default) or 'claude'. */
+  provider: LlmProvider
 }
 
 export interface BatchStats {
@@ -193,6 +216,7 @@ export async function extractKnowledge(
   entityContext?: string,
   qdrantClient?: QdrantClient,
   batchSize: number = DEFAULT_BATCH_SIZE,
+  provider: LlmProvider = 'gemini',
 ): Promise<ExtractionBatchResult> {
   const stats: ExtractionBatchResult = {
     entitiesCreated: 0,
@@ -222,15 +246,11 @@ export async function extractKnowledge(
   prompt += `\n\n--- TEXT CHUNKS ---\n${chunkTexts}`
 
   try {
-    const response = await callGemini(prompt, {
-      systemInstruction: 'You are a JSON-only knowledge extraction tool. Output valid JSON only.',
-      jsonMode: true,
-      timeoutMs: 120_000,
-    })
+    const responseText = await callLlm(provider, prompt)
 
-    const extraction = parseKnowledgeExtraction(response.text)
+    const extraction = parseKnowledgeExtraction(responseText)
     if (!extraction) {
-      logger.warn({ responseHead: response.text.slice(0, 200) }, 'Knowledge extraction: failed to parse response')
+      logger.warn({ responseHead: responseText.slice(0, 200) }, 'Knowledge extraction: failed to parse response')
       for (const chunk of chunks) {
         await updateChunkEntityIds(db, chunk.id, [])
       }
@@ -351,7 +371,7 @@ export async function extractKnowledge(
     logger.info(stats, 'Knowledge extraction: batch complete')
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error)
-    logger.error({ error: errMsg, chunkCount: chunks.length }, 'Knowledge extraction: Gemini call failed')
+    logger.error({ error: errMsg, chunkCount: chunks.length, provider }, 'Knowledge extraction: LLM call failed')
 
     for (const chunk of chunks) {
       await updateChunkEntityIds(db, chunk.id, [])
@@ -368,6 +388,7 @@ const DEFAULT_BUDGET: BatchBudget = {
   maxTimeMinutes: 60,
   chunkBatchSize: DEFAULT_BATCH_SIZE,
   interBatchDelaySec: 0,
+  provider: 'gemini',
 }
 
 /**
@@ -408,7 +429,7 @@ export async function extractKnowledgeBatch(
       entityContext = buildEntityContext(await getAllEntityNames(db))
     }
 
-    const result = await extractKnowledge(db, entityContext, qdrantClient, b.chunkBatchSize)
+    const result = await extractKnowledge(db, entityContext, qdrantClient, b.chunkBatchSize, b.provider)
     if (result.chunksProcessed === 0) break
 
     if (result.errorCount) {
