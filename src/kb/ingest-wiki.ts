@@ -17,6 +17,7 @@ import 'dotenv/config'
 import { readFileSync } from 'node:fs'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
+import { QdrantClient } from '@qdrant/js-client-rest'
 import * as schema from '../db/schema.js'
 import { upsertChunk } from './repository.js'
 import { splitText, contentHash } from './chunker.js'
@@ -180,7 +181,8 @@ async function main(): Promise<void> {
 
   // Init embedder and vector store
   await initEmbedder()
-  const vectorStore = new KBVectorStore()
+  const qdrantClient = new QdrantClient({ url: process.env.QDRANT_URL ?? 'http://localhost:6333' })
+  const vectorStore = new KBVectorStore(qdrantClient)
   await vectorStore.ensureCollection()
 
   let totalChunks = 0
