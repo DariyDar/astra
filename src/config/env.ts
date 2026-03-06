@@ -3,7 +3,7 @@ import 'dotenv/config'
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
+  REDIS_URL: z.string().min(1),
   ENCRYPTION_KEY: z.string().length(64, 'Must be 32 bytes hex-encoded'),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TELEGRAM_ADMIN_CHAT_ID: z.string().min(1),
