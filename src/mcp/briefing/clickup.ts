@@ -99,6 +99,8 @@ export async function fetchClickUp(
 
   const headers = { Authorization: apiKey }
   const limit = req.limit_per_source ?? 10
+  // When querying specific lists, return all tasks (up to API max of 100)
+  const listLimit = req.limit_per_source ?? 100
   const includeClosed = req.include_closed ? 'true' : 'false'
 
   // If specific lists requested, resolve them and query per-list
@@ -142,7 +144,7 @@ export async function fetchClickUp(
       )
     }
 
-    const result = items.slice(0, limit)
+    const result = items.slice(0, listLimit)
     await resolveParentNames(result, headers)
     return result
   }
@@ -233,6 +235,12 @@ async function resolveParentNames(items: BriefingItem[], headers: Record<string,
 function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
   const listInfo = t.list as { name?: string } | undefined
   const parentId = t.parent as string | null | undefined
+
+  // Extract custom fields: resolve dropdown orderindex → option name
+  const customFields = resolveCustomFields(
+    t.custom_fields as Array<{ name: string; type: string; value: unknown; type_config?: { options?: Array<{ name: string; orderindex: number }> } }> | undefined,
+  )
+
   return {
     source: 'clickup' as Source,
     subject: (t.name as string) ?? '',
@@ -243,5 +251,40 @@ function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
     links: t.url ? [t.url as string] : [],
     list: listInfo?.name ?? '',
     parent: parentId ?? '',
+    ...customFields,
   }
+}
+
+interface RawCustomField {
+  name: string
+  type: string
+  value: unknown
+  type_config?: { options?: Array<{ name: string; orderindex: number }> }
+}
+
+/** Extract non-empty custom fields, resolving dropdown indices to names. */
+function resolveCustomFields(fields: RawCustomField[] | undefined): Record<string, string> {
+  if (!fields) return {}
+  const result: Record<string, string> = {}
+
+  for (const cf of fields) {
+    if (cf.value == null) continue
+
+    const key = `cf_${cf.name.toLowerCase().replace(/\s+/g, '_')}`
+
+    if (cf.type === 'drop_down' && typeof cf.value === 'number') {
+      const opts = cf.type_config?.options ?? []
+      const match = opts.find(o => o.orderindex === cf.value)
+      if (match) result[key] = match.name
+    } else if (cf.type === 'date' && typeof cf.value === 'string') {
+      result[key] = new Date(parseInt(cf.value)).toISOString()
+    } else if (cf.type === 'users') {
+      const users = cf.value as Array<{ username?: string }>
+      if (Array.isArray(users)) result[key] = users.map(u => u.username ?? '').filter(Boolean).join(', ')
+    } else if (typeof cf.value === 'string') {
+      result[key] = cf.value
+    }
+  }
+
+  return result
 }
