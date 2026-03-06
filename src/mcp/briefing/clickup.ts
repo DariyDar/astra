@@ -235,24 +235,30 @@ async function resolveParentNames(items: BriefingItem[], headers: Record<string,
 function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
   const listInfo = t.list as { name?: string } | undefined
   const parentId = t.parent as string | null | undefined
+  const assignees = ((t.assignees as Array<{ username?: string }>) ?? []).map(a => a.username).filter(Boolean).join(', ')
+  const dueDate = t.due_date ? new Date(parseInt(t.due_date as string)).toISOString() : ''
+  const desc = truncate((t.description as string) ?? '', 80)
 
   // Extract custom fields: resolve dropdown orderindex → option name
   const customFields = resolveCustomFields(
     t.custom_fields as Array<{ name: string; type: string; value: unknown; type_config?: { options?: Array<{ name: string; orderindex: number }> } }> | undefined,
   )
 
-  return {
+  // Only include non-empty fields to keep payload compact
+  const item: BriefingItem = {
     source: 'clickup' as Source,
     subject: (t.name as string) ?? '',
     status: (t.status as { status?: string })?.status ?? '',
-    assignee: ((t.assignees as Array<{ username?: string }>) ?? []).map(a => a.username).join(', '),
-    due_date: t.due_date ? new Date(parseInt(t.due_date as string)).toISOString() : '',
-    text_preview: truncate((t.description as string) ?? '', 200),
-    links: t.url ? [t.url as string] : [],
-    list: listInfo?.name ?? '',
-    parent: parentId ?? '',
-    ...customFields,
   }
+  if (assignees) item.assignee = assignees
+  if (dueDate) item.due_date = dueDate
+  if (desc) item.text_preview = desc
+  if (listInfo?.name) item.list = listInfo.name
+  if (parentId) item.parent = parentId
+  for (const [k, v] of Object.entries(customFields)) {
+    if (v) item[k] = v
+  }
+  return item
 }
 
 interface RawCustomField {

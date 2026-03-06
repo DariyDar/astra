@@ -8,11 +8,12 @@ const MODEL = 'sonnet'
 const CLAUDE_TIMEOUT_MS = 180_000
 /**
  * Max agentic turns for MCP tool calls.
- * Each tool call consumes ~2 turns (request + result), so 16 allows ~8 tool calls.
- * Composite queries (KB search + live briefing + comparison) need 6-7 tool calls.
+ * Each tool call consumes ~2 turns (request + result), so 24 allows ~12 tool calls.
+ * Composite queries (KB search + live briefing + analysis) can need 8-10 tool calls
+ * when data is large (e.g. full project audit with custom fields).
  * Bail-early prompt keeps simple queries lean despite higher limit.
  */
-const MCP_MAX_TURNS = 16
+const MCP_MAX_TURNS = 24
 
 export interface UsageMetrics {
   inputTokens: number
