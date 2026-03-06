@@ -48,6 +48,7 @@ async function callLlm(provider: LlmProvider, prompt: string): Promise<string> {
     systemInstruction: SYSTEM_INSTRUCTION,
     jsonMode: true,
     timeoutMs: 120_000,
+    thinkingBudget: 0,
   })
   return response.text
 }
