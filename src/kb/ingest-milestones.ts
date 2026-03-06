@@ -12,7 +12,7 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { eq, and } from 'drizzle-orm'
 import pg from 'pg'
 import * as schema from '../db/schema.js'
-import { kbEntities, kbAliases } from '../db/schema.js'
+import { kbEntities, kbEntityAliases } from '../db/schema.js'
 import { addFact } from './repository.js'
 import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
 import { logger } from '../logging/logger.js'
@@ -82,9 +82,9 @@ async function findEntityId(
   if (entity) return entity.id
 
   // Try via aliases
-  const [alias] = await db.select({ entityId: kbAliases.entityId })
-    .from(kbAliases)
-    .where(eq(kbAliases.alias, name))
+  const [alias] = await db.select({ entityId: kbEntityAliases.entityId })
+    .from(kbEntityAliases)
+    .where(eq(kbEntityAliases.alias, name))
     .limit(1)
   if (alias) return alias.entityId
 
