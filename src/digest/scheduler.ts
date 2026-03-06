@@ -63,6 +63,13 @@ function sanitizeTelegramHtml(html: string): string {
   // Escape any remaining < placeholders as &lt;
   result = result.replace(new RegExp(PLACEHOLDER, 'g'), '&lt;')
 
+  // Fix broken <a> tags: remove <a> without valid href, and their matching </a>
+  // Replace broken <a> with a marker, then clean up
+  result = result.replace(/<a\s*>/gi, '')  // <a> with no attributes
+  result = result.replace(/<a\s+href\s*=\s*""?\s*>/gi, '')  // <a href="">
+  result = result.replace(/<a\s+href\s*=\s*''?\s*>/gi, '')  // <a href=''>
+  result = result.replace(/<a\s+>/gi, '')  // <a > (just whitespace)
+
   // Balance unclosed tags
   result = balanceHtmlTags(result)
 
@@ -120,9 +127,10 @@ function splitMessage(text: string, maxLen: number): string[] {
   return chunks.map(balanceHtmlTags)
 }
 
-/** Close any unclosed HTML tags at the end of a chunk. */
+/** Balance HTML tags: close unclosed tags and remove orphaned closing tags. */
 function balanceHtmlTags(chunk: string): string {
   const openTags: string[] = []
+  const orphanedClosePositions: Array<{ start: number; end: number }> = []
   const tagRegex = /<\/?([a-z]+)[^>]*>/gi
   let match: RegExpExecArray | null
   while ((match = tagRegex.exec(chunk)) !== null) {
@@ -130,13 +138,29 @@ function balanceHtmlTags(chunk: string): string {
     const tagName = match[1].toLowerCase()
     if (isClosing) {
       const idx = openTags.lastIndexOf(tagName)
-      if (idx !== -1) openTags.splice(idx, 1)
+      if (idx !== -1) {
+        openTags.splice(idx, 1)
+      } else {
+        // Orphaned closing tag — mark for removal
+        orphanedClosePositions.push({ start: match.index, end: match.index + match[0].length })
+      }
     } else if (!match[0].endsWith('/>')) {
       openTags.push(tagName)
     }
   }
-  if (openTags.length === 0) return chunk
-  return chunk + openTags.reverse().map((t) => `</${t}>`).join('')
+
+  // Remove orphaned closing tags (iterate in reverse to preserve positions)
+  let result = chunk
+  for (let i = orphanedClosePositions.length - 1; i >= 0; i--) {
+    const { start, end } = orphanedClosePositions[i]
+    result = result.slice(0, start) + result.slice(end)
+  }
+
+  // Close unclosed tags
+  if (openTags.length > 0) {
+    result += openTags.reverse().map((t) => `</${t}>`).join('')
+  }
+  return result
 }
 
 /** Full-compilation retry: if all per-source retries fail, retry entire compilation. */
