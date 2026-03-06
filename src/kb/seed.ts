@@ -57,7 +57,8 @@ const projects: SeedEntity[] = [
   { type: 'project', name: 'Oregon Trail', company: 'ac', aliases: ['Oregon Trail The Boomtown', 'Орегон Трейл', 'OT'] },
   { type: 'project', name: 'Aquarium', company: 'ac', aliases: ['Аквариум'] },
   { type: 'project', name: 'Idle Axe Thrower', company: 'ac', aliases: ['IAT'] },
-  { type: 'project', name: 'Ohbibi MWCF', company: 'ac', aliases: ['Motor World Car Factory', 'Ohbibi Creatives', 'MWCF'] },
+  { type: 'project', name: 'Motor World: Car Factory', company: 'ac', aliases: ['MWCF', 'Motor World Car Factory', 'Ohbibi MWCF', 'ohbibi-mwcf'], metadata: { client: 'Ohbibi', description: 'Production: разработка и поддержка MWCF' } },
+  { type: 'project', name: 'OhBibi Creatives', company: 'ac', aliases: ['Ohbibi Creatives', 'ohbibi-mwcf-creatives', 'MWCF Creatives'], metadata: { client: 'Ohbibi', description: 'Креативы (рекламные видео) + UA для MWCF' } },
   { type: 'project', name: 'Symphonia', company: 'ac', aliases: ['Симфония'] },
   { type: 'project', name: 'Tough Guy', company: 'ac', aliases: ['Таф Гай'] },
 ]
@@ -211,13 +212,18 @@ const relations: SeedRelation[] = [
   { from: 'Марина Назарова', to: 'Idle Axe Thrower', relation: 'works_on', role: 'Artist' },
   { from: 'Сергей', to: 'Idle Axe Thrower', relation: 'works_on', role: 'QA' },
 
-  // Ohbibi MWCF
-  { from: 'Дарий', to: 'Ohbibi MWCF', relation: 'manages', role: 'PM' },
-  { from: 'Семён', to: 'Ohbibi MWCF', relation: 'works_on', role: 'Developer' },
-  { from: 'Алмазхан', to: 'Ohbibi MWCF', relation: 'works_on', role: 'Developer' },
-  { from: 'Данил', to: 'Ohbibi MWCF', relation: 'works_on', role: 'QA' },
-  { from: 'Сергей', to: 'Ohbibi MWCF', relation: 'works_on', role: 'QA' },
-  { from: 'Ohbibi', to: 'Ohbibi MWCF', relation: 'client_of' },
+  // Motor World: Car Factory (Production)
+  { from: 'Дарий', to: 'Motor World: Car Factory', relation: 'manages', role: 'PM' },
+  { from: 'Семён', to: 'Motor World: Car Factory', relation: 'works_on', role: 'Developer' },
+  { from: 'Алмазхан', to: 'Motor World: Car Factory', relation: 'works_on', role: 'Developer' },
+  { from: 'Данил', to: 'Motor World: Car Factory', relation: 'works_on', role: 'QA' },
+  { from: 'Сергей', to: 'Motor World: Car Factory', relation: 'works_on', role: 'QA' },
+  { from: 'Ohbibi', to: 'Motor World: Car Factory', relation: 'client_of' },
+
+  // OhBibi Creatives (Ads + UA)
+  { from: 'Анастасия', to: 'OhBibi Creatives', relation: 'manages', role: 'Creative Producer' },
+  { from: 'Богдан', to: 'OhBibi Creatives', relation: 'works_on', role: 'UA' },
+  { from: 'Ohbibi', to: 'OhBibi Creatives', relation: 'client_of' },
 
   // Tough Guy
   { from: 'Иван', to: 'Tough Guy', relation: 'owns', role: 'Creator' },
