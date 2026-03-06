@@ -6,7 +6,7 @@
  */
 
 import { SLACK_WORKSPACES, fetchSlackChannels } from '../../mcp/briefing/slack.js'
-import { buildSlackUserCache, resolveSlackMentions } from '../../kb/slack-user-cache.js'
+import { buildSlackUserCache, resolveUserId, resolveSlackMentionsAsync } from '../../kb/slack-user-cache.js'
 import { logger } from '../../logging/logger.js'
 
 const RATE_LIMIT_MS = 600  // Slightly faster than ingestion (1100ms) — runs once/day
@@ -178,9 +178,11 @@ export async function fetchDigestSlack(
           continue
         }
 
-        // Resolve user name and text mentions
-        const authorName = (msg.user ? userCache.get(msg.user) : undefined) ?? msg.user ?? 'unknown'
-        const resolvedText = resolveSlackMentions(msg.text, userCache)
+        // Resolve user name (with fallback to users.info for Slack Connect guests)
+        const authorName = msg.user
+          ? await resolveUserId(msg.user, userCache)
+          : 'unknown'
+        const resolvedText = await resolveSlackMentionsAsync(msg.text, userCache)
 
         messages.push({
           author: authorName,

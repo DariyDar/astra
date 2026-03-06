@@ -87,6 +87,41 @@ export async function buildSlackUserCache(): Promise<Map<string, string>> {
 }
 
 /**
+ * Resolve a single user ID to display name via users.info API.
+ * Used as fallback for Slack Connect guests not returned by users.list.
+ * Result is cached in the module-level cache for subsequent calls.
+ */
+export async function resolveUserId(userId: string, cache: Map<string, string>): Promise<string> {
+  const cached = cache.get(userId)
+  if (cached) return cached
+
+  for (const ws of SLACK_WORKSPACES) {
+    try {
+      const resp = await fetch(`https://slack.com/api/users.info?user=${userId}`, {
+        headers: { Authorization: `Bearer ${ws.token}` },
+        signal: AbortSignal.timeout(5_000),
+      })
+      if (!resp.ok) continue
+      const data = await resp.json() as { ok: boolean; user?: SlackUser }
+      if (!data.ok || !data.user) continue
+
+      const u = data.user
+      const name =
+        u.profile?.display_name?.trim() ||
+        u.profile?.real_name?.trim() ||
+        u.real_name?.trim() ||
+        userId
+      cache.set(userId, name)
+      return name
+    } catch {
+      continue
+    }
+  }
+
+  return userId
+}
+
+/**
  * Replace <@U123> and <@U123|display_name> patterns with resolved display names.
  * If user ID not found in cache, falls back to pipe display name or keeps raw ID.
  */
@@ -101,4 +136,26 @@ export function resolveSlackMentions(text: string, cache: Map<string, string>): 
     // No resolution available — keep original
     return _match
   })
+}
+
+/**
+ * Async version of resolveSlackMentions — resolves unknown user IDs via users.info API.
+ * Use for digest where we want all names resolved.
+ */
+export async function resolveSlackMentionsAsync(text: string, cache: Map<string, string>): Promise<string> {
+  const mentionPattern = /<@(U[A-Z0-9]+)(?:\|([^>]*))?>/g
+  const matches = [...text.matchAll(mentionPattern)]
+  if (matches.length === 0) return text
+
+  // Resolve unknown IDs in parallel
+  const unknownIds = new Set<string>()
+  for (const m of matches) {
+    if (!cache.has(m[1])) unknownIds.add(m[1])
+  }
+  if (unknownIds.size > 0) {
+    await Promise.all([...unknownIds].map((id) => resolveUserId(id, cache)))
+  }
+
+  // Now replace synchronously — all IDs should be cached
+  return resolveSlackMentions(text, cache)
 }
