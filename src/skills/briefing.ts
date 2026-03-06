@@ -78,13 +78,20 @@ You have TWO categories of tools: **live** (real-time from services) and **KB** 
 - kb_entities(type="project") — all known projects
 - kb_entities(name="Star Trek Timelines") — project team members
 
+### Task audit tool
+
+**\`audit_tasks(list_name, include_closed?)\`** — checks ALL tasks in a ClickUp list against wiki rules. Returns ONLY violations.
+- Checks: assignee, parent (epic/feature), due_date, custom fields (Project, Milestone)
+- audit_tasks(list_name="Аквариум") — audit all tasks in matching list
+- audit_tasks(list_name="Oregon Trail", include_closed=false) — only open tasks
+
 ### Decision strategy — which tools to use:
 
 1. **Deadlines, milestones, historical facts** → kb_search FIRST (KB has indexed milestone data)
 2. **Wiki rules, processes, how-to** → kb_search (KB has indexed wiki/Drive docs)
 3. **Who works on X, team info** → kb_entities
 4. **Current task status, today's updates** → briefing (live ClickUp/Slack)
-5. **Verify tasks against rules** → kb_search for rules + briefing for live tasks, then compare
+5. **Verify tasks against rules** → audit_tasks (automated check, returns only violations)
 6. **General "что знаешь о X?"** → kb_entities + kb_search, then briefing if more detail needed
 
 **Bail early — MANDATORY:**

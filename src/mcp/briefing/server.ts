@@ -18,6 +18,7 @@ import { fetchGmail, fetchEmailContent, getEmailContentTool } from './gmail.js'
 import { fetchCalendar } from './calendar.js'
 import { fetchClickUp } from './clickup.js'
 import { executeClockifyReport, clockifyReportTool, type ClockifyReportType } from './clockify.js'
+import { executeAuditTasks, auditTasksTool } from './audit.js'
 import * as schema from '../../db/schema.js'
 import { KBVectorStore } from '../../kb/vector-store.js'
 import { kbSearchTool, kbEntitiesTool, handleKBSearch, handleKBEntities } from '../../kb/mcp-tools.js'
@@ -201,7 +202,7 @@ export async function main(): Promise<void> {
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbSearchTool, kbEntitiesTool],
+    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbSearchTool, kbEntitiesTool, auditTasksTool],
   }))
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -284,6 +285,15 @@ export async function main(): Promise<void> {
       } else if (toolName === 'kb_entities') {
         const text = await handleKBEntities(db, args)
         log(`tool=${toolName} done`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'audit_tasks') {
+        if (!args.list_name) throw new Error('list_name is required')
+        const auditResult = await executeAuditTasks(
+          args.list_name as string,
+          (args.include_closed as boolean) ?? true,
+        )
+        const text = JSON.stringify(auditResult, null, 0)
+        log(`tool=${toolName} list=${auditResult.list} total=${auditResult.total_tasks} issues=${auditResult.tasks_with_issues}`)
         return { content: [{ type: 'text', text }] }
       } else {
         throw new Error(`Unknown tool: ${toolName}`)
