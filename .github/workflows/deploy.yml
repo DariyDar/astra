@@ -65,6 +65,8 @@ jobs:
             rm -f ~/.pm2/dump.pm2
 
             # ── 2. DEPLOY code ──
+            # Clean source dirs before extract so deleted files don't linger
+            rm -rf src/ tests/ scripts/
             tar xzf /tmp/astra-deploy.tar.gz
             rm /tmp/astra-deploy.tar.gz
 
