@@ -142,7 +142,9 @@ export async function fetchClickUp(
       )
     }
 
-    return items.slice(0, limit)
+    const result = items.slice(0, limit)
+    await resolveParentNames(result, headers)
+    return result
   }
 
   // Search by term across entire workspace
@@ -163,7 +165,9 @@ export async function fetchClickUp(
       ((t.description as string) ?? '').toLowerCase().includes(term),
     )
 
-    return filtered.slice(0, limit).map(mapClickUpTask)
+    const searchResult = filtered.slice(0, limit).map(mapClickUpTask)
+    await resolveParentNames(searchResult, headers)
+    return searchResult
   }
 
   // For "recent" / "digest" — fetch tasks with due dates in period
@@ -179,13 +183,56 @@ export async function fetchClickUp(
   )
   const data = await jsonOrThrow<{ tasks?: Array<Record<string, unknown>> }>(resp, 'ClickUp tasks')
 
-  return (data.tasks ?? []).slice(0, limit).map(mapClickUpTask)
+  const digestResult = (data.tasks ?? []).slice(0, limit).map(mapClickUpTask)
+  await resolveParentNames(digestResult, headers)
+  return digestResult
+}
+
+// ── Parent task name resolution ──
+
+/** Cached parent task names. Avoids re-fetching the same parent across requests. */
+const parentNameCache = new Map<string, string>()
+
+/**
+ * Resolve parent task IDs to human-readable names via bulk fetch.
+ * Mutates items in-place, replacing `parent` ID with parent task name.
+ */
+async function resolveParentNames(items: BriefingItem[], headers: Record<string, string>): Promise<void> {
+  const parentIds = new Set<string>()
+  for (const item of items) {
+    const pid = item.parent as string
+    if (pid && !parentNameCache.has(pid)) parentIds.add(pid)
+  }
+
+  if (parentIds.size > 0) {
+    const results = await Promise.allSettled(
+      [...parentIds].map(async (id) => {
+        const resp = await fetch(`https://api.clickup.com/api/v2/task/${id}`, {
+          headers,
+          signal: AbortSignal.timeout(10_000),
+        })
+        const data = await jsonOrThrow<{ name?: string }>(resp, `ClickUp task ${id}`)
+        return { id, name: data.name ?? '' }
+      }),
+    )
+    for (const r of results) {
+      if (r.status === 'fulfilled') parentNameCache.set(r.value.id, r.value.name)
+    }
+  }
+
+  for (const item of items) {
+    const pid = item.parent as string
+    if (pid) {
+      item.parent = parentNameCache.get(pid) ?? ''
+    }
+  }
 }
 
 // ── Helpers ──
 
 function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
   const listInfo = t.list as { name?: string } | undefined
+  const parentId = t.parent as string | null | undefined
   return {
     source: 'clickup' as Source,
     subject: (t.name as string) ?? '',
@@ -195,5 +242,6 @@ function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
     text_preview: truncate((t.description as string) ?? '', 200),
     links: t.url ? [t.url as string] : [],
     list: listInfo?.name ?? '',
+    parent: parentId ?? '',
   }
 }
