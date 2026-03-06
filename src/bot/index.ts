@@ -292,7 +292,8 @@ async function startup(): Promise<void> {
     await initEmbedder()
     logger.info('Embedder initialized')
   } catch (error) {
-    logger.warn({ error }, 'Embedder initialization failed, long-term memory degraded')
+    const errMsg = error instanceof Error ? error.message : String(error)
+    logger.warn({ error: errMsg }, 'Embedder initialization failed, long-term memory degraded')
   }
 
   // 3. Ensure Qdrant collections exist (memory + knowledge base)
@@ -309,7 +310,8 @@ async function startup(): Promise<void> {
   try {
     mcpServer = await startMcpServer()
   } catch (error) {
-    logger.warn({ error }, 'MCP server failed to start, memory tools unavailable')
+    const mcpErr = error instanceof Error ? error.message : String(error)
+    logger.warn({ error: mcpErr }, 'MCP server failed to start, memory tools unavailable')
   }
 
   // 4b. Load skill modules (auto-discovers from src/skills/)
