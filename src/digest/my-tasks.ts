@@ -14,6 +14,12 @@ export interface ClickUpTask {
   is_overdue: boolean
 }
 
+/** Format date as "6 мар 2026". */
+function formatDateShort(d: Date): string {
+  const months = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
 /** Cached ClickUp user ID, keyed by API key to handle key rotation. */
 let cachedUser: { apiKey: string; userId: string } | null = null
 
@@ -88,7 +94,7 @@ export async function fetchMyTasks(): Promise<ClickUpTask[]> {
     return {
       subject: (t.name as string) ?? '',
       status: (t.status as { status?: string })?.status ?? '',
-      due_date: dueDate ? dueDate.toISOString() : '',
+      due_date: dueDate ? formatDateShort(dueDate) : '',
       list: listInfo?.name ?? '',
       url: (t.url as string) ?? '',
       is_overdue: dueDate ? dueDate < todayStart : false,
