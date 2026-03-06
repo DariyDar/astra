@@ -50,7 +50,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Upload and extract
+      - name: Stop, deploy code, sync env, then start
         run: |
           scp -i ~/.ssh/deploy_key /tmp/deploy.tar.gz ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:/tmp/astra-deploy.tar.gz
           ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'DEPLOY'
@@ -58,7 +58,13 @@ jobs:
 
             cd /home/clawdbot/personal-assistant
 
-            # Extract new code (preserves .env)
+            # ── 1. STOP everything first ──
+            pgrep -f "personal-assistant" | xargs kill -9 2>/dev/null || true
+            pm2 kill 2>/dev/null || true
+            sleep 2
+            rm -f ~/.pm2/dump.pm2
+
+            # ── 2. DEPLOY code ──
             tar xzf /tmp/astra-deploy.tar.gz
             rm /tmp/astra-deploy.tar.gz
 
@@ -71,49 +77,11 @@ jobs:
             # Run database migrations
             npx drizzle-kit push --force
 
-            # Kill all existing processes to avoid Telegram 409 conflict
-            pgrep -f "personal-assistant" | xargs kill -9 2>/dev/null || true
-            pm2 kill 2>/dev/null || true
-            sleep 2
-            rm -f ~/.pm2/dump.pm2
-
-            # Start fresh via PM2 ecosystem config
-            pm2 start ecosystem.config.cjs
-            pm2 save
+            # ── 3. SYNC env vars (before start, so bot reads fresh .env) ──
+            sed -i 's/NODE_ENV=development/NODE_ENV=production/' .env
           DEPLOY
 
-      - name: Migrate old env vars
-        run: |
-          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'MIGRATE'
-            cd /home/clawdbot/personal-assistant
-
-            # Ensure NODE_ENV=production
-            sed -i 's/NODE_ENV=development/NODE_ENV=production/' .env
-
-            # Migrate old Slack var names to AC-prefixed (one-time)
-            grep -q '^SLACK_AC_BOT_TOKEN=' .env || {
-              OLD_VAL=$(grep '^SLACK_BOT_TOKEN=' .env | cut -d= -f2-)
-              [ -n "$OLD_VAL" ] && echo "SLACK_AC_BOT_TOKEN=$OLD_VAL" >> .env
-            }
-            grep -q '^SLACK_AC_APP_TOKEN=' .env || {
-              OLD_VAL=$(grep '^SLACK_APP_TOKEN=' .env | cut -d= -f2-)
-              [ -n "$OLD_VAL" ] && echo "SLACK_AC_APP_TOKEN=$OLD_VAL" >> .env
-            }
-            grep -q '^SLACK_AC_USER_TOKEN=' .env || {
-              OLD_VAL=$(grep '^SLACK_USER_TOKEN=' .env | cut -d= -f2-)
-              [ -n "$OLD_VAL" ] && echo "SLACK_AC_USER_TOKEN=$OLD_VAL" >> .env
-            }
-            grep -q '^SLACK_AC_ADMIN_USER_ID=' .env || {
-              OLD_VAL=$(grep '^SLACK_ADMIN_USER_ID=' .env | cut -d= -f2-)
-              [ -n "$OLD_VAL" ] && echo "SLACK_AC_ADMIN_USER_ID=$OLD_VAL" >> .env
-            }
-            grep -q '^SLACK_AC_TEAM_ID=' .env || {
-              OLD_VAL=$(grep '^SLACK_TEAM_ID=' .env | cut -d= -f2-)
-              [ -n "$OLD_VAL" ] && echo "SLACK_AC_TEAM_ID=$OLD_VAL" >> .env
-            }
-          MIGRATE
-
-      - name: Sync env vars
+      - name: Sync env secrets
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << ENVEOF
             cd /home/clawdbot/personal-assistant
@@ -163,9 +131,36 @@ jobs:
             grep -q '^CLOCKIFY_WORKSPACE_ID=' .env || echo 'CLOCKIFY_WORKSPACE_ID=' >> .env
             sed -i 's|^CLOCKIFY_WORKSPACE_ID=.*|CLOCKIFY_WORKSPACE_ID=${{ secrets.CLOCKIFY_WORKSPACE_ID }}|' .env
 
-            # Restart to pick up new env
-            pm2 restart astra-bot --update-env
+            # Migrate old Slack var names to AC-prefixed (one-time, idempotent)
+            grep -q '^SLACK_AC_BOT_TOKEN=' .env || {
+              OLD_VAL=$(grep '^SLACK_BOT_TOKEN=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_BOT_TOKEN=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_APP_TOKEN=' .env || {
+              OLD_VAL=$(grep '^SLACK_APP_TOKEN=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_APP_TOKEN=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_USER_TOKEN=' .env || {
+              OLD_VAL=$(grep '^SLACK_USER_TOKEN=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_USER_TOKEN=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_ADMIN_USER_ID=' .env || {
+              OLD_VAL=$(grep '^SLACK_ADMIN_USER_ID=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_ADMIN_USER_ID=$OLD_VAL" >> .env
+            }
+            grep -q '^SLACK_AC_TEAM_ID=' .env || {
+              OLD_VAL=$(grep '^SLACK_TEAM_ID=' .env | cut -d= -f2-)
+              [ -n "$OLD_VAL" ] && echo "SLACK_AC_TEAM_ID=$OLD_VAL" >> .env
+            }
           ENVEOF
+
+      - name: Start PM2
+        run: |
+          ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'START'
+            cd /home/clawdbot/personal-assistant
+            pm2 start ecosystem.config.cjs
+            pm2 save
+          START
 
       - name: Health check
         run: |
