@@ -22,6 +22,7 @@ import { findEntitiesByType, getFactsForEntity } from '../kb/repository.js'
 import { fetchDigestSlack, type DigestSlackChannel } from './sources/slack.js'
 import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
 import { DIGEST_SYSTEM_PROMPT, buildDigestUserPrompt } from './prompt.js'
+import { buildNameMap, resolveDisplayName, type NameMap } from './name-resolver.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
 
 type Company = 'astrocat' | 'highground'
@@ -231,8 +232,11 @@ export async function compileDigest(company: Company): Promise<string> {
 
   const yesterdayPeriod = parsePeriod('yesterday')
 
-  // Build project map for company-based filtering
-  const projectMap = await buildProjectMap()
+  // Build project map for company-based filtering + name map for display names
+  const [projectMap, nameMap] = await Promise.all([
+    buildProjectMap(),
+    buildNameMap(),
+  ])
   const companyProjects = projectMap.get(wsLabel) ?? []
   const otherWs = wsLabel === 'ac' ? 'hg' : 'ac'
   const otherProjects = projectMap.get(otherWs) ?? []
@@ -293,6 +297,9 @@ export async function compileDigest(company: Company): Promise<string> {
   const myTasks = (myTasksResult.status === 'fulfilled' ? myTasksResult.value : []) as ClickUpTask[]
   const kbContext = (kbResult.status === 'fulfilled' ? kbResult.value : []) as Array<{ project: string; facts: string[] }>
 
+  // Resolve display names: Slack author → short Russian name
+  resolveSlackDisplayNames(slackChannels, nameMap)
+
   // Log non-critical failures as warnings
   const failedNonCritical = results.filter(
     (r) => r.error !== null && !(CRITICAL_SOURCES as readonly string[]).includes(r.name),
@@ -326,6 +333,7 @@ export async function compileDigest(company: Company): Promise<string> {
     clickupData: [...companyClickup, ...sharedClickup],
     myTasks,
     kbContext,
+    allProjects: companyProjects.map((p) => p.name),
   })
 
   // Call Gemini to compile the digest
@@ -438,4 +446,13 @@ function settledToResult<T>(result: PromiseSettledResult<T>): { data: T | null; 
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/** Replace Slack author names with short Russian display names from KB. Mutates in place. */
+function resolveSlackDisplayNames(channels: DigestSlackChannel[], nameMap: NameMap): void {
+  for (const ch of channels) {
+    for (const msg of ch.messages) {
+      msg.author = resolveDisplayName(msg.author, nameMap)
+    }
+  }
 }

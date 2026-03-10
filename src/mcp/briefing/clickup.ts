@@ -255,6 +255,8 @@ function mapClickUpTask(t: Record<string, unknown>): BriefingItem {
   if (desc) item.text_preview = desc
   if (listInfo?.name) item.list = listInfo.name
   if (parentId) item.parent = parentId
+  const taskUrl = (t.url as string) ?? ''
+  if (taskUrl) item.link = taskUrl
   for (const [k, v] of Object.entries(customFields)) {
     if (v) item[k] = v
   }

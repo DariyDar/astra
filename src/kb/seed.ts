@@ -61,6 +61,8 @@ const projects: SeedEntity[] = [
   { type: 'project', name: 'OhBibi Creatives', company: 'ac', aliases: ['Ohbibi Creatives', 'ohbibi-mwcf-creatives', 'MWCF Creatives'], metadata: { client: 'Ohbibi', description: 'Креативы (рекламные видео) + UA для MWCF' } },
   { type: 'project', name: 'Symphonia', company: 'ac', aliases: ['Симфония'] },
   { type: 'project', name: 'Tough Guy', company: 'ac', aliases: ['Таф Гай'] },
+  { type: 'project', name: 'Vector', company: 'ac', aliases: ['Вектор'] },
+  { type: 'project', name: 'Bachalau', company: 'ac', aliases: ['Бакалау'] },
 ]
 
 // ── Processes ──
@@ -76,56 +78,60 @@ const processes: SeedEntity[] = [
 
 const people: SeedEntity[] = [
   // Leadership
-  { type: 'person', name: 'Дарий', company: 'ac', aliases: ['Dariy', 'dariy', 'Дарий Шацких'], metadata: { role: 'CPO HG, VP Production AC' } },
-  { type: 'person', name: 'Арсен', company: 'hg', aliases: ['Arsen'], metadata: { role: 'CEO HG' } },
-  { type: 'person', name: 'Никита Кокарев', company: 'hg', aliases: ['Никита К.', 'Nikita K'], metadata: { role: 'Co-founder, Art Director' } },
-  { type: 'person', name: 'Слава', company: 'hg', aliases: ['Вячеслав Куряков', 'Slava'], metadata: { role: 'Co-founder HG' } },
-  { type: 'person', name: 'Йенг', company: 'ac', aliases: ['Yeng'], metadata: { role: 'CEO AC' } },
-  { type: 'person', name: 'Брент', company: 'ac', aliases: ['Brent'], metadata: { role: 'Co-founder AC' } },
+  { type: 'person', name: 'Дарий', company: 'ac', aliases: ['Dariy', 'dariy', 'Дарий Шацких', 'Dariy Shatskikh'], metadata: { role: 'CPO HG, VP Production AC', display_name: 'Дарий' } },
+  { type: 'person', name: 'Арсен', company: 'hg', aliases: ['Arsen'], metadata: { role: 'CEO HG', display_name: 'Арсен' } },
+  { type: 'person', name: 'Никита Кокарев', company: 'hg', aliases: ['Никита К.', 'Nikita K', 'Nikita Kokarev'], metadata: { role: 'Co-founder, Art Director', display_name: 'Никита К.' } },
+  { type: 'person', name: 'Слава', company: 'hg', aliases: ['Вячеслав Куряков', 'Slava', 'Vyacheslav'], metadata: { role: 'Co-founder HG', display_name: 'Слава' } },
+  { type: 'person', name: 'Йенг', company: 'ac', aliases: ['Yeng', 'Yang Wen'], metadata: { role: 'CEO AC', display_name: 'Йенг' } },
+  { type: 'person', name: 'Брент', company: 'ac', aliases: ['Brent'], metadata: { role: 'Co-founder AC', display_name: 'Брент' } },
 
   // PMs (cross-project)
-  { type: 'person', name: 'Анастасия', aliases: ['Настя', 'Anastasia', 'Nastya'], metadata: { role: 'PM' } },
-  { type: 'person', name: 'Александра', aliases: ['Саша', 'Alexandra', 'Sasha'], metadata: { role: 'PM' } },
+  { type: 'person', name: 'Анастасия Воронова', aliases: ['Настя', 'Anastasia', 'Nastya', 'Анастасия', 'Anastasia Voronova'], metadata: { role: 'PM', display_name: 'Настя (PM)' } },
+  { type: 'person', name: 'Анастасия Емельяненко', aliases: ['Anastasia Emelyanenko'], metadata: { role: 'HR', display_name: 'Настя (HR)' } },
+  { type: 'person', name: 'Александра', aliases: ['Саша', 'Alexandra', 'Sasha'], metadata: { role: 'PM', display_name: 'Саша' } },
 
   // Developers
-  { type: 'person', name: 'Семён', company: 'hg', aliases: ['Semyon', 'Semen', 'Semён'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Рустам', company: 'ac', aliases: ['Rustam'], metadata: { role: 'Dev Lead (STT)' } },
-  { type: 'person', name: 'Валера', company: 'ac', aliases: ['Valera'], metadata: { role: 'Tech Expert (STT)' } },
-  { type: 'person', name: 'Руслан', company: 'ac', aliases: ['Ruslan'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Дмитрий', company: 'ac', aliases: ['Dmitry'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Дияр', company: 'ac', aliases: ['Diyar'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Никита Щукин', company: 'ac', aliases: ['Nikita Shchukin'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Алехандро', company: 'hg', aliases: ['Александр', 'Alejandro'], metadata: { role: 'Mini-TL' } },
-  { type: 'person', name: 'Амгалан', aliases: ['Amgalan'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Игорь', aliases: ['Igor'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Иван', aliases: ['Ivan'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Алмазхан', company: 'ac', aliases: ['Almazkhan'], metadata: { role: 'Developer' } },
-  { type: 'person', name: 'Всеволод', company: 'hg', aliases: ['Vsevolod'], metadata: { role: 'Developer (HTML5)' } },
-  { type: 'person', name: 'Илья Воронов', company: 'ac', aliases: ['Ilya Voronov'], metadata: { role: 'Developer (STT)' } },
+  { type: 'person', name: 'Семён', company: 'hg', aliases: ['Semyon', 'Semen', 'Semён'], metadata: { role: 'Developer', display_name: 'Семён' } },
+  { type: 'person', name: 'Рустам', company: 'ac', aliases: ['Rustam'], metadata: { role: 'Dev Lead (STT)', display_name: 'Рустам' } },
+  { type: 'person', name: 'Валера', company: 'ac', aliases: ['Valera'], metadata: { role: 'Tech Expert (STT)', display_name: 'Валера' } },
+  { type: 'person', name: 'Руслан', company: 'ac', aliases: ['Ruslan'], metadata: { role: 'Developer', display_name: 'Руслан' } },
+  { type: 'person', name: 'Дмитрий', company: 'ac', aliases: ['Dmitry'], metadata: { role: 'Developer', display_name: 'Дмитрий' } },
+  { type: 'person', name: 'Дияр', company: 'ac', aliases: ['Diyar'], metadata: { role: 'Developer', display_name: 'Дияр' } },
+  { type: 'person', name: 'Никита Щукин', company: 'ac', aliases: ['Nikita Shchukin', 'Nikita Sch'], metadata: { role: 'Developer', display_name: 'Никита Щ.' } },
+  { type: 'person', name: 'Алехандро', company: 'hg', aliases: ['Александр', 'Alejandro'], metadata: { role: 'Mini-TL', display_name: 'Алехандро' } },
+  { type: 'person', name: 'Амгалан', aliases: ['Amgalan'], metadata: { role: 'Developer', display_name: 'Амгалан' } },
+  { type: 'person', name: 'Игорь', aliases: ['Igor'], metadata: { role: 'Developer', display_name: 'Игорь' } },
+  { type: 'person', name: 'Иван', aliases: ['Ivan'], metadata: { role: 'Developer', display_name: 'Иван' } },
+  { type: 'person', name: 'Алмазхан', company: 'ac', aliases: ['Almazkhan'], metadata: { role: 'Developer', display_name: 'Алмазхан' } },
+  { type: 'person', name: 'Всеволод', company: 'hg', aliases: ['Vsevolod'], metadata: { role: 'Developer (HTML5)', display_name: 'Всеволод' } },
+  { type: 'person', name: 'Илья Воронов', company: 'ac', aliases: ['Ilya Voronov'], metadata: { role: 'Developer (STT)', display_name: 'Илья В.' } },
 
   // Game Design
-  { type: 'person', name: 'Фарид', company: 'hg', aliases: ['Farid'], metadata: { role: 'Game Designer' } },
-  { type: 'person', name: 'Илья Бочаров', company: 'ac', aliases: ['Ilya Bocharov'], metadata: { role: 'Game Designer (STT)' } },
-  { type: 'person', name: 'Анна Буткеева', company: 'ac', aliases: ['Anna Butkeeva'], metadata: { role: 'Game Designer (STT)' } },
-  { type: 'person', name: 'Ян Ромарчук', company: 'ac', aliases: ['Yan', 'Jan'], metadata: { role: 'Game Designer' } },
+  { type: 'person', name: 'Сергей Клепицкий', company: 'ac', aliases: ['Sergey Klepitsky'], metadata: { role: 'Game Designer', display_name: 'Сергей (ГД)' } },
+  { type: 'person', name: 'Фарид', company: 'hg', aliases: ['Farid'], metadata: { role: 'Game Designer', display_name: 'Фарид' } },
+  { type: 'person', name: 'Илья Бочаров', company: 'ac', aliases: ['Ilya Bocharov'], metadata: { role: 'Game Designer (STT)', display_name: 'Илья Б.' } },
+  { type: 'person', name: 'Анна Буткеева', company: 'ac', aliases: ['Anna Butkeeva'], metadata: { role: 'Game Designer (STT)', display_name: 'Анна' } },
+  { type: 'person', name: 'Ян Ромарчук', company: 'ac', aliases: ['Yan', 'Jan'], metadata: { role: 'Game Designer', display_name: 'Ян' } },
 
   // Art
-  { type: 'person', name: 'Катя Дочкина', aliases: ['Катя', 'Ekaterina', 'Katya'], metadata: { role: 'UI/UX Designer' } },
-  { type: 'person', name: 'Марина Назарова', aliases: ['Marina Nazarova'], metadata: { role: 'Artist' } },
-  { type: 'person', name: 'Наиля', aliases: ['Nailya'], metadata: { role: 'Artist' } },
-  { type: 'person', name: 'Денис', aliases: ['Denis'], metadata: { role: 'VFX Artist' } },
-  { type: 'person', name: 'Александр Прудко', aliases: ['Prudko'], metadata: { role: 'VFX Artist' } },
-  { type: 'person', name: 'Марина Ляндина', company: 'hg', aliases: ['Marina Lyandina'], metadata: { role: 'Artist (HTML5)' } },
+  { type: 'person', name: 'Катя Дочкина', aliases: ['Катя', 'Ekaterina', 'Katya'], metadata: { role: 'UI/UX Designer', display_name: 'Катя' } },
+  { type: 'person', name: 'Марина Назарова', aliases: ['Marina Nazarova'], metadata: { role: 'Artist', display_name: 'Марина Н.' } },
+  { type: 'person', name: 'Наиля', aliases: ['Nailya'], metadata: { role: 'Artist', display_name: 'Наиля' } },
+  { type: 'person', name: 'Денис', aliases: ['Denis'], metadata: { role: 'VFX Artist', display_name: 'Денис' } },
+  { type: 'person', name: 'Александр Прудко', aliases: ['Prudko'], metadata: { role: 'VFX Artist', display_name: 'Прудко' } },
+  { type: 'person', name: 'Марина Ляндина', company: 'hg', aliases: ['Marina Lyandina'], metadata: { role: 'Artist (HTML5)', display_name: 'Марина Л.' } },
 
   // QA
-  { type: 'person', name: 'Данил', aliases: ['Danil'], metadata: { role: 'QA' } },
-  { type: 'person', name: 'Сергей', aliases: ['Sergey'], metadata: { role: 'QA Lead' } },
-  { type: 'person', name: 'Алёна Субботина', company: 'hg', aliases: ['Alyona', 'Алёна'], metadata: { role: 'Support (Level One)' } },
+  { type: 'person', name: 'Данил', aliases: ['Danil'], metadata: { role: 'QA', display_name: 'Данил' } },
+  { type: 'person', name: 'Сергей Гуменюк', aliases: ['Sergey', 'Sergey Gumenyuk', 'Сергей'], metadata: { role: 'QA Lead', display_name: 'Сергей (QA)' } },
+  { type: 'person', name: 'Алёна Субботина', company: 'hg', aliases: ['Alyona', 'Алёна'], metadata: { role: 'Support (Level One)', display_name: 'Алёна' } },
 
   // Analytics & Marketing
-  { type: 'person', name: 'Юлия', company: 'ac', aliases: ['Julia', 'Yulia'], metadata: { role: 'Analytics' } },
-  { type: 'person', name: 'Богдан', company: 'ac', aliases: ['Bogdan'], metadata: { role: 'UA' } },
-  { type: 'person', name: 'Челси', company: 'ac', aliases: ['Chelsea'], metadata: { role: 'Marketing' } },
+  { type: 'person', name: 'Юлия Дюфлот', company: 'ac', aliases: ['Julia', 'Yulia', 'Юлия', 'Yulia Dyuflot'], metadata: { role: 'Analytics', display_name: 'Юля (аналитик)' } },
+  { type: 'person', name: 'Юлия Чатялян', aliases: ['Yulia Chatyalyan'], metadata: { role: 'Marketing', display_name: 'Юля (маркетинг)' } },
+  { type: 'person', name: 'Юлия Гречаная', aliases: ['Yulia Grechanaya'], metadata: { role: 'Org', display_name: 'Юля (орг)' } },
+  { type: 'person', name: 'Богдан', company: 'ac', aliases: ['Bogdan'], metadata: { role: 'UA', display_name: 'Богдан' } },
+  { type: 'person', name: 'Челси', company: 'ac', aliases: ['Chelsea'], metadata: { role: 'Marketing', display_name: 'Челси' } },
 ]
 
 // ── Relations ──
@@ -154,7 +160,7 @@ const relations: SeedRelation[] = [
   { from: 'Алехандро', to: 'Level Two', relation: 'works_on', role: 'Mini-TL' },
   { from: 'Амгалан', to: 'Level Two', relation: 'works_on', role: 'Developer' },
   { from: 'Игорь', to: 'Level Two', relation: 'works_on', role: 'Developer' },
-  { from: 'Сергей', to: 'Level Two', relation: 'works_on', role: 'QA Lead' },
+  { from: 'Сергей Гуменюк', to: 'Level Two', relation: 'works_on', role: 'QA Lead' },
   { from: 'Данил', to: 'Level Two', relation: 'works_on', role: 'QA' },
 
   // Pivot Pumps
@@ -162,7 +168,7 @@ const relations: SeedRelation[] = [
   { from: 'Алехандро', to: 'Pivot Pumps', relation: 'works_on', role: 'Developer' },
   { from: 'Амгалан', to: 'Pivot Pumps', relation: 'works_on', role: 'Developer' },
   { from: 'Игорь', to: 'Pivot Pumps', relation: 'works_on', role: 'Developer' },
-  { from: 'Сергей', to: 'Pivot Pumps', relation: 'works_on', role: 'QA' },
+  { from: 'Сергей Гуменюк', to: 'Pivot Pumps', relation: 'works_on', role: 'QA' },
 
   // HTML5 Banners
   { from: 'Александра', to: 'HTML5 Banners', relation: 'manages', role: 'PM' },
@@ -173,7 +179,7 @@ const relations: SeedRelation[] = [
   { from: 'Алехандро', to: 'Playable Ads', relation: 'works_on', role: 'Developer' },
 
   // Star Trek Timelines
-  { from: 'Анастасия', to: 'Star Trek Timelines', relation: 'manages', role: 'PM' },
+  { from: 'Анастасия Воронова', to: 'Star Trek Timelines', relation: 'manages', role: 'PM' },
   { from: 'Рустам', to: 'Star Trek Timelines', relation: 'works_on', role: 'Dev Lead' },
   { from: 'Валера', to: 'Star Trek Timelines', relation: 'works_on', role: 'Tech Expert' },
   { from: 'Илья Воронов', to: 'Star Trek Timelines', relation: 'works_on', role: 'Developer' },
@@ -182,16 +188,16 @@ const relations: SeedRelation[] = [
   { from: 'Tilting Point', to: 'Star Trek Timelines', relation: 'client_of' },
 
   // SpongeBob: Krusty Cook-Off (F2P / LiveOps)
-  { from: 'Анастасия', to: 'SpongeBob: Krusty Cook-Off', relation: 'manages', role: 'PM' },
+  { from: 'Анастасия Воронова', to: 'SpongeBob: Krusty Cook-Off', relation: 'manages', role: 'PM' },
   { from: 'Руслан', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
   { from: 'Дмитрий', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
   { from: 'Дияр', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
   { from: 'Никита Щукин', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Developer' },
-  { from: 'Юлия', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Analytics' },
+  { from: 'Юлия Дюфлот', to: 'SpongeBob: Krusty Cook-Off', relation: 'works_on', role: 'Analytics' },
   { from: 'Tilting Point', to: 'SpongeBob: Krusty Cook-Off', relation: 'client_of' },
 
   // SpongeBob Get Cookin' (Netflix Games)
-  { from: 'Анастасия', to: "SpongeBob Get Cookin'", relation: 'manages', role: 'PM' },
+  { from: 'Анастасия Воронова', to: "SpongeBob Get Cookin'", relation: 'manages', role: 'PM' },
   { from: 'Руслан', to: "SpongeBob Get Cookin'", relation: 'works_on', role: 'Developer' },
 
   // Oregon Trail
@@ -203,32 +209,32 @@ const relations: SeedRelation[] = [
   { from: 'Семён', to: 'Aquarium', relation: 'works_on', role: 'Developer' },
   { from: 'Амгалан', to: 'Aquarium', relation: 'works_on', role: 'Developer' },
   { from: 'Алмазхан', to: 'Aquarium', relation: 'works_on', role: 'Developer' },
-  { from: 'Сергей', to: 'Aquarium', relation: 'works_on', role: 'QA' },
-  { from: 'Юлия', to: 'Aquarium', relation: 'works_on', role: 'Analytics' },
+  { from: 'Сергей Гуменюк', to: 'Aquarium', relation: 'works_on', role: 'QA' },
+  { from: 'Юлия Дюфлот', to: 'Aquarium', relation: 'works_on', role: 'Analytics' },
 
   // Idle Axe Thrower
   { from: 'Игорь', to: 'Idle Axe Thrower', relation: 'works_on', role: 'Developer' },
   { from: 'Ян Ромарчук', to: 'Idle Axe Thrower', relation: 'works_on', role: 'Game Designer' },
   { from: 'Марина Назарова', to: 'Idle Axe Thrower', relation: 'works_on', role: 'Artist' },
-  { from: 'Сергей', to: 'Idle Axe Thrower', relation: 'works_on', role: 'QA' },
+  { from: 'Сергей Гуменюк', to: 'Idle Axe Thrower', relation: 'works_on', role: 'QA' },
 
   // Motor World: Car Factory (Production)
   { from: 'Дарий', to: 'Motor World: Car Factory', relation: 'manages', role: 'PM' },
   { from: 'Семён', to: 'Motor World: Car Factory', relation: 'works_on', role: 'Developer' },
   { from: 'Алмазхан', to: 'Motor World: Car Factory', relation: 'works_on', role: 'Developer' },
   { from: 'Данил', to: 'Motor World: Car Factory', relation: 'works_on', role: 'QA' },
-  { from: 'Сергей', to: 'Motor World: Car Factory', relation: 'works_on', role: 'QA' },
+  { from: 'Сергей Гуменюк', to: 'Motor World: Car Factory', relation: 'works_on', role: 'QA' },
   { from: 'Ohbibi', to: 'Motor World: Car Factory', relation: 'client_of' },
 
   // OhBibi Creatives (Ads + UA)
-  { from: 'Анастасия', to: 'OhBibi Creatives', relation: 'manages', role: 'Creative Producer' },
+  { from: 'Анастасия Воронова', to: 'OhBibi Creatives', relation: 'manages', role: 'Creative Producer' },
   { from: 'Богдан', to: 'OhBibi Creatives', relation: 'works_on', role: 'UA' },
   { from: 'Ohbibi', to: 'OhBibi Creatives', relation: 'client_of' },
 
   // Tough Guy
   { from: 'Иван', to: 'Tough Guy', relation: 'owns', role: 'Creator' },
   { from: 'Данил', to: 'Tough Guy', relation: 'works_on', role: 'QA' },
-  { from: 'Сергей', to: 'Tough Guy', relation: 'works_on', role: 'QA' },
+  { from: 'Сергей Гуменюк', to: 'Tough Guy', relation: 'works_on', role: 'QA' },
   { from: 'Богдан', to: 'Tough Guy', relation: 'works_on', role: 'UA' },
   { from: 'Челси', to: 'Tough Guy', relation: 'works_on', role: 'Marketing' },
 
@@ -237,6 +243,12 @@ const relations: SeedRelation[] = [
   { from: 'Relevate Health', to: 'Level Two', relation: 'client_of' },
   { from: 'Relevate Health', to: 'HTML5 Banners', relation: 'client_of' },
   { from: 'Relevate Health', to: 'Playable Ads', relation: 'client_of' },
+
+  // Vector
+  { from: 'Сергей Клепицкий', to: 'Vector', relation: 'works_on', role: 'Game Designer' },
+
+  // Bachalau (previous project for Клепицкий)
+  { from: 'Сергей Клепицкий', to: 'Bachalau', relation: 'works_on', role: 'Game Designer' },
 
   // Process → Project relationships
   { from: 'Character Art Brief', to: 'Star Trek Timelines', relation: 'member_of' },

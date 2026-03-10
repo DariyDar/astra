@@ -78,6 +78,7 @@ async function fetchGmailAccount(
         date: getHeader('Date'),
         text_preview: truncate(msgData.snippet ?? '', 200),
         is_unread: msgData.labelIds?.includes('UNREAD') ?? false,
+        link: `https://mail.google.com/mail/u/?authuser=${encodeURIComponent(account)}#inbox/${msgData.id}`,
       }
     }),
   )

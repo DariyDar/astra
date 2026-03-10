@@ -25,6 +25,7 @@ export interface DigestSlackMessage {
   ts: string
   date: string
   threadInfo?: string
+  link?: string
 }
 
 /** Subtypes to skip entirely — system noise. */
@@ -184,12 +185,18 @@ export async function fetchDigestSlack(
           : 'unknown'
         const resolvedText = await resolveSlackMentionsAsync(msg.text, userCache)
 
+        // Slack permalink: https://slack.com/archives/{channelId}/p{ts_no_dot}
+        const slackLink = msg.ts
+          ? `https://slack.com/archives/${ch.id}/p${msg.ts.replace('.', '')}`
+          : undefined
+
         messages.push({
           author: authorName,
           text: resolvedText,
           ts: msg.ts ?? '',
           date: msg.ts ? new Date(parseFloat(msg.ts) * 1000).toISOString() : '',
           threadInfo: msg.reply_count ? `${msg.reply_count} replies` : undefined,
+          link: slackLink,
         })
       }
 

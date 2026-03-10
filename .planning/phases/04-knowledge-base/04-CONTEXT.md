@@ -19,11 +19,14 @@ Ingest bounded history from all connected sources, extract entities, build a RAG
 - Existing 25K Slack chunks must be fully re-ingested with ID resolution (not mixed ID/name data)
 - This is a one-time re-ingest operation: reset Slack watermarks, re-ingest all with names
 
-### Entity Dedup and Aliases
+### Entity Dedup and Aliases (CRITICAL)
 - Different spellings of the same entity are aliases, not duplicates (LifeQuest = Life Quest, Motor World: The Car Factory = Ohbibi MWCF)
 - Entity extraction prompt should use existing entity names as context to prevent new duplicates
 - After extraction, known duplicates must be merged into canonical entity + aliases
 - `Motor World: The Car Factory` and `Ohbibi MWCF` are ONE project — merge required
+- ONE canonical entity per real-world object, ALL variations are aliases (e.g., "Star Trek" canonical → aliases: stt, st, star trek timelines, стар трек)
+- Discovered dups/aliases during extraction MUST be presented to user for confirmation — NO automatic merges
+- Entity review is a dedicated interactive step: show all entities grouped by type, surface suspicious duplicates, discuss with user, merge only after approval
 
 ### Incremental Quality Verification (CRITICAL)
 - Every large operation must follow escalating test pattern:
@@ -59,6 +62,14 @@ Ingest bounded history from all connected sources, extract entities, build a RAG
 - User wants cross-source entity mapping as primary quality indicator: "which Notion articles relate to which Slack channels, which emails arrive about it, which calendar meetings, which processes exist"
 - Quality check format: user receives dozens of questions per source about entities and their relationships, confirms correctness
 - The Slack ID-to-name issue was discovered during this review — 70+ person entities stored as raw Slack IDs (U09AKPXRQ81) instead of names. This must never happen again with any source
+- **Knowledge Map Report (mandatory Phase 4 deliverable):** After extraction + entity review, produce a structured per-project report:
+  - Project name + all aliases
+  - People count broken down by team/company (e.g., "25 people: 12 ours, 8 Tilting Point, 3 Manila Team, 2 unknown")
+  - Processes found (listed by name)
+  - Tools/integrations (e.g., "uses Jira as task tracker, link: ...")
+  - Source coverage (how many Slack/Notion/Gmail/Calendar/ClickUp chunks reference this project)
+  - Astra asks questions where data is unclear or ambiguous
+- This report validates the entire KB entity graph quality before Phase 4 can close
 
 </specifics>
 
@@ -67,7 +78,7 @@ Ingest bounded history from all connected sources, extract entities, build a RAG
 
 - Gmail API filters (gmail.settings.basic scope) — needs re-auth, not Phase 4 scope
 - Daily digests — Phase 5 scope
-- RAG search quality verification — can only be done after extraction is complete, may be Phase 4 close criterion or Phase 5 prerequisite
+- RAG search quality verification — moved to Phase 4 close criterion via knowledge-map plan (interactive review with user)
 
 </deferred>
 
