@@ -69,36 +69,36 @@ interface ChunkCount {
 
 // ─── Load all data ───
 
-const allEntities = (await db.execute<Entity>(
+const allEntities = (await db.execute(
   sql`SELECT id, type, name, company, metadata FROM kb_entities ORDER BY type, name`,
-)).rows
+)).rows as unknown as Entity[]
 
-const allAliases = (await db.execute<Alias>(
+const allAliases = (await db.execute(
   sql`SELECT entity_id, alias FROM kb_entity_aliases ORDER BY entity_id, alias`,
-)).rows
+)).rows as unknown as Alias[]
 
-const allRelations = (await db.execute<Relation>(
+const allRelations = (await db.execute(
   sql`SELECT r.from_id, r.to_id, e1.name as from_name, e1.type as from_type,
       e2.name as to_name, e2.type as to_type, r.relation, r.role, r.status, r.period
       FROM kb_entity_relations r
       JOIN kb_entities e1 ON r.from_id = e1.id
       JOIN kb_entities e2 ON r.to_id = e2.id
       ORDER BY r.relation, e1.name`,
-)).rows
+)).rows as unknown as Relation[]
 
-const allFacts = (await db.execute<Fact>(
+const allFacts = (await db.execute(
   sql`SELECT id, entity_id, fact_type, text, source, fact_date::text, confidence
       FROM kb_facts ORDER BY entity_id, fact_date DESC NULLS LAST`,
-)).rows
+)).rows as unknown as Fact[]
 
-const allDocs = (await db.execute<Doc>(
+const allDocs = (await db.execute(
   sql`SELECT id, entity_id, title, url, source, doc_type
       FROM kb_documents ORDER BY entity_id, title`,
-)).rows
+)).rows as unknown as Doc[]
 
-const chunkCounts = (await db.execute<ChunkCount>(
+const chunkCounts = (await db.execute(
   sql`SELECT source, count(*)::int as count FROM kb_chunks GROUP BY source ORDER BY count DESC`,
-)).rows
+)).rows as unknown as ChunkCount[]
 
 const totalChunks = chunkCounts.reduce((sum, c) => sum + c.count, 0)
 
