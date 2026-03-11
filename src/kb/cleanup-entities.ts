@@ -91,33 +91,7 @@ async function main() {
   // ────────────────────────────────────────────
   console.log('\n--- PERSON CLEANUP ---')
 
-  // 1a. STT game characters: orphan extracted persons with no aliases, no relations
-  const sttChars = await query(sql`
-    SELECT e.id, e.name FROM kb_entities e
-    WHERE e.type = 'person'
-      AND e.metadata->>'source' = 'extraction'
-      AND NOT EXISTS (SELECT 1 FROM kb_entity_aliases WHERE entity_id = e.id)
-      AND NOT EXISTS (SELECT 1 FROM kb_entity_relations r WHERE r.from_id = e.id OR r.to_id = e.id)
-  `)
-  console.log(`\n1a. Orphan extracted persons (no aliases, no relations): ${sttChars.length}`)
-  totalDeleted += await deleteEntities(sttChars.map(r => r.id), 'orphan extracted person')
-
-  // 1b. Unresolved Slack IDs
-  const slackIdPersons = await query(sql`
-    SELECT id, name FROM kb_entities WHERE type = 'person' AND name ~ '^U[0-9A-Z]{8,}$'
-  `)
-  console.log(`\n1b. Unresolved Slack ID persons: ${slackIdPersons.length}`)
-  totalDeleted += await deleteEntities(slackIdPersons.map(r => r.id), 'unresolved Slack ID')
-
-  // 1c. Role titles stored as persons
-  const roleTitles = await query(sql`
-    SELECT id, name FROM kb_entities WHERE type = 'person'
-      AND name IN ('Feature Owner', 'GD', 'GD (ГД)', 'PM', 'PM (ПМ)', 'Product Owner', 'Team Lead', 'Team Lead (Тимлид)')
-  `)
-  console.log(`\n1c. Role titles as persons: ${roleTitles.length}`)
-  totalDeleted += await deleteEntities(roleTitles.map(r => r.id), 'role title, not person')
-
-  // 1d. Known person duplicates
+  // 1a. Merge duplicates FIRST (before deletion picks them up as orphans)
   const personMerges: [number, number[]][] = [
     [2344, [2346]], // Goar — Гоар Алавердян duplicate
     [281, [3987]],  // Diyar Taikenov — Дияр Тайкенов duplicate
@@ -126,12 +100,50 @@ async function main() {
     [57, [3399]],   // Bogdan Khashiev — Bogdan Kashiev duplicate
     [300, [3933]],  // Romain Blanchais — Romain duplicate
   ]
-  console.log(`\n1d. Person duplicate merges: ${personMerges.length}`)
+  console.log(`\n1a. Person duplicate merges: ${personMerges.length}`)
   for (const [target, sources] of personMerges) {
     for (const source of sources) {
       if (await mergeEntity(target, source)) totalMerged++
     }
   }
+
+  // Protect real external contacts that happen to be orphans
+  const protectedPersonIds = new Set([
+    300,  // Romain Blanchais — Ohbibi employee
+    1228, // Yakovkina — Tilting Point
+    1229, // Rakocevic — Tilting Point
+    2552, // Meaghan — HG (Manila QA oversight)
+    1679, // Nadezhda Riabova — HG
+    2038, // Viacheslav Nekatunin — HG
+    4005, // Simon — AC (Simon Friedrich, Transperfect)
+  ])
+
+  // 1b. Orphan extracted persons (STT chars, interview candidates, etc.)
+  const orphanPersons = await query(sql`
+    SELECT e.id, e.name FROM kb_entities e
+    WHERE e.type = 'person'
+      AND e.metadata->>'source' = 'extraction'
+      AND NOT EXISTS (SELECT 1 FROM kb_entity_aliases WHERE entity_id = e.id)
+      AND NOT EXISTS (SELECT 1 FROM kb_entity_relations r WHERE r.from_id = e.id OR r.to_id = e.id)
+  `)
+  const orphanPersonFiltered = orphanPersons.filter(r => !protectedPersonIds.has(r.id))
+  console.log(`\n1b. Orphan extracted persons (${orphanPersons.length} found, ${orphanPersonFiltered.length} after protecting ${protectedPersonIds.size} known contacts):`)
+  totalDeleted += await deleteEntities(orphanPersonFiltered.map(r => r.id), 'orphan extracted person')
+
+  // 1c. Unresolved Slack IDs
+  const slackIdPersons = await query(sql`
+    SELECT id, name FROM kb_entities WHERE type = 'person' AND name ~ '^U[0-9A-Z]{8,}$'
+  `)
+  console.log(`\n1c. Unresolved Slack ID persons: ${slackIdPersons.length}`)
+  totalDeleted += await deleteEntities(slackIdPersons.map(r => r.id), 'unresolved Slack ID')
+
+  // 1d. Role titles stored as persons
+  const roleTitles = await query(sql`
+    SELECT id, name FROM kb_entities WHERE type = 'person'
+      AND name IN ('Feature Owner', 'GD', 'GD (ГД)', 'PM', 'PM (ПМ)', 'Product Owner', 'Team Lead', 'Team Lead (Тимлид)')
+  `)
+  console.log(`\n1d. Role titles as persons: ${roleTitles.length}`)
+  totalDeleted += await deleteEntities(roleTitles.map(r => r.id), 'role title, not person')
 
   // ────────────────────────────────────────────
   // 2. PROJECTS
