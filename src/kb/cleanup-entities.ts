@@ -445,6 +445,92 @@ async function main() {
   }
 
   // ────────────────────────────────────────────
+  // 7. DELETE ALL PROCESSES (pure noise)
+  // ────────────────────────────────────────────
+  console.log('\n--- PROCESS NUKE ---')
+  const allProcesses = await query(sql`SELECT id, name FROM kb_entities WHERE type = 'process'`)
+  console.log(`\n7. Delete ALL remaining processes: ${allProcesses.length}`)
+  totalDeleted += await deleteEntities(allProcesses.map(r => r.id), 'nuke all processes')
+
+  // ────────────────────────────────────────────
+  // 8. CLEAN JUNK ALIASES
+  // ────────────────────────────────────────────
+  console.log('\n--- ALIAS CLEANUP ---')
+
+  const junkAliases = [
+    'Саши ПМши',           // garbage on Aleksandr Krylov
+    'Yang Brent Wiedmer',  // "Yang" prefix junk
+    'Yang Chelsea Marie Dua',
+    'Yang Arsen Chatalian',
+    'Yang Rymarchyk',
+    'Evgeniy Kutepov',     // wrong person as alias of Goar
+    'Сильвейна',           // typo on Sylvain
+  ]
+
+  // Fix jduflot: it's on Julia Chatalian but should be on Julia Duflot
+  const jduflotFix = await query(sql`
+    SELECT a.id, a.entity_id, e.name FROM kb_entity_aliases a
+    JOIN kb_entities e ON a.entity_id = e.id
+    WHERE a.alias = 'jduflot'
+  `)
+  if (jduflotFix.length && jduflotFix[0].name !== 'Julia Duflot') {
+    const duflotEntity = await query(sql`SELECT id FROM kb_entities WHERE name = 'Julia Duflot' LIMIT 1`)
+    if (duflotEntity.length) {
+      if (dryRun) {
+        console.log(`  [DRY-RUN] Would move alias 'jduflot' from ${jduflotFix[0].name} to Julia Duflot`)
+      } else {
+        await db.execute(sql`DELETE FROM kb_entity_aliases WHERE alias = 'jduflot'`)
+        await db.execute(sql`INSERT INTO kb_entity_aliases (entity_id, alias) VALUES (${duflotEntity[0].id}, 'jduflot') ON CONFLICT (alias) DO NOTHING`)
+        console.log(`  Moved alias 'jduflot' from ${jduflotFix[0].name} to Julia Duflot`)
+      }
+    }
+  }
+
+  // Delete junk aliases
+  let aliasesDeleted = 0
+  for (const alias of junkAliases) {
+    if (dryRun) {
+      console.log(`  [DRY-RUN] Would delete alias: ${alias}`)
+    } else {
+      await db.execute(sql`DELETE FROM kb_entity_aliases WHERE alias = ${alias}`)
+      console.log(`  Deleted alias: ${alias}`)
+    }
+    aliasesDeleted++
+  }
+
+  // Delete Slack ID aliases (U-prefixed)
+  const slackIdAliases = await query(sql`
+    SELECT a.id, a.alias FROM kb_entity_aliases a WHERE a.alias ~ '^U[0-9A-Z]{6,}$'
+  `) as unknown as { id: number; alias: string }[]
+  console.log(`\n8. Slack ID aliases to delete: ${slackIdAliases.length}`)
+  for (const a of slackIdAliases) {
+    if (dryRun) {
+      console.log(`  [DRY-RUN] Would delete Slack ID alias: ${a.alias}`)
+    } else {
+      await db.execute(sql`DELETE FROM kb_entity_aliases WHERE alias = ${a.alias}`)
+      console.log(`  Deleted Slack ID alias: ${a.alias}`)
+    }
+    aliasesDeleted++
+  }
+
+  // Delete email aliases (contain @)
+  const emailAliases = await query(sql`
+    SELECT a.id, a.alias FROM kb_entity_aliases a WHERE a.alias LIKE '%@%'
+  `) as unknown as { id: number; alias: string }[]
+  console.log(`\nEmail aliases to delete: ${emailAliases.length}`)
+  for (const a of emailAliases) {
+    if (dryRun) {
+      console.log(`  [DRY-RUN] Would delete email alias: ${a.alias}`)
+    } else {
+      await db.execute(sql`DELETE FROM kb_entity_aliases WHERE alias = ${a.alias}`)
+      console.log(`  Deleted email alias: ${a.alias}`)
+    }
+    aliasesDeleted++
+  }
+
+  console.log(`\nTotal aliases cleaned: ${aliasesDeleted}`)
+
+  // ────────────────────────────────────────────
   // SUMMARY
   // ────────────────────────────────────────────
   console.log(`\n${'═'.repeat(60)}`)
