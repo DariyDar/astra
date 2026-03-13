@@ -34,7 +34,7 @@ services:
     image: falkordb/falkordb:latest
     command: redis-server --requirepass ${FALKORDB_PASSWORD}
     ports:
-      - "127.0.0.1:6380:6379"
+      - "127.0.0.1:6381:6379"
     volumes:
       - falkordb_data:/data
     healthcheck:
