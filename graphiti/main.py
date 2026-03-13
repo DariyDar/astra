@@ -37,6 +37,7 @@ async def get_graphiti():
         from graphiti_core import Graphiti
         from graphiti_core.driver.falkordb_driver import FalkorDriver
         from graphiti_core.llm_client import LLMConfig
+        from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
 
         # Set API key for litellm
         os.environ["GEMINI_API_KEY"] = config.GEMINI_API_KEY
@@ -58,10 +59,16 @@ async def get_graphiti():
             model=config.EMBEDDER_MODEL,
         )
 
+        reranker_config = LLMConfig(
+            api_key=config.GEMINI_API_KEY,
+            model="gemini/gemini-2.0-flash",
+        )
+
         graphiti_instance = Graphiti(
             graph_driver=falkor_driver,
             llm_client=llm_config,
             embedder=embedder_config,
+            cross_encoder=GeminiRerankerClient(config=reranker_config),
         )
 
         await graphiti_instance.build_indices()
