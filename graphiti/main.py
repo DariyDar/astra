@@ -36,10 +36,11 @@ async def get_graphiti():
 
         from graphiti_core import Graphiti
         from graphiti_core.driver.falkordb_driver import FalkorDriver
-        from graphiti_core.llm_client import LLMConfig
+        from graphiti_core.llm_client import LLMConfig, OpenAIClient
+        from graphiti_core.embedder import OpenAIEmbedder, OpenAIEmbedderConfig
         from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
 
-        # Set API key for litellm
+        # Set API key for litellm (used by OpenAIClient under the hood)
         os.environ["GEMINI_API_KEY"] = config.GEMINI_API_KEY
 
         falkor_driver = FalkorDriver(
@@ -54,9 +55,10 @@ async def get_graphiti():
             model=config.LLM_MODEL,
         )
 
-        embedder_config = LLMConfig(
+        embedder_config = OpenAIEmbedderConfig(
             api_key=config.GEMINI_API_KEY,
-            model=config.EMBEDDER_MODEL,
+            embedding_model=config.EMBEDDER_MODEL,
+            embedding_dim=768,
         )
 
         reranker_config = LLMConfig(
@@ -66,8 +68,8 @@ async def get_graphiti():
 
         graphiti_instance = Graphiti(
             graph_driver=falkor_driver,
-            llm_client=llm_config,
-            embedder=embedder_config,
+            llm_client=OpenAIClient(config=llm_config),
+            embedder=OpenAIEmbedder(config=embedder_config),
             cross_encoder=GeminiRerankerClient(config=reranker_config),
         )
 
