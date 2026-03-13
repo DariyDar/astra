@@ -51,8 +51,8 @@ services:
       FALKORDB_HOST: falkordb
       FALKORDB_PORT: "6379"
       GEMINI_API_KEY: ${GEMINI_API_KEY_PERSONAL}
-      LLM_MODEL: ${LLM_MODEL:-gemini/gemini-2.0-flash}
-      EMBEDDER_MODEL: ${EMBEDDER_MODEL:-gemini/text-embedding-004}
+      LLM_MODEL: ${LLM_MODEL:-gemini-2.5-flash}
+      EMBEDDER_MODEL: ${EMBEDDER_MODEL:-gemini-embedding-001}
     depends_on:
       falkordb:
         condition: service_healthy

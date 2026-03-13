@@ -16,7 +16,7 @@ import type { GraphitiMessage } from './graphiti-client.js'
 
 const GRAPHITI_URL = process.env.GRAPHITI_URL ?? 'http://localhost:3200'
 const INTER_REQUEST_DELAY_MS = 4_500 // ~13 RPM, under Gemini 15 RPM limit
-const REQUEST_TIMEOUT_MS = 60_000
+const REQUEST_TIMEOUT_MS = 180_000
 
 // ── HTTP helpers ──
 
@@ -143,7 +143,7 @@ async function main() {
 
   for (let i = 0; i < allEntities.length; i++) {
     const entity = allEntities[i]
-    const groupId = `seed-${entity.type}`
+    const groupId = `seed_${entity.type}`
     const message = buildEntityEpisode(entity)
 
     try {
@@ -173,7 +173,7 @@ async function main() {
     const message = buildRelationEpisode(rel)
 
     try {
-      await graphitiFetch('/messages', { group_id: 'seed-relations', messages: [message] })
+      await graphitiFetch('/messages', { group_id: 'seed_relations', messages: [message] })
       relSucceeded++
       console.log(`  [${i + 1}/${relations.length}] OK: ${rel.from} → ${rel.relation} → ${rel.to}`)
     } catch (error) {

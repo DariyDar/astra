@@ -8,11 +8,10 @@ FALKORDB_PORT = int(os.getenv("FALKORDB_PORT", "6379"))
 FALKORDB_USERNAME = os.getenv("FALKORDB_USERNAME", "")
 FALKORDB_PASSWORD = os.getenv("FALKORDB_PASSWORD", "")
 
-# LLM — Gemini 2.0 Flash via litellm
-# litellm model string: "gemini/gemini-2.0-flash"
+# LLM — Gemini 2.0 Flash via native google-genai SDK
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gemini/gemini-2.0-flash")
-EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL", "gemini/text-embedding-004")
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+EMBEDDER_MODEL = os.getenv("EMBEDDER_MODEL", "gemini-embedding-001")
 
 # Server
 SERVER_PORT = int(os.getenv("GRAPHITI_PORT", "3200"))

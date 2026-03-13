@@ -2,7 +2,7 @@
 Graphiti REST server — bridges our TS bot with Graphiti + FalkorDB.
 
 Endpoints wrap graphiti-core v0.28 API with FalkorDriver.
-LLM: Gemini 2.0 Flash via litellm (through OpenAIClient).
+LLM: Gemini 2.0 Flash via native google-genai SDK.
 """
 
 import asyncio
@@ -34,14 +34,13 @@ async def get_graphiti():
         if graphiti_instance is not None:
             return graphiti_instance
 
+        from google.genai import types as genai_types
         from graphiti_core import Graphiti
         from graphiti_core.driver.falkordb_driver import FalkorDriver
-        from graphiti_core.llm_client import LLMConfig, OpenAIClient
-        from graphiti_core.embedder import OpenAIEmbedder, OpenAIEmbedderConfig
+        from graphiti_core.llm_client import LLMConfig
+        from graphiti_core.llm_client.gemini_client import GeminiClient
+        from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
         from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
-
-        # Set API key for litellm (used by OpenAIClient under the hood)
-        os.environ["GEMINI_API_KEY"] = config.GEMINI_API_KEY
 
         falkor_driver = FalkorDriver(
             host=config.FALKORDB_HOST,
@@ -55,21 +54,24 @@ async def get_graphiti():
             model=config.LLM_MODEL,
         )
 
-        embedder_config = OpenAIEmbedderConfig(
+        embedder_config = GeminiEmbedderConfig(
             api_key=config.GEMINI_API_KEY,
             embedding_model=config.EMBEDDER_MODEL,
-            embedding_dim=768,
+            embedding_dim=3072,
         )
 
         reranker_config = LLMConfig(
             api_key=config.GEMINI_API_KEY,
-            model="gemini/gemini-2.0-flash",
+            model="gemini-2.5-flash",
         )
+
+        # Disable thinking to avoid consuming output token budget
+        no_thinking = genai_types.ThinkingConfig(thinking_budget=0)
 
         graphiti_instance = Graphiti(
             graph_driver=falkor_driver,
-            llm_client=OpenAIClient(config=llm_config),
-            embedder=OpenAIEmbedder(config=embedder_config),
+            llm_client=GeminiClient(config=llm_config, thinking_config=no_thinking),
+            embedder=GeminiEmbedder(config=embedder_config),
             cross_encoder=GeminiRerankerClient(config=reranker_config),
         )
 
@@ -159,15 +161,15 @@ async def add_messages(req: AddMessagesRequest):
             if msg.timestamp
             else datetime.now(timezone.utc)
         )
-        await g.add_episode(
+        result = await g.add_episode(
             name=msg.name or f"message-{msg.uuid}",
             episode_body=msg.content,
             source_description=msg.source_description or f"group:{req.group_id}",
             reference_time=ts,
             group_id=req.group_id,
-            uuid=msg.uuid,
         )
-        results.append({"uuid": msg.uuid, "status": "ok"})
+        ep_uuid = result.episode.uuid if result and result.episode else msg.uuid
+        results.append({"uuid": ep_uuid, "status": "ok"})
 
     return {"results": results}
 
