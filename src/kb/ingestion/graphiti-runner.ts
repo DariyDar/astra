@@ -13,6 +13,7 @@ import type * as schema from '../../db/schema.js'
 import { logger } from '../../logging/logger.js'
 import { getIngestionState, setIngestionState } from '../repository.js'
 import { addEpisode, healthcheck, type GraphitiMessage } from '../graphiti-client.js'
+import { classifyEmail } from '../gmail-classifier.js'
 import type { SourceAdapter, RawItem } from './types.js'
 import type { KBChunkInput } from '../types.js'
 
@@ -101,6 +102,18 @@ async function runGraphitiAdapter(
         if (chunks.length === 0) {
           stats.episodesSkipped++
           continue
+        }
+
+        // Skip Gmail system emails (noreply, notifications, etc.)
+        if (adapter.source === 'gmail' && item.metadata.from) {
+          const emailType = classifyEmail(
+            item.metadata.from as string,
+            item.metadata.subject as string | undefined,
+          )
+          if (emailType === 'system') {
+            stats.episodesSkipped++
+            continue
+          }
         }
 
         // Skip very short content (< 20 chars — likely empty/noise)

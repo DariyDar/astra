@@ -5,7 +5,7 @@ import type { KBChunkInput } from '../types.js'
 import type { SourceAdapter, RawItem } from './types.js'
 import { logger } from '../../logging/logger.js'
 
-const INITIAL_LOOKBACK_DAYS = 90
+const INITIAL_LOOKBACK_DAYS = 30
 
 interface CalendarEvent {
   id: string
