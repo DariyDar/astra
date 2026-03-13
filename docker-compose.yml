@@ -32,13 +32,12 @@ services:
 
   falkordb:
     image: falkordb/falkordb:latest
-    command: redis-server --requirepass ${FALKORDB_PASSWORD}
     ports:
       - "127.0.0.1:6381:6379"
     volumes:
       - falkordb_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${FALKORDB_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,7 +50,6 @@ services:
     environment:
       FALKORDB_HOST: falkordb
       FALKORDB_PORT: "6379"
-      FALKORDB_PASSWORD: ${FALKORDB_PASSWORD}
       GEMINI_API_KEY: ${GEMINI_API_KEY_PERSONAL}
       LLM_MODEL: ${LLM_MODEL:-gemini/gemini-2.0-flash}
       EMBEDDER_MODEL: ${EMBEDDER_MODEL:-gemini/text-embedding-004}
