@@ -8,9 +8,6 @@
  * Slack is naturally separated by workspace.
  */
 
-import { db } from '../db/index.js'
-import { inArray } from 'drizzle-orm'
-import { kbEntityAliases } from '../db/schema.js'
 import { callGemini } from '../llm/gemini.js'
 import { logger } from '../logging/logger.js'
 import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
@@ -18,7 +15,7 @@ import { fetchGmail } from '../mcp/briefing/gmail.js'
 import { fetchCalendar } from '../mcp/briefing/calendar.js'
 import { fetchClickUp } from '../mcp/briefing/clickup.js'
 import { parsePeriod } from '../mcp/briefing/period.js'
-import { findEntitiesByType, getFactsForEntity } from '../kb/repository.js'
+import { findEntitiesByType, getFactsForEntity, getAliasesForEntityIds } from '../kb/kb-facade.js'
 import { fetchDigestSlack, type DigestSlackChannel } from './sources/slack.js'
 import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
 import { DIGEST_SYSTEM_PROMPT, buildDigestUserPrompt } from './prompt.js'
@@ -80,22 +77,18 @@ interface ProjectInfo {
  * Gmail/Calendar/ClickUp data per company.
  */
 async function buildProjectMap(): Promise<Map<string, ProjectInfo[]>> {
-  const projects = await findEntitiesByType(db, 'project')
-  const projectIds = projects.map((p) => p.id)
+  const projects = await findEntitiesByType('project')
+  const projectIds = projects.map((p) => p.id as number)
 
-  // Fetch all aliases for all projects in one query
-  const aliases = projectIds.length > 0
-    ? await db.select({
-      entityId: kbEntityAliases.entityId,
-      alias: kbEntityAliases.alias,
-    }).from(kbEntityAliases).where(inArray(kbEntityAliases.entityId, projectIds))
-    : []
+  // Fetch all aliases for all projects via facade
+  const aliases = await getAliasesForEntityIds(projectIds)
 
   const aliasMap = new Map<number, string[]>()
   for (const a of aliases) {
-    const list = aliasMap.get(a.entityId) ?? []
+    const eid = a.entityId as number
+    const list = aliasMap.get(eid) ?? []
     list.push(a.alias)
-    aliasMap.set(a.entityId, list)
+    aliasMap.set(eid, list)
   }
 
   const byCompany = new Map<string, ProjectInfo[]>()
@@ -103,11 +96,11 @@ async function buildProjectMap(): Promise<Map<string, ProjectInfo[]>> {
   for (const p of projects) {
     if (!p.company) continue
     const company = p.company.toLowerCase()
-    const projectAliases = aliasMap.get(p.id) ?? []
+    const projectAliases = aliasMap.get(p.id as number) ?? []
     const searchTerms = [p.name, ...projectAliases].map((t) => t.toLowerCase())
 
     const info: ProjectInfo = {
-      id: p.id,
+      id: p.id as number,
       name: p.name,
       company,
       aliases: projectAliases,
@@ -371,7 +364,7 @@ export async function compileDigest(company: Company): Promise<string> {
 
 /** Fetch KB facts for projects belonging to a company. */
 async function fetchKBContext(companyCode: string): Promise<Array<{ project: string; facts: string[] }>> {
-  const projects = await findEntitiesByType(db, 'project')
+  const projects = await findEntitiesByType('project')
   const companyProjects = projects.filter((p) => {
     if (!p.company) return false
     return p.company.toLowerCase() === companyCode.toLowerCase()
@@ -379,7 +372,7 @@ async function fetchKBContext(companyCode: string): Promise<Array<{ project: str
 
   const results = await Promise.all(
     companyProjects.slice(0, MAX_KB_PROJECTS).map(async (project) => {
-      const facts = await getFactsForEntity(db, project.id, {
+      const facts = await getFactsForEntity(project.id, {
         limit: MAX_FACTS_PER_PROJECT,
       })
       return facts.length > 0

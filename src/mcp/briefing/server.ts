@@ -5,10 +5,6 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 
-import { drizzle } from 'drizzle-orm/node-postgres'
-import pg from 'pg'
-import { QdrantClient } from '@qdrant/js-client-rest'
-
 import type { Source, QueryType, FieldName, BriefingRequest, BriefingItem, BriefingResult } from './types.js'
 import { log, filterFields } from './utils.js'
 import { parsePeriod } from './period.js'
@@ -19,8 +15,6 @@ import { fetchCalendar } from './calendar.js'
 import { fetchClickUp } from './clickup.js'
 import { executeClockifyReport, clockifyReportTool, type ClockifyReportType } from './clockify.js'
 import { executeAuditTasks, auditTasksTool } from './audit.js'
-import * as schema from '../../db/schema.js'
-import { KBVectorStore } from '../../kb/vector-store.js'
 import { kbSearchTool, kbEntitiesTool, handleKBSearch, handleKBEntities } from '../../kb/mcp-tools.js'
 
 // ── Main briefing logic ──
@@ -186,15 +180,8 @@ const searchEverywhereTool = {
 export async function main(): Promise<void> {
   log('\n--- astra-briefing starting ---')
 
-  // Connect to PostgreSQL and Qdrant for KB tools
-  const { Pool } = pg
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-  const db = drizzle(pool, { schema })
-  const qdrantUrl = process.env.QDRANT_URL ?? 'http://localhost:6333'
-  const qdrantClient = new QdrantClient({ url: qdrantUrl })
-  const vectorStore = new KBVectorStore(qdrantClient)
-  await vectorStore.ensureCollection()
-  log('KB: database and vector store connected')
+  // KB tools now use the facade (kb-facade.ts) which manages its own connections
+  log('KB: using facade (KB_BACKEND=' + (process.env.KB_BACKEND ?? 'legacy') + ')')
 
   const server = new Server(
     { name: 'Astra Briefing Server', version: '1.0.0' },
@@ -279,11 +266,11 @@ export async function main(): Promise<void> {
         log(`tool=${toolName} id=${emailResult.id} account=${emailResult.account}`)
         return { content: [{ type: 'text', text }] }
       } else if (toolName === 'kb_search') {
-        const text = await handleKBSearch(db, vectorStore, args)
+        const text = await handleKBSearch(args)
         log(`tool=${toolName} done`)
         return { content: [{ type: 'text', text }] }
       } else if (toolName === 'kb_entities') {
-        const text = await handleKBEntities(db, args)
+        const text = await handleKBEntities(args)
         log(`tool=${toolName} done`)
         return { content: [{ type: 'text', text }] }
       } else if (toolName === 'audit_tasks') {

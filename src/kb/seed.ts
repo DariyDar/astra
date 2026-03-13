@@ -16,7 +16,7 @@ import type { EntityType, RelationType } from './types.js'
 
 const { Pool } = pg
 
-interface SeedEntity {
+export interface SeedEntity {
   type: EntityType
   name: string
   company?: string
@@ -24,7 +24,7 @@ interface SeedEntity {
   metadata?: Record<string, unknown>
 }
 
-interface SeedRelation {
+export interface SeedRelation {
   from: string
   to: string
   relation: RelationType
@@ -33,41 +33,50 @@ interface SeedRelation {
 
 // ── Companies ──
 
-const companies: SeedEntity[] = [
-  { type: 'company', name: 'Highground', aliases: ['HG', 'HighGround', 'Хайграунд'] },
-  { type: 'company', name: 'AstroCat', aliases: ['AC', 'Астрокэт', 'Астрокат'] },
+export const companies: SeedEntity[] = [
+  { type: 'company', name: 'Highground', aliases: ['HG', 'HighGround', 'Хайграунд', 'High Ground'] },
+  { type: 'company', name: 'AstroCat', aliases: ['AC', 'Астрокэт', 'Астрокат', 'Astro Cat'] },
   { type: 'company', name: 'Tilting Point', aliases: ['TP'] },
-  { type: 'company', name: 'Relevate Health', aliases: ['Level Ex'] },
+  { type: 'company', name: 'Relevate Health', aliases: ['Level Ex', 'Relevate Healt'] },
   { type: 'company', name: 'Ohbibi' },
   { type: 'company', name: 'Beamable' },
   { type: 'company', name: 'Indium Soft' },
+  { type: 'company', name: 'SNKE', aliases: ['SNKE ex Level Ex'] },
 ]
 
 // ── Projects ──
 
-const projects: SeedEntity[] = [
-  { type: 'project', name: 'Level One', company: 'hg', aliases: ['L1', 'Левел Ван'], metadata: { client: 'Relevate Health' } },
-  { type: 'project', name: 'Level Two', company: 'hg', aliases: ['L2', 'Левел Ту'], metadata: { client: 'Relevate Health' } },
-  { type: 'project', name: 'Pivot Pumps', company: 'hg' },
-  { type: 'project', name: 'HTML5 Banners', company: 'hg', aliases: ['HTML5 баннеры', 'баннеры'] },
-  { type: 'project', name: 'Playable Ads', company: 'hg', aliases: ['Playable Advertisement', 'плейаблы'] },
-  { type: 'project', name: 'Star Trek Timelines', company: 'ac', aliases: ['STT', 'Стар Трек', 'стт'] },
-  { type: 'project', name: 'SpongeBob: Krusty Cook-Off', company: 'ac', aliases: ['SpongeBob', 'SBKCO', 'Губка Боб', 'SB', 'KCO', 'SpongeBob LiveOps', 'SBKCO F2P', 'Krusty Cook-Off'], metadata: { client: 'Tilting Point', description: 'SpongeBob F2P mobile game (LiveOps)' } },
-  { type: 'project', name: 'SpongeBob Get Cookin\'', company: 'ac', aliases: ['SB Netflix', 'SpongeBob Netflix', 'SpongeBob PE', 'SpongeBob KCO Netflix'], metadata: { client: 'Netflix Games', description: 'SpongeBob premium edition for Netflix Games' } },
-  { type: 'project', name: 'Oregon Trail', company: 'ac', aliases: ['Oregon Trail The Boomtown', 'Орегон Трейл', 'OT'] },
-  { type: 'project', name: 'Aquarium', company: 'ac', aliases: ['Аквариум'] },
-  { type: 'project', name: 'Idle Axe Thrower', company: 'ac', aliases: ['IAT'] },
-  { type: 'project', name: 'Motor World: Car Factory', company: 'ac', aliases: ['MWCF', 'Motor World Car Factory', 'Ohbibi MWCF', 'ohbibi-mwcf'], metadata: { client: 'Ohbibi', description: 'Production: разработка и поддержка MWCF' } },
-  { type: 'project', name: 'OhBibi Creatives', company: 'ac', aliases: ['Ohbibi Creatives', 'ohbibi-mwcf-creatives', 'MWCF Creatives'], metadata: { client: 'Ohbibi', description: 'Креативы (рекламные видео) + UA для MWCF' } },
-  { type: 'project', name: 'Symphonia', company: 'ac', aliases: ['Симфония'] },
-  { type: 'project', name: 'Tough Guy', company: 'ac', aliases: ['Таф Гай'] },
-  { type: 'project', name: 'Vector', company: 'ac', aliases: ['Вектор'] },
-  { type: 'project', name: 'Bachalau', company: 'ac', aliases: ['Бакалау'] },
+export const projects: SeedEntity[] = [
+  { type: 'project', name: 'Level One', company: 'hg', aliases: ['L1', 'Левел Ван', 'LEV1', 'LVL1', 'Gluc', 'Глюк'], metadata: { client: 'Relevate Health' } },
+  { type: 'project', name: 'Level Two', company: 'hg', aliases: ['L2', 'Левел Ту', 'LEV2', 'LVL2'], metadata: { client: 'Relevate Health' } },
+  { type: 'project', name: 'Pivot Pumps', company: 'hg', aliases: ['Помпы', 'Пивот', 'PIVOT PUMPS'], metadata: { client: 'Relevate Health' } },
+  { type: 'project', name: 'HTML5 Banners', company: 'hg', aliases: ['HTML5 баннеры', 'баннеры', 'Баннеры', 'HTML5 banners'], metadata: { client: 'Relevate Health' } },
+  { type: 'project', name: 'Playable Ads', company: 'hg', aliases: ['Playable Advertisement', 'плейаблы', 'Playable'], metadata: { client: 'Relevate Health' } },
+  { type: 'project', name: 'Star Trek Timelines', company: 'ac', aliases: ['STT', 'Стар Трек', 'стт', 'СТТ'], metadata: { client: 'Tilting Point' } },
+  { type: 'project', name: 'SpongeBob: Krusty Cook-Off', company: 'ac', aliases: ['SpongeBob', 'SBKCO', 'Губка Боб', 'SB', 'KCO', 'SpongeBob LiveOps', 'SBKCO F2P', 'Krusty Cook-Off', 'SBLO'], metadata: { client: 'Tilting Point', description: 'SpongeBob F2P mobile game (LiveOps)' } },
+  { type: 'project', name: 'SpongeBob Get Cookin\'', company: 'ac', aliases: ['SB Netflix', 'SpongeBob Netflix', 'SpongeBob PE', 'SpongeBob KCO Netflix', 'СБ Нетфликс', 'SBN'], metadata: { client: 'Tilting Point', platform: 'Netflix Games', description: 'SpongeBob premium edition for Netflix Games, published by Tilting Point' } },
+  { type: 'project', name: 'Oregon Trail', company: 'ac', aliases: ['Oregon Trail The Boomtown', 'Орегон Трейл', 'OT', 'TOT', 'The Oregon Trail'], metadata: { client: 'Tilting Point' } },
+  { type: 'project', name: 'Aquarium', company: 'ac', aliases: ['Аквариум', 'Дрифт'] },
+  { type: 'project', name: 'Idle Axe Thrower', company: 'ac', aliases: ['IAT', 'Magic Archery', 'Viking', 'топоры'] },
+  { type: 'project', name: 'Motor World: Car Factory', company: 'ac', aliases: ['MWCF', 'Motor World Car Factory', 'Ohbibi MWCF', 'ohbibi-mwcf', 'MotorW', 'OhBibi Creatives', 'ohbibi-mwcf-creatives', 'MWCF Creatives'], metadata: { client: 'Ohbibi', description: 'Production + креативы (UA) для MWCF' } },
+  { type: 'project', name: 'Symphonia', company: 'ac', aliases: ['Симфония'], metadata: { description: 'Издательская деятельность Astro Cat' } },
+  { type: 'project', name: 'Tough Guy', company: 'ac', aliases: ['Таф Гай'], metadata: { description: 'Издательская деятельность Astro Cat' } },
+  { type: 'project', name: 'Vector', company: 'ac', aliases: ['Вектор', 'VECTOR'] },
+  { type: 'project', name: 'MOBA BACALHAU', company: 'ac', aliases: ['Моба', 'Бакаляо', 'MOBA', 'Bacalhau', 'Бакалау'] },
+  // New projects from CSV seed
+  { type: 'project', name: 'Block Puzzle', company: 'ac', aliases: ['BP', 'пазлы', 'Блок Пазл'] },
+  { type: 'project', name: 'Clash of Gods', company: 'ac', aliases: ['CoG', 'Боу', 'Bow'] },
+  { type: 'project', name: 'Pong Breaker Royale', company: 'ac', aliases: ['Pong', 'Понг'] },
+  { type: 'project', name: 'Puppet Master', company: 'ac', aliases: ['Puppet', 'Паппет', 'Summoner'] },
+  { type: 'project', name: 'LifeQuest', company: 'ac' },
+  { type: 'project', name: 'DnD 3000', company: 'ac' },
+  { type: 'project', name: 'Karl Storz', company: 'hg', metadata: { client: 'SNKE' }, aliases: ['Karl'] },
+  { type: 'project', name: 'Botox', company: 'hg', aliases: ['Ботокс'], metadata: { client: 'Relevate Health' } },
 ]
 
 // ── Processes ──
 
-const processes: SeedEntity[] = [
+export const processes: SeedEntity[] = [
   { type: 'process', name: 'Character Art Brief', metadata: { project: 'Star Trek Timelines', description: 'Character art creation pipeline for STT' } },
   { type: 'process', name: 'Content Planning', metadata: { project: 'Star Trek Timelines', description: 'Content release planning for STT' } },
   { type: 'process', name: 'Buddy Check', metadata: { project: 'Star Trek Timelines', description: 'Peer review process for STT' } },
@@ -76,7 +85,7 @@ const processes: SeedEntity[] = [
 
 // ── People ──
 
-const people: SeedEntity[] = [
+export const people: SeedEntity[] = [
   // Leadership
   { type: 'person', name: 'Дарий', company: 'ac', aliases: ['Dariy', 'dariy', 'Дарий Шацких', 'Dariy Shatskikh'], metadata: { role: 'CPO HG, VP Production AC', display_name: 'Дарий' } },
   { type: 'person', name: 'Арсен', company: 'hg', aliases: ['Arsen'], metadata: { role: 'CEO HG', display_name: 'Арсен' } },
@@ -136,7 +145,7 @@ const people: SeedEntity[] = [
 
 // ── Relations ──
 
-const relations: SeedRelation[] = [
+export const relations: SeedRelation[] = [
   // Company membership
   { from: 'Дарий', to: 'Highground', relation: 'member_of', role: 'CPO' },
   { from: 'Дарий', to: 'AstroCat', relation: 'member_of', role: 'VP Production, Co-founder' },
@@ -226,10 +235,9 @@ const relations: SeedRelation[] = [
   { from: 'Сергей Гуменюк', to: 'Motor World: Car Factory', relation: 'works_on', role: 'QA' },
   { from: 'Ohbibi', to: 'Motor World: Car Factory', relation: 'client_of' },
 
-  // OhBibi Creatives (Ads + UA)
-  { from: 'Анастасия Воронова', to: 'OhBibi Creatives', relation: 'manages', role: 'Creative Producer' },
-  { from: 'Богдан', to: 'OhBibi Creatives', relation: 'works_on', role: 'UA' },
-  { from: 'Ohbibi', to: 'OhBibi Creatives', relation: 'client_of' },
+  // Motor World: Car Factory — Creatives / UA (merged from OhBibi Creatives)
+  { from: 'Анастасия Воронова', to: 'Motor World: Car Factory', relation: 'works_on', role: 'Creative Producer' },
+  { from: 'Богдан', to: 'Motor World: Car Factory', relation: 'works_on', role: 'UA' },
 
   // Tough Guy
   { from: 'Иван', to: 'Tough Guy', relation: 'owns', role: 'Creator' },
@@ -247,8 +255,15 @@ const relations: SeedRelation[] = [
   // Vector
   { from: 'Сергей Клепицкий', to: 'Vector', relation: 'works_on', role: 'Game Designer' },
 
-  // Bachalau (previous project for Клепицкий)
-  { from: 'Сергей Клепицкий', to: 'Bachalau', relation: 'works_on', role: 'Game Designer' },
+  // MOBA BACALHAU
+  { from: 'Сергей Клепицкий', to: 'MOBA BACALHAU', relation: 'works_on', role: 'Game Designer' },
+
+  // Additional client relationships (from CSV)
+  { from: 'Tilting Point', to: 'Oregon Trail', relation: 'client_of' },
+  { from: 'Relevate Health', to: 'Pivot Pumps', relation: 'client_of' },
+  { from: 'Relevate Health', to: 'Botox', relation: 'client_of' },
+  { from: 'SNKE', to: 'Karl Storz', relation: 'client_of' },
+  { from: 'Tilting Point', to: "SpongeBob Get Cookin'", relation: 'client_of' },
 
   // Process → Project relationships
   { from: 'Character Art Brief', to: 'Star Trek Timelines', relation: 'member_of' },
@@ -257,7 +272,9 @@ const relations: SeedRelation[] = [
   { from: 'Live Operations Scheduling', to: 'Star Trek Timelines', relation: 'member_of' },
 ]
 
-// ── Main ──
+export const allEntities: SeedEntity[] = [...companies, ...projects, ...processes, ...people]
+
+// ── Main (legacy PG seed) ──
 
 async function main() {
   const pool = new Pool({ connectionString: process.env.DATABASE_URL })
@@ -270,7 +287,6 @@ async function main() {
   let relationsCreated = 0
 
   // Seed all entities
-  const allEntities = [...companies, ...projects, ...processes, ...people]
   for (const entity of allEntities) {
     const id = await createEntity(db, {
       type: entity.type,

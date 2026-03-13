@@ -3,10 +3,7 @@
  * Built once per digest run, maps all known aliases → display_name.
  */
 
-import { db } from '../db/index.js'
-import { findEntitiesByType } from '../kb/repository.js'
-import { kbEntityAliases } from '../db/schema.js'
-import { inArray } from 'drizzle-orm'
+import { findEntitiesByType, getAliasesForEntityIds } from '../kb/kb-facade.js'
 import { logger } from '../logging/logger.js'
 
 export type NameMap = Map<string, string>
@@ -17,21 +14,17 @@ export type NameMap = Map<string, string>
  * Returns a Map for O(1) lookups.
  */
 export async function buildNameMap(): Promise<NameMap> {
-  const people = await findEntitiesByType(db, 'person')
-  const personIds = people.map((p) => p.id)
+  const people = await findEntitiesByType('person')
+  const personIds = people.map((p) => p.id as number)
 
-  const aliases = personIds.length > 0
-    ? await db.select({
-      entityId: kbEntityAliases.entityId,
-      alias: kbEntityAliases.alias,
-    }).from(kbEntityAliases).where(inArray(kbEntityAliases.entityId, personIds))
-    : []
+  const aliases = await getAliasesForEntityIds(personIds)
 
   const aliasMap = new Map<number, string[]>()
   for (const a of aliases) {
-    const list = aliasMap.get(a.entityId) ?? []
+    const eid = a.entityId as number
+    const list = aliasMap.get(eid) ?? []
     list.push(a.alias)
-    aliasMap.set(a.entityId, list)
+    aliasMap.set(eid, list)
   }
 
   const nameMap: NameMap = new Map()
@@ -45,7 +38,7 @@ export async function buildNameMap(): Promise<NameMap> {
     setWithCollisionCheck(nameMap, person.name.toLowerCase(), displayName)
 
     // Map all aliases
-    const personAliases = aliasMap.get(person.id) ?? []
+    const personAliases = aliasMap.get(person.id as number) ?? []
     for (const alias of personAliases) {
       setWithCollisionCheck(nameMap, alias.toLowerCase(), displayName)
     }

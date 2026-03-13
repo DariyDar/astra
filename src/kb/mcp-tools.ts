@@ -1,11 +1,10 @@
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import type * as schema from '../db/schema.js'
-import { KBVectorStore } from './vector-store.js'
-import { hybridSearch } from './search.js'
-import { findEntityByName, findEntitiesByType, getRelationsFor } from './repository.js'
+import {
+  hybridSearch,
+  findEntityByName,
+  findEntitiesByType,
+  getRelationsFor,
+} from './kb-facade.js'
 import type { EntityType, ChunkSource } from './types.js'
-
-type DB = NodePgDatabase<typeof schema>
 
 // ── Tool definitions ──
 
@@ -92,8 +91,6 @@ function parsePeriodToRange(period: string): { after?: Date; before?: Date } {
 }
 
 export async function handleKBSearch(
-  db: DB,
-  vectorStore: KBVectorStore,
   args: Record<string, unknown>,
 ): Promise<string> {
   const query = args.query as string
@@ -102,7 +99,7 @@ export async function handleKBSearch(
   const rawLimit = Math.max(1, Math.min((args.limit as number) ?? 10, 30))
   const periodRange = args.period ? parsePeriodToRange(args.period as string) : {}
 
-  const results = await hybridSearch(db, vectorStore, query, {
+  const results = await hybridSearch(query, {
     source: args.source as ChunkSource | undefined,
     person: args.person as string | undefined,
     project: args.project as string | undefined,
@@ -126,17 +123,16 @@ export async function handleKBSearch(
 }
 
 export async function handleKBEntities(
-  db: DB,
   args: Record<string, unknown>,
 ): Promise<string> {
   // If name is provided, look up specific entity
   if (args.name) {
-    const entity = await findEntityByName(db, args.name as string)
+    const entity = await findEntityByName(args.name as string)
     if (!entity) {
       return JSON.stringify({ error: `Entity not found: "${args.name}"`, suggestions: 'Try a different name or check kb_entities without a name to see available entities.' })
     }
 
-    const relations = await getRelationsFor(db, entity.id)
+    const relations = await getRelationsFor(entity.id)
 
     return JSON.stringify({
       entity: {
@@ -157,7 +153,7 @@ export async function handleKBEntities(
 
   // If type is provided, list entities of that type
   if (args.type) {
-    const entities = await findEntitiesByType(db, args.type as EntityType)
+    const entities = await findEntitiesByType(args.type as EntityType)
     return JSON.stringify({
       type: args.type,
       entities: entities.map((e) => ({
