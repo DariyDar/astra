@@ -19,7 +19,7 @@ import type { SourceAdapter, RawItem } from './types.js'
 
 type DB = NodePgDatabase<typeof schema>
 
-const INTER_EPISODE_DELAY_MS = 500 // Paid tier: 2000 RPM, bottleneck is Graphiti processing
+const INTER_EPISODE_DELAY_MS = 2_000 // FalkorDB needs time to process graph queries per episode
 const MAX_EPISODE_CHARS = 15_000 // Cap episode size to avoid overwhelming LLM context
 
 interface GraphitiIngestionStats {
