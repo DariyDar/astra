@@ -7,6 +7,7 @@ LLM: Gemini 2.0 Flash via native google-genai SDK.
 
 import asyncio
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -161,9 +162,12 @@ async def add_messages(req: AddMessagesRequest):
             if msg.timestamp
             else datetime.now(timezone.utc)
         )
+        # Strip lone surrogates that break Python's UTF-8 codec (e.g. from Slack emoji)
+        clean_body = re.sub(r'[\ud800-\udfff]', '', msg.content)
+        clean_name = re.sub(r'[\ud800-\udfff]', '', msg.name or f"message-{msg.uuid}")
         result = await g.add_episode(
-            name=msg.name or f"message-{msg.uuid}",
-            episode_body=msg.content,
+            name=clean_name,
+            episode_body=clean_body,
             source_description=msg.source_description or f"group:{req.group_id}",
             reference_time=ts,
             group_id=req.group_id,

@@ -35,14 +35,20 @@ function safeGroupId(source: string, adapterName: string): string {
   return adapterName.replace(/[^a-zA-Z0-9_]/g, '_')
 }
 
+/** Strip lone surrogates that break Python's UTF-8 codec (e.g. broken emoji from Slack). */
+function stripSurrogates(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\uD800-\uDFFF]/g, '')
+}
+
 /** Convert a RawItem's chunks into a single Graphiti episode message. */
 function itemToEpisode(adapter: SourceAdapter, item: RawItem, chunks: KBChunkInput[]): GraphitiMessage {
-  // Combine all chunk texts into one episode body
-  const content = chunks.map((c) => c.text).join('\n\n')
+  // Combine all chunk texts into one episode body, strip broken surrogates
+  const content = stripSurrogates(chunks.map((c) => c.text).join('\n\n'))
 
   return {
     content,
-    name: `${adapter.source}:${item.id}`,
+    name: stripSurrogates(`${adapter.source}:${item.id}`),
     role_type: 'user',
     timestamp: item.date?.toISOString(),
     source_description: `${adapter.source}:${adapter.name}`,
