@@ -2,10 +2,11 @@
  * Graphiti ingestion runner — replaces the legacy chunk→embed→qdrant pipeline.
  *
  * Same SourceAdapter interface, but instead of chunking + embedding + vector store,
- * each item becomes a Graphiti episode via addEpisode(). Graphiti handles:
- * entity extraction, deduplication, embedding, and graph construction.
+ * items are batched by channel+day and sent as Graphiti episodes.
+ * Graphiti handles: entity extraction, deduplication, embedding, and graph construction.
  *
- * Rate limited to ~13 RPM (4.5s delay) to stay under Gemini 15 RPM limit.
+ * Batching: messages from the same channel on the same day → 1 episode.
+ * This reduces ~19K Slack messages to ~1-2K episodes (15-20x cost savings).
  */
 
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
@@ -15,11 +16,11 @@ import { getIngestionState, setIngestionState } from '../repository.js'
 import { addEpisode, healthcheck, type GraphitiMessage } from '../graphiti-client.js'
 import { classifyEmail } from '../gmail-classifier.js'
 import type { SourceAdapter, RawItem } from './types.js'
-import type { KBChunkInput } from '../types.js'
 
 type DB = NodePgDatabase<typeof schema>
 
-const INTER_EPISODE_DELAY_MS = 4_500 // ~13 RPM, under Gemini 15 RPM limit
+const INTER_EPISODE_DELAY_MS = 500 // Paid tier: 2000 RPM, bottleneck is Graphiti processing
+const MAX_EPISODE_CHARS = 15_000 // Cap episode size to avoid overwhelming LLM context
 
 interface GraphitiIngestionStats {
   adapter: string
@@ -31,7 +32,7 @@ interface GraphitiIngestionStats {
 }
 
 /** Build a group_id safe for FalkorDB RediSearch (no hyphens). */
-function safeGroupId(source: string, adapterName: string): string {
+function safeGroupId(_source: string, adapterName: string): string {
   return adapterName.replace(/[^a-zA-Z0-9_]/g, '_')
 }
 
@@ -41,18 +42,128 @@ function stripSurrogates(text: string): string {
   return text.replace(/[\uD800-\uDFFF]/g, '')
 }
 
-/** Convert a RawItem's chunks into a single Graphiti episode message. */
-function itemToEpisode(adapter: SourceAdapter, item: RawItem, chunks: KBChunkInput[]): GraphitiMessage {
-  // Combine all chunk texts into one episode body, strip broken surrogates
-  const content = stripSurrogates(chunks.map((c) => c.text).join('\n\n'))
+/** Get YYYY-MM-DD date key from a Date object. */
+function dateKey(d: Date): string {
+  return d.toISOString().slice(0, 10)
+}
 
-  return {
-    content,
-    name: stripSurrogates(`${adapter.source}:${item.id}`),
-    role_type: 'user',
-    timestamp: item.date?.toISOString(),
-    source_description: `${adapter.source}:${adapter.name}`,
+/** Build a human-readable source description from adapter name and batch key. */
+function buildSourceDescription(adapterName: string, batchKey: string): string {
+  return `${adapterName}/${batchKey}`
+}
+
+interface BatchedEpisode {
+  key: string // grouping key (channel+date or source+date)
+  name: string // episode name
+  content: string // concatenated messages
+  timestamp: Date // latest message date in batch
+  sourceDescription: string
+  itemCount: number
+}
+
+/**
+ * Group items into batched episodes by channel+day (Slack) or by day (other sources).
+ * Filters out Gmail system emails and short content.
+ */
+function batchItems(
+  adapter: SourceAdapter,
+  items: RawItem[],
+): BatchedEpisode[] {
+  const batches = new Map<string, { items: RawItem[]; latestDate: Date }>()
+  let skipped = 0
+
+  for (const item of items) {
+    // Skip Gmail system emails
+    if (adapter.source === 'gmail' && item.metadata.from) {
+      const emailType = classifyEmail(
+        item.metadata.from as string,
+        item.metadata.subject as string | undefined,
+      )
+      if (emailType === 'system') {
+        skipped++
+        continue
+      }
+    }
+
+    // Skip very short content
+    if (!item.text || item.text.trim().length < 20) {
+      skipped++
+      continue
+    }
+
+    // Build batch key: channel+date for Slack, source+date for others
+    const day = item.date ? dateKey(item.date) : 'unknown'
+    const channel = (item.metadata.channel as string) ?? adapter.name
+    const key = `${channel}:${day}`
+
+    const existing = batches.get(key)
+    if (existing) {
+      existing.items.push(item)
+      if (item.date && item.date > existing.latestDate) {
+        existing.latestDate = item.date
+      }
+    } else {
+      batches.set(key, {
+        items: [item],
+        latestDate: item.date ?? new Date(),
+      })
+    }
   }
+
+  if (skipped > 0) {
+    logger.info({ adapter: adapter.name, skipped }, 'Items skipped (system emails / short)')
+  }
+
+  const episodes: BatchedEpisode[] = []
+
+  for (const [key, batch] of batches) {
+    // Format messages chronologically
+    const sorted = batch.items.sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0))
+
+    const lines: string[] = []
+    let totalChars = 0
+
+    for (const item of sorted) {
+      const time = item.date ? item.date.toISOString().slice(11, 16) : '??:??'
+      const user = (item.metadata.user as string) ?? (item.metadata.from as string) ?? 'unknown'
+      const isReply = item.metadata.isReply as boolean | undefined
+      const prefix = isReply ? '  ↳ ' : ''
+      const line = `${prefix}[${time}] ${user}: ${item.text.trim()}`
+
+      // Cap episode size
+      if (totalChars + line.length > MAX_EPISODE_CHARS) {
+        // Flush current batch and start overflow
+        if (lines.length > 0) {
+          episodes.push({
+            key,
+            name: stripSurrogates(`${adapter.source}:${key}`),
+            content: stripSurrogates(lines.join('\n')),
+            timestamp: batch.latestDate,
+            sourceDescription: buildSourceDescription(adapter.name, key),
+            itemCount: lines.length,
+          })
+        }
+        lines.length = 0
+        totalChars = 0
+      }
+
+      lines.push(line)
+      totalChars += line.length
+    }
+
+    if (lines.length > 0) {
+      episodes.push({
+        key,
+        name: stripSurrogates(`${adapter.source}:${key}`),
+        content: stripSurrogates(lines.join('\n')),
+        timestamp: batch.latestDate,
+        sourceDescription: buildSourceDescription(adapter.name, key),
+        itemCount: sorted.length,
+      })
+    }
+  }
+
+  return episodes
 }
 
 async function delay(ms: number): Promise<void> {
@@ -61,7 +172,7 @@ async function delay(ms: number): Promise<void> {
 
 /**
  * Run Graphiti ingestion for a single adapter.
- * Fetches new items, converts to episodes, sends to Graphiti.
+ * Fetches items, batches by channel+day, sends batched episodes to Graphiti.
  */
 async function runGraphitiAdapter(
   db: DB,
@@ -97,58 +208,47 @@ async function runGraphitiAdapter(
       return stats
     }
 
+    // Batch items into episodes (channel+day grouping)
+    const episodes = batchItems(adapter, items)
     const groupId = safeGroupId(adapter.source, adapter.name)
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
+    logger.info(
+      { adapter: adapter.name, items: items.length, episodes: episodes.length },
+      'Batched items into episodes',
+    )
+
+    for (let i = 0; i < episodes.length; i++) {
+      const ep = episodes[i]
 
       try {
-        // Convert item to chunks (reuse existing adapter logic)
-        const chunks = adapter.toChunks(item)
-        if (chunks.length === 0) {
-          stats.episodesSkipped++
-          continue
+        const message: GraphitiMessage = {
+          content: ep.content,
+          name: ep.name,
+          role_type: 'user',
+          timestamp: ep.timestamp.toISOString(),
+          source_description: ep.sourceDescription,
         }
 
-        // Skip Gmail system emails (noreply, notifications, etc.)
-        if (adapter.source === 'gmail' && item.metadata.from) {
-          const emailType = classifyEmail(
-            item.metadata.from as string,
-            item.metadata.subject as string | undefined,
-          )
-          if (emailType === 'system') {
-            stats.episodesSkipped++
-            continue
-          }
-        }
-
-        // Skip very short content (< 20 chars — likely empty/noise)
-        const totalText = chunks.map((c) => c.text).join('')
-        if (totalText.trim().length < 20) {
-          stats.episodesSkipped++
-          continue
-        }
-
-        // Build and send episode
-        const message = itemToEpisode(adapter, item, chunks)
         await addEpisode(groupId, message)
         stats.episodesCreated++
 
-        logger.debug(
-          { adapter: adapter.name, itemId: item.id, index: i + 1, total: items.length },
-          'Episode ingested',
-        )
+        if ((i + 1) % 50 === 0 || i === episodes.length - 1) {
+          logger.info(
+            { adapter: adapter.name, progress: `${i + 1}/${episodes.length}`, created: stats.episodesCreated, errors: stats.errors },
+            'Graphiti ingestion progress',
+          )
+        }
       } catch (error) {
         stats.errors++
         const errMsg = error instanceof Error ? error.message : String(error)
         logger.warn(
-          { adapter: adapter.name, itemId: item.id, error: errMsg },
+          { adapter: adapter.name, episode: ep.key, error: errMsg },
           'Episode ingestion failed',
         )
       }
 
-      // Rate limit between episodes (skip after last item)
-      if (i < items.length - 1) {
+      // Brief delay between episodes (paid tier has 2000 RPM, bottleneck is Graphiti processing)
+      if (i < episodes.length - 1) {
         await delay(INTER_EPISODE_DELAY_MS)
       }
     }
