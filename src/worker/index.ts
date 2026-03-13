@@ -7,6 +7,7 @@ import { QdrantClient } from '@qdrant/js-client-rest'
 import { env } from '../config/env.js'
 import { KBVectorStore } from '../kb/vector-store.js'
 import { runIngestion } from '../kb/ingestion/runner.js'
+import { runGraphitiIngestion } from '../kb/ingestion/graphiti-runner.js'
 import { createSlackAdapters } from '../kb/ingestion/slack.js'
 import { createGmailAdapters } from '../kb/ingestion/gmail.js'
 import { createClickUpAdapter } from '../kb/ingestion/clickup.js'
@@ -17,6 +18,8 @@ import { createNotionAdapter } from '../kb/ingestion/notion.js'
 import { extractKnowledgeBatch, markLowValueChunks } from '../kb/knowledge-extractor.js'
 import type { SourceAdapter } from '../kb/ingestion/types.js'
 import { deliverDailyDigest } from '../digest/scheduler.js'
+
+const useGraphiti = env.KB_BACKEND === 'graphiti'
 
 const AUDIT_RETENTION_DAYS = 30
 
@@ -65,10 +68,8 @@ const qdrantClient = new QdrantClient({ url: env.QDRANT_URL })
 const kbVectorStore = new KBVectorStore(qdrantClient)
 
 const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
-  logger.info('Starting KB nightly ingestion')
+  logger.info({ backend: env.KB_BACKEND }, 'Starting KB nightly ingestion')
   try {
-    await kbVectorStore.ensureCollection()
-
     // Build adapters from all configured sources
     const adapters: SourceAdapter[] = []
     adapters.push(...createSlackAdapters())
@@ -85,36 +86,46 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
       return
     }
 
-    const ingestionStats = await runIngestion(db, kbVectorStore, adapters)
-    const totalCreated = ingestionStats.reduce((sum, s) => sum + s.chunksCreated, 0)
-    logger.info({ totalCreated }, 'KB ingestion complete')
+    if (useGraphiti) {
+      // Graphiti pipeline: fetch → addEpisode() (handles extraction + embedding)
+      const stats = await runGraphitiIngestion(db, adapters)
+      const totalCreated = stats.reduce((sum, s) => sum + s.episodesCreated, 0)
+      logger.info({ totalCreated }, 'Graphiti KB ingestion complete')
+    } else {
+      // Legacy pipeline: fetch → chunk → embed → Qdrant + PG extraction
+      await kbVectorStore.ensureCollection()
 
-    // Drive incremental sync — poll Changes API for modified files
-    try {
-      const tokens = await resolveGoogleTokens()
-      for (const account of tokens.keys()) {
-        const result = await syncDriveChanges(db, account, qdrantClient)
-        logger.info({ account, ...result }, 'Drive incremental sync complete')
+      const ingestionStats = await runIngestion(db, kbVectorStore, adapters)
+      const totalCreated = ingestionStats.reduce((sum, s) => sum + s.chunksCreated, 0)
+      logger.info({ totalCreated }, 'KB ingestion complete')
+
+      // Drive incremental sync — poll Changes API for modified files
+      try {
+        const tokens = await resolveGoogleTokens()
+        for (const account of tokens.keys()) {
+          const result = await syncDriveChanges(db, account, qdrantClient)
+          logger.info({ account, ...result }, 'Drive incremental sync complete')
+        }
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error)
+        logger.error({ error: errMsg }, 'Drive incremental sync failed (non-blocking)')
       }
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error)
-      logger.error({ error: errMsg }, 'Drive incremental sync failed (non-blocking)')
-    }
 
-    // Mark any new low-value chunks as processed
-    const marked = await markLowValueChunks(db)
-    if (marked > 0) {
-      logger.info({ marked }, 'KB: marked low-value chunks as processed')
-    }
+      // Mark any new low-value chunks as processed
+      const marked = await markLowValueChunks(db)
+      if (marked > 0) {
+        logger.info({ marked }, 'KB: marked low-value chunks as processed')
+      }
 
-    // Run multi-batch knowledge extraction via Gemini (free, fast)
-    logger.info('KB: starting nightly knowledge extraction')
-    const extractionStats = await extractKnowledgeBatch(db, {
-      maxBatches: 100,
-      maxTimeMinutes: 60,
-      chunkBatchSize: 100,
-    }, qdrantClient)
-    logger.info(extractionStats, 'KB nightly knowledge extraction complete')
+      // Run multi-batch knowledge extraction via Gemini (free, fast)
+      logger.info('KB: starting nightly knowledge extraction')
+      const extractionStats = await extractKnowledgeBatch(db, {
+        maxBatches: 100,
+        maxTimeMinutes: 60,
+        chunkBatchSize: 100,
+      }, qdrantClient)
+      logger.info(extractionStats, 'KB nightly knowledge extraction complete')
+    }
   } catch (error) {
     logger.error({ error }, 'KB nightly ingestion failed')
   }

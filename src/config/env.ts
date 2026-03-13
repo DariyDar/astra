@@ -34,6 +34,7 @@ const envSchema = z.object({
   GEMINI_API_KEY_AC: z.string().optional(),
   REDIS_PASSWORD: z.string().optional(),
   QDRANT_URL: z.string().url().default('http://localhost:6333'),
+  KB_BACKEND: z.enum(['legacy', 'graphiti']).default('legacy'),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info'),

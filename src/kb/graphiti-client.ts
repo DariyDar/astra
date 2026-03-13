@@ -8,7 +8,7 @@ import { logger } from '../logging/logger.js'
 const GRAPHITI_URL = process.env.GRAPHITI_URL ?? 'http://localhost:3200'
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 2_000
-const REQUEST_TIMEOUT_MS = 30_000
+const REQUEST_TIMEOUT_MS = 180_000
 
 // ── DTOs ──
 
