@@ -1,8 +1,8 @@
 """
 Graphiti REST server — bridges our TS bot with Graphiti + FalkorDB.
 
-Endpoints mirror the official Graphiti server but use FalkorDriver instead of Neo4j.
-LLM: Gemini 2.0 Flash via litellm.
+Endpoints wrap graphiti-core v0.28 API with FalkorDriver.
+LLM: Gemini 2.0 Flash via litellm (through OpenAIClient).
 """
 
 import asyncio
@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -73,7 +73,7 @@ async def get_graphiti():
             cross_encoder=GeminiRerankerClient(config=reranker_config),
         )
 
-        await graphiti_instance.build_indices()
+        await graphiti_instance.build_indices_and_constraints()
         return graphiti_instance
 
 
@@ -93,13 +93,6 @@ class Message(BaseModel):
 class AddMessagesRequest(BaseModel):
     group_id: str
     messages: list[Message]
-
-
-class AddEntityNodeRequest(BaseModel):
-    uuid: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    group_id: str
-    name: str
-    summary: str = ""
 
 
 class SearchQuery(BaseModel):
@@ -166,7 +159,7 @@ async def add_messages(req: AddMessagesRequest):
             if msg.timestamp
             else datetime.now(timezone.utc)
         )
-        episode = await g.add_episode(
+        await g.add_episode(
             name=msg.name or f"message-{msg.uuid}",
             episode_body=msg.content,
             source_description=msg.source_description or f"group:{req.group_id}",
@@ -179,59 +172,15 @@ async def add_messages(req: AddMessagesRequest):
     return {"results": results}
 
 
-@app.post("/entity-node")
-async def add_entity_node(req: AddEntityNodeRequest):
-    """Manually create an entity node (for seeding)."""
-    g = await get_graphiti()
-
-    from graphiti_core.nodes import EntityNode
-
-    node = EntityNode(
-        uuid=req.uuid,
-        group_id=req.group_id,
-        name=req.name,
-        summary=req.summary,
-    )
-    await g.save_entity_node(node)
-
-    return {"uuid": req.uuid, "name": req.name, "status": "ok"}
-
-
-@app.delete("/entity-edge/{edge_uuid}")
-async def delete_entity_edge(edge_uuid: str):
-    """Delete an edge by UUID."""
-    g = await get_graphiti()
-    await g.delete_entity_edge(edge_uuid)
-    return {"status": "ok"}
-
-
 @app.delete("/episode/{episode_uuid}")
 async def delete_episode(episode_uuid: str):
     """Delete an episode by UUID."""
     g = await get_graphiti()
-    await g.delete_episode(episode_uuid)
+    await g.remove_episode(episode_uuid)
     return {"status": "ok"}
 
 
-@app.delete("/group/{group_id}")
-async def delete_group(group_id: str):
-    """Delete all data for a group."""
-    g = await get_graphiti()
-    await g.delete_group(group_id)
-    return {"status": "ok"}
-
-
-@app.post("/clear")
-async def clear_graph():
-    """Wipe all graph data. Use with caution."""
-    g = await get_graphiti()
-    # Delete all groups — Graphiti doesn't have a single clear() method
-    # This is a destructive operation, use only for dev/testing
-    await g.build_indices()
-    return {"status": "ok", "note": "indices rebuilt, use DELETE /group/{id} to remove data"}
-
-
-# ── Retrieve routes ──
+# ── Search routes ──
 
 
 @app.post("/search")
@@ -239,14 +188,14 @@ async def search(req: SearchQuery):
     """Hybrid search: semantic + BM25 + graph traversal."""
     g = await get_graphiti()
 
-    results = await g.search(
+    edges = await g.search(
         query=req.query,
         group_ids=req.group_ids if req.group_ids else None,
         num_results=req.max_facts,
     )
 
     facts = []
-    for edge in results:
+    for edge in edges:
         facts.append(
             FactResult(
                 uuid=edge.uuid,
@@ -262,31 +211,16 @@ async def search(req: SearchQuery):
     return SearchResults(facts=facts)
 
 
-@app.get("/entity-edge/{edge_uuid}")
-async def get_entity_edge(edge_uuid: str):
-    """Get a single edge by UUID."""
-    g = await get_graphiti()
-    edge = await g.get_entity_edge(edge_uuid)
-    if edge is None:
-        raise HTTPException(status_code=404, detail="Edge not found")
-
-    return FactResult(
-        uuid=edge.uuid,
-        name=edge.name if hasattr(edge, "name") else "",
-        fact=edge.fact,
-        valid_at=edge.valid_at.isoformat() if edge.valid_at else None,
-        invalid_at=edge.invalid_at.isoformat() if edge.invalid_at else None,
-        created_at=edge.created_at.isoformat() if hasattr(edge, "created_at") and edge.created_at else None,
-        expired_at=edge.expired_at.isoformat() if hasattr(edge, "expired_at") and edge.expired_at else None,
-    )
-
-
 @app.get("/episodes/{group_id}")
 async def get_episodes(group_id: str, last_n: int = 10):
     """Get recent episodes for a group."""
     g = await get_graphiti()
     last_n = min(last_n, 100)
-    episodes = await g.get_episodes(group_id=group_id, last_n=last_n)
+    episodes = await g.retrieve_episodes(
+        reference_time=datetime.now(timezone.utc),
+        last_n=last_n,
+        group_ids=[group_id],
+    )
 
     return {
         "group_id": group_id,

@@ -143,35 +143,10 @@ export async function addEpisodes(
   return result.results
 }
 
-export async function addEntityNode(
-  groupId: string,
-  name: string,
-  summary: string,
-  uuid?: string,
-): Promise<{ uuid: string; name: string; status: string }> {
-  return graphitiFetch('/entity-node', {
-    method: 'POST',
-    body: JSON.stringify({
-      uuid,
-      group_id: groupId,
-      name,
-      summary,
-    }),
-  })
-}
-
 // ── Delete ──
-
-export async function deleteEntityEdge(edgeUuid: string): Promise<void> {
-  await graphitiFetch(`/entity-edge/${edgeUuid}`, { method: 'DELETE' })
-}
 
 export async function deleteEpisode(episodeUuid: string): Promise<void> {
   await graphitiFetch(`/episode/${episodeUuid}`, { method: 'DELETE' })
-}
-
-export async function deleteGroup(groupId: string): Promise<void> {
-  await graphitiFetch(`/group/${groupId}`, { method: 'DELETE' })
 }
 
 // ── Search ──
@@ -192,10 +167,6 @@ export async function search(
 }
 
 // ── Retrieve ──
-
-export async function getEntityEdge(edgeUuid: string): Promise<GraphitiFact> {
-  return graphitiFetch(`/entity-edge/${edgeUuid}`)
-}
 
 export async function getEpisodes(
   groupId: string,
