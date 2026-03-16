@@ -68,10 +68,11 @@ team_external:
     note: >
       Клиент — Relevate Health (Levelex). Амир Лотан — product owner.
       Коммуникация в Slack канале hg/relevate_health-high_ground.
-    - name: Амир Лотан
-      role: Product Manager
-      slack_uids: {hg: U07R6M1MQNS}
-      status: active
+    contacts:
+      - name: Амир Лотан
+        role: Product Manager
+        slack_uids: {hg: U07R6M1MQNS}
+        status: active
 
 processes:
   - name: Level 2 Sync

@@ -57,9 +57,10 @@ team_internal:
 team_external:
   daedalus_lab:
     note: Внешняя студия, работала над GD для Block Puzzle.
-    - name: Aparna Pande
-      role: Game Designer
-      status: active
+    contacts:
+      - name: Aparna Pande
+        role: Game Designer
+        status: active
 
 resources:
   - name: ClickUp — Tasks BP

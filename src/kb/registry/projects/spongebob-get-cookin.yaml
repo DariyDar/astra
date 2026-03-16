@@ -105,30 +105,32 @@ team_external:
 
   lionbridge:
     note: Отдельная компания (не TP). QA локализации.
-    - name: Dariusz Kosinski
-      role: Localization Project Manager
-      slack_uids: {ac: U03AYQDD33L}
-      status: active
-    - name: Guillermo Alvarez Lloret
-      role: Localization QA
-      slack_uids: {ac: U05UTKNJR9V}
-      status: active
-    - name: Michael Santer
-      role: Localization
-      slack_uids: {ac: U03SQSRHLRK}
-      status: active
-    - name: Simona Pelli
-      role: Localization
-      slack_uids: {ac: U033G9HL86Q}
-      status: active
+    contacts:
+      - name: Dariusz Kosinski
+        role: Localization Project Manager
+        slack_uids: {ac: U03AYQDD33L}
+        status: active
+      - name: Guillermo Alvarez Lloret
+        role: Localization QA
+        slack_uids: {ac: U05UTKNJR9V}
+        status: active
+      - name: Michael Santer
+        role: Localization
+        slack_uids: {ac: U03SQSRHLRK}
+        status: active
+      - name: Simona Pelli
+        role: Localization
+        slack_uids: {ac: U033G9HL86Q}
+        status: active
 
   illogika:
     note: Предыдущая студия-разработчик. Mylene вела Netflix версию SpongeBob до передачи AstroCat.
-    - name: Mylene Ares
-      display: Mylène
-      role: Developer (Illogika) — вела Netflix SpongeBob, managed transition
-      slack_uids: {ac: U03J0TZ361Y}
-      status: left
+    contacts:
+      - name: Mylene Ares
+        display: Mylène
+        role: Developer (Illogika) — вела Netflix SpongeBob, managed transition
+        slack_uids: {ac: U03J0TZ361Y}
+        status: left
 
   netflix:
     - name: Josh Lee

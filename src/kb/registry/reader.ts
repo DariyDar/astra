@@ -27,7 +27,7 @@ export interface ProjectCard {
   note?: string
   slack_channels: Record<string, string>
   team_internal: Array<{ name: string; role: string; status: string }>
-  team_external: Record<string, { note: string }>
+  team_external: Record<string, { note: string; contacts: Array<{ name: string; role: string; status: string }> }>
   processes: Array<{ name: string; cadence: string; description?: string }>
   resources: Array<{ name: string; type: string; description?: string }>
   drive_docs: Array<{ title: string; url: string; type: string; owner: string; last_modified?: string; description?: string }>
@@ -167,10 +167,14 @@ function ensureProjectsLoaded(): void {
     }))
 
     // Parse team_external
-    const teamExtRaw = (data.team_external ?? {}) as Record<string, Record<string, string>>
-    const team_external: Record<string, { note: string }> = {}
+    const teamExtRaw = (data.team_external ?? {}) as Record<string, Record<string, unknown>>
+    const team_external: Record<string, { note: string; contacts: Array<{ name: string; role: string; status: string }> }> = {}
     for (const [key, val] of Object.entries(teamExtRaw)) {
-      team_external[key] = { note: val.note ?? '' }
+      const contactsRaw = (val.contacts as Array<Record<string, string>>) ?? []
+      team_external[key] = {
+        note: (val.note as string) ?? '',
+        contacts: contactsRaw.map((c) => ({ name: c.name ?? '', role: c.role ?? '', status: c.status ?? 'active' })),
+      }
     }
 
     // Parse slack_channels
@@ -607,6 +611,9 @@ export function formatProjectCard(card: ProjectCard): string {
     lines.push('\n## External')
     for (const [key, val] of Object.entries(card.team_external)) {
       lines.push(`- ${key}: ${val.note}`)
+      for (const c of val.contacts) {
+        lines.push(`  - ${c.name} — ${c.role}`)
+      }
     }
   }
 

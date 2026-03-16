@@ -76,62 +76,63 @@ team_external:
       Финансирование: $25.1M (Atomico, Gumi, Time for Growth).
       Известные игры: FRAG Pro Shooter (150M+ downloads), SUP Racing, Motor World.
       Slack Connect guests.
-    - name: Stanislas Dewavrin
-      role: CEO & Co-Founder — ex-VP Creation Gameloft (Minion Rush, Asphalt). UA стратегия, ad networks.
-      slack_uids: {ac: U7ZB3CHA5}
-      status: active
-    - name: Guillaume Alemanni
-      role: Game Lead / Senior PM — координация, Adjust, локализация, ATT consent. Ex-Gameloft, HEC Paris.
-      slack_uids: {ac: U02GD99SRL4}
-      status: active
-    - name: Guillaume Lacava
-      role: Technical / DevOps — Adjust dashboard, Firebase, service accounts, 1Password
-      slack_uids: {ac: U03JCC6T4PQ}
-      status: active
-    - name: Matthieu Brossard
-      role: Producer — delivery calendar
-      slack_uids: {ac: U08KHQP0S5P}
-      status: active
-    - name: Michal Glebicki
-      role: QA Lead — smoke tests, bug reports, player investigations, Jira/Atlassian
-      slack_uids: {ac: U055TL35G2E}
-      status: active
-    - name: Romain Blanchais
-      role: Game Dev Leadership — 18+ years, 11 shipped titles. Branch management, builds.
-      slack_uids: {ac: U09FAHK06AX}
-      status: active
-    - name: Raphael Lhoir
-      role: Support / QA — crash logs, player issues
-      slack_uids: {ac: UKPK36GD9}
-      status: active
-    - name: Antoine A.
-      role: Customer Support — tickets, crash reports, player spending
-      slack_uids: {ac: U02SLKY8QUA}
-      status: active
-    - name: Georges Choucair
-      role: IT / DevOps — Firebase access, console management
-      slack_uids: {ac: U064DMWCW5C}
-      status: active
-    - name: Moshi Blum
-      role: Team member
-      slack_uids: {ac: U09DUBVFTLP}
-      status: active
-    - name: Yann Le Blevec
-      role: Team member
-      slack_uids: {ac: U03BZ6D13K4}
-      status: active
-    - name: Guillaume S
-      role: Team member
-      slack_uids: {ac: U018YKC4BTR}
-      status: active
-    - name: Rebecca Alexander
-      role: Team member
-      slack_uids: {ac: U09T1GS2TMX}
-      status: active
-    - name: Herve Phan
-      role: Team member
-      slack_uids: {ac: U09J9DD41PY}
-      status: active
+    contacts:
+      - name: Stanislas Dewavrin
+        role: CEO & Co-Founder — ex-VP Creation Gameloft (Minion Rush, Asphalt). UA стратегия, ad networks.
+        slack_uids: {ac: U7ZB3CHA5}
+        status: active
+      - name: Guillaume Alemanni
+        role: Game Lead / Senior PM — координация, Adjust, локализация, ATT consent. Ex-Gameloft, HEC Paris.
+        slack_uids: {ac: U02GD99SRL4}
+        status: active
+      - name: Guillaume Lacava
+        role: Technical / DevOps — Adjust dashboard, Firebase, service accounts, 1Password
+        slack_uids: {ac: U03JCC6T4PQ}
+        status: active
+      - name: Matthieu Brossard
+        role: Producer — delivery calendar
+        slack_uids: {ac: U08KHQP0S5P}
+        status: active
+      - name: Michal Glebicki
+        role: QA Lead — smoke tests, bug reports, player investigations, Jira/Atlassian
+        slack_uids: {ac: U055TL35G2E}
+        status: active
+      - name: Romain Blanchais
+        role: Game Dev Leadership — 18+ years, 11 shipped titles. Branch management, builds.
+        slack_uids: {ac: U09FAHK06AX}
+        status: active
+      - name: Raphael Lhoir
+        role: Support / QA — crash logs, player issues
+        slack_uids: {ac: UKPK36GD9}
+        status: active
+      - name: Antoine A.
+        role: Customer Support — tickets, crash reports, player spending
+        slack_uids: {ac: U02SLKY8QUA}
+        status: active
+      - name: Georges Choucair
+        role: IT / DevOps — Firebase access, console management
+        slack_uids: {ac: U064DMWCW5C}
+        status: active
+      - name: Moshi Blum
+        role: Team member
+        slack_uids: {ac: U09DUBVFTLP}
+        status: active
+      - name: Yann Le Blevec
+        role: Team member
+        slack_uids: {ac: U03BZ6D13K4}
+        status: active
+      - name: Guillaume S
+        role: Team member
+        slack_uids: {ac: U018YKC4BTR}
+        status: active
+      - name: Rebecca Alexander
+        role: Team member
+        slack_uids: {ac: U09T1GS2TMX}
+        status: active
+      - name: Herve Phan
+        role: Team member
+        slack_uids: {ac: U09J9DD41PY}
+        status: active
 
 processes:
   - name: Stand Up || MWCF

@@ -154,10 +154,11 @@ team_external:
     note: >
       Внешний QA аутсорс (Индия). Компания: Indium Soft.
       Jijo shared с SBKCO. Ежедневный email-отчёт с результатами работы за день.
-    - name: Jijo M Mathews
-      role: QA Tester — events, deferred linking, builds. Shared с SBKCO.
-      slack_uids: {ac: U069YFT22EA}
-      status: active
+    contacts:
+      - name: Jijo M Mathews
+        role: QA Tester — events, deferred linking, builds. Shared с SBKCO.
+        slack_uids: {ac: U069YFT22EA}
+        status: active
 
   lionbridge:
     note: QA локализации (отдельная компания, не TP). Localization reports, bug findings for non-English versions.
@@ -166,47 +167,48 @@ team_external:
     note: >
       Customer Support аутсорс (Transperfect / TGPS).
       Weekly player support reports, QA smoke testing, locale checks.
-    - name: Stefan Kravic
-      role: QA — smoke testing, locale checks
-      slack_uids: {ac: U07GWFQRQQ2}
-      status: active
-    - name: Dejana Pajovic
-      role: Support/QA
-      slack_uids: {ac: U05FLB04Y1Y}
-      status: active
-    - name: Filip Milojevic
-      role: QA
-      slack_uids: {ac: U05UWF6DU01}
-      status: active
-    - name: Daliborka Zaric
-      display: Daca
-      role: QA
-      slack_uids: {ac: U06BBJ6J00Y}
-      status: active
-    - name: Yulia Alekseeva
-      role: Customer Support — weekly ticket reports
-      slack_uids: {ac: U01DK1PBTFD}
-      status: active
-    - name: Sofia Vives
-      role: Support
-      slack_uids: {ac: U06D6M2J4EB}
-      status: active
-    - name: Antonija Dikanovic
-      role: Support
-      slack_uids: {ac: U06U19VBQFL}
-      status: active
-    - name: Thiago Goulart
-      role: CS Team Lead — weekly reports
-      slack_uids: {ac: U0A5CU7D84A}
-      status: active
-    - name: Yana Kakovkina
-      role: CS Agent — player bugs, tutorial issues
-      slack_uids: {ac: U0A6YH48JH1}
-      status: active
-    - name: Simon Friedrich
-      role: PM (TGPS)
-      slack_uids: {ac: U01GTGJDMUL}
-      status: active
+    contacts:
+      - name: Stefan Kravic
+        role: QA — smoke testing, locale checks
+        slack_uids: {ac: U07GWFQRQQ2}
+        status: active
+      - name: Dejana Pajovic
+        role: Support/QA
+        slack_uids: {ac: U05FLB04Y1Y}
+        status: active
+      - name: Filip Milojevic
+        role: QA
+        slack_uids: {ac: U05UWF6DU01}
+        status: active
+      - name: Daliborka Zaric
+        display: Daca
+        role: QA
+        slack_uids: {ac: U06BBJ6J00Y}
+        status: active
+      - name: Yulia Alekseeva
+        role: Customer Support — weekly ticket reports
+        slack_uids: {ac: U01DK1PBTFD}
+        status: active
+      - name: Sofia Vives
+        role: Support
+        slack_uids: {ac: U06D6M2J4EB}
+        status: active
+      - name: Antonija Dikanovic
+        role: Support
+        slack_uids: {ac: U06U19VBQFL}
+        status: active
+      - name: Thiago Goulart
+        role: CS Team Lead — weekly reports
+        slack_uids: {ac: U0A5CU7D84A}
+        status: active
+      - name: Yana Kakovkina
+        role: CS Agent — player bugs, tutorial issues
+        slack_uids: {ac: U0A6YH48JH1}
+        status: active
+      - name: Simon Friedrich
+        role: PM (TGPS)
+        slack_uids: {ac: U01GTGJDMUL}
+        status: active
 
 processes:
   - name: Daily Standup (STT & Oregon)

@@ -119,11 +119,12 @@ team_external:
       status: active
   illogika:
     note: Предыдущая студия-разработчик. Проект перешёл к AstroCat.
-    - name: Mylene Ares
-      display: Mylène
-      role: Developer (Illogika) — вела Netflix версию SpongeBob
-      slack_uids: {ac: U03J0TZ361Y}
-      status: left
+    contacts:
+      - name: Mylene Ares
+        display: Mylène
+        role: Developer (Illogika) — вела Netflix версию SpongeBob
+        slack_uids: {ac: U03J0TZ361Y}
+        status: left
 
   nickelodeon:
     - name: Marin Yoshino
@@ -135,97 +136,99 @@ team_external:
     note: >
       Внешний QA аутсорс (Индия). Компания: Indium Soft.
       Ежедневный email-отчёт с результатами работы за день.
-    - name: Nisha Ubaid
-      role: QA Lead — Scrum updates, координация regression testing, feature checklists
-      slack_uids: {ac: U06A55793T4}
-      status: active
-    - name: Jijo M Mathews
-      role: QA Tester — также работает на Oregon Trail
-      slack_uids: {ac: U069YFT22EA}
-      status: active
-    - name: Ramzy Ahmed
-      role: QA Tester — regression, bug verification, build testing
-      slack_uids: {ac: U069QGZMULX}
-      status: active
-    - name: Preethi Pandit
-      role: QA Tester — Jira tickets
-      slack_uids: {ac: U06P288N1K8}
-      status: active
-    - name: Sanyam Srivastava
-      role: QA Tester — regression updates
-      slack_uids: {ac: U06K66MA8G1, hg: U09GPH8GFAT}
-      status: active
-    - name: Saravana Muthu
-      role: QA Tester
-      slack_uids: {ac: U06P5VC1Q2Z}
-      status: active
-    - name: Javed Alam
-      role: QA Tester
-      slack_uids: {ac: U06AHPSB4C9}
-      status: active
-    - name: Dileep GK
-      role: QA Tester — bug verification, regression
-      slack_uids: {ac: U08MXBTT33K}
-      status: active
-    - name: Neehar Kulkarni
-      role: QA/Art asset координация
-      slack_uids: {ac: U06APTJSGBZ}
-      status: active
-    - name: Vishnu Naik N
-      role: QA Tester
-      slack_uids: {ac: U08TFGHN9PW}
-      status: active
-    - name: MohammedRazeen M Ajaravi
-      role: QA Tester
-      slack_uids: {ac: U09SYBTP1QF}
-      status: active
-    - name: Juwaina R Gogeri
-      role: QA Tester
-      slack_uids: {ac: U06A2767VFX}
-      status: active
-    - name: Abhishek Kishor Solat
-      role: QA Tester — must-fix issues
-      slack_uids: {ac: U0ACF9RQ8DR}
-      status: active
+    contacts:
+      - name: Nisha Ubaid
+        role: QA Lead — Scrum updates, координация regression testing, feature checklists
+        slack_uids: {ac: U06A55793T4}
+        status: active
+      - name: Jijo M Mathews
+        role: QA Tester — также работает на Oregon Trail
+        slack_uids: {ac: U069YFT22EA}
+        status: active
+      - name: Ramzy Ahmed
+        role: QA Tester — regression, bug verification, build testing
+        slack_uids: {ac: U069QGZMULX}
+        status: active
+      - name: Preethi Pandit
+        role: QA Tester — Jira tickets
+        slack_uids: {ac: U06P288N1K8}
+        status: active
+      - name: Sanyam Srivastava
+        role: QA Tester — regression updates
+        slack_uids: {ac: U06K66MA8G1, hg: U09GPH8GFAT}
+        status: active
+      - name: Saravana Muthu
+        role: QA Tester
+        slack_uids: {ac: U06P5VC1Q2Z}
+        status: active
+      - name: Javed Alam
+        role: QA Tester
+        slack_uids: {ac: U06AHPSB4C9}
+        status: active
+      - name: Dileep GK
+        role: QA Tester — bug verification, regression
+        slack_uids: {ac: U08MXBTT33K}
+        status: active
+      - name: Neehar Kulkarni
+        role: QA/Art asset координация
+        slack_uids: {ac: U06APTJSGBZ}
+        status: active
+      - name: Vishnu Naik N
+        role: QA Tester
+        slack_uids: {ac: U08TFGHN9PW}
+        status: active
+      - name: MohammedRazeen M Ajaravi
+        role: QA Tester
+        slack_uids: {ac: U09SYBTP1QF}
+        status: active
+      - name: Juwaina R Gogeri
+        role: QA Tester
+        slack_uids: {ac: U06A2767VFX}
+        status: active
+      - name: Abhishek Kishor Solat
+        role: QA Tester — must-fix issues
+        slack_uids: {ac: U0ACF9RQ8DR}
+        status: active
 
   tgps_support:
     note: Customer Support аутсорс
-    - name: Thiago Goulart
-      role: CS Team Lead — weekly CS reports, bug escalation, Switch reports
-      slack_uids: {ac: U0A5CU7D84A}
-      status: active
-    - name: Alex Sidki
-      role: CS Agent — Zendesk tickets, player issues
-      slack_uids: {ac: U0A5AT9LF54}
-      status: active
-    - name: William Perottoni
-      role: CS Agent
-      slack_uids: {ac: U0A5ATA9RGW}
-      status: active
-    - name: Dejana Pajovic
-      role: CS Agent — weekly reports, Play Store reviews
-      slack_uids: {ac: U05FLB04Y1Y}
-      status: active
-    - name: Yulia Alekseeva
-      role: CS Agent — weekly reports with ticket counts, ratings
-      slack_uids: {ac: U01DK1PBTFD}
-      status: active
-    - name: Anna Shemiakina
-      role: CS Agent — Zendesk tickets, maintenance/ad issues
-      slack_uids: {ac: U05FZ03E197}
-      status: active
-    - name: Milos Rakocevic
-      role: CS Agent — bug analysis from player tickets
-      slack_uids: {ac: U05FLAZMLF4}
-      status: active
-    - name: Yana Kakovkina
-      role: CS Agent — player bugs, tutorial issues
-      slack_uids: {ac: U0A6YH48JH1}
-      status: active
-    - name: Simon Friedrich
-      role: PM (TGPS)
-      slack_uids: {ac: U01GTGJDMUL}
-      status: active
+    contacts:
+      - name: Thiago Goulart
+        role: CS Team Lead — weekly CS reports, bug escalation, Switch reports
+        slack_uids: {ac: U0A5CU7D84A}
+        status: active
+      - name: Alex Sidki
+        role: CS Agent — Zendesk tickets, player issues
+        slack_uids: {ac: U0A5AT9LF54}
+        status: active
+      - name: William Perottoni
+        role: CS Agent
+        slack_uids: {ac: U0A5ATA9RGW}
+        status: active
+      - name: Dejana Pajovic
+        role: CS Agent — weekly reports, Play Store reviews
+        slack_uids: {ac: U05FLB04Y1Y}
+        status: active
+      - name: Yulia Alekseeva
+        role: CS Agent — weekly reports with ticket counts, ratings
+        slack_uids: {ac: U01DK1PBTFD}
+        status: active
+      - name: Anna Shemiakina
+        role: CS Agent — Zendesk tickets, maintenance/ad issues
+        slack_uids: {ac: U05FZ03E197}
+        status: active
+      - name: Milos Rakocevic
+        role: CS Agent — bug analysis from player tickets
+        slack_uids: {ac: U05FLAZMLF4}
+        status: active
+      - name: Yana Kakovkina
+        role: CS Agent — player bugs, tutorial issues
+        slack_uids: {ac: U0A6YH48JH1}
+        status: active
+      - name: Simon Friedrich
+        role: PM (TGPS)
+        slack_uids: {ac: U01GTGJDMUL}
+        status: active
 
   pley:
     - name: Will Wadbrant
