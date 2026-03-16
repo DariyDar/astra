@@ -6,7 +6,7 @@
  * enabling efficient navigation via kb_registry() tool calls.
  */
 
-import { getAllProjects, getAllStatuses, refresh as refreshReader } from './reader.js'
+import { getAllProjects, getAllStatuses, loadProjectCard, refresh as refreshReader } from './reader.js'
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -104,6 +104,14 @@ export function buildKnowledgeMap(): string {
   lines.push(`Navigation: call kb_registry(project="X") to get full project card (team, channels, docs with URLs, tasks, status).`)
   lines.push(`Call kb_registry(section="processes"|"wiki"|"drive"|"people"|"channels") for cross-project info.`)
 
+  // Quick Reference — compact per-project channels/lists
+  lines.push(``)
+  lines.push(buildQuickReference(acProjects, hgProjects))
+
+  // Key company-wide documents
+  lines.push(``)
+  lines.push(buildKeyDocuments())
+
   cachedMap = lines.join('\n')
   cachedAt = Date.now()
   return cachedMap
@@ -128,6 +136,71 @@ export function refreshKnowledgeMap(): void {
   cachedMap = null
   buildKnowledgeMap()
   logger.info({ mapLength: cachedMap!.length }, 'Knowledge map refreshed')
+}
+
+// ─── Quick Reference & Key Docs ───
+
+/**
+ * Build a compact per-project quick reference with Slack channels and ClickUp lists.
+ * Saves 1 tool call per query by giving Claude channel/list names upfront.
+ */
+function buildQuickReference(
+  acProjects: Array<{ name: string; company: string; status: string; aliases: string[] }>,
+  hgProjects: Array<{ name: string; company: string; status: string; aliases: string[] }>,
+): string {
+  const formatProjectRef = (projects: Array<{ name: string; status: string }>): string => {
+    const parts: string[] = []
+    for (const p of projects.filter((pr) => pr.status === 'active')) {
+      const card = loadProjectCardSafe(p.name)
+      if (!card) {
+        parts.push(p.name)
+        continue
+      }
+      const channels = Object.keys(card.slack_channels)
+      const cuLists = card.clickup_lists
+      const extras: string[] = []
+      if (channels.length > 0) extras.push(`Slack: ${channels.slice(0, 3).join(', ')}`)
+      if (cuLists.length > 0) extras.push(`ClickUp: ~${cuLists.reduce((s, l) => s + l.chunks, 0)}`)
+      parts.push(extras.length > 0 ? `${p.name} (${extras.join(' | ')})` : p.name)
+    }
+    return parts.join(', ')
+  }
+
+  return [
+    `Project Quick Reference:`,
+    `AC active: ${formatProjectRef(acProjects)}`,
+    `HG active: ${formatProjectRef(hgProjects)}`,
+  ].join('\n')
+}
+
+/**
+ * Build a compact list of key company-wide documents from Drive.
+ */
+function buildKeyDocuments(): string {
+  const docsFile = join(REGISTRY_DIR, 'resources', 'drive', 'company-ops.yaml')
+  const data = loadYamlFile<{ documents: Array<{ title: string; description?: string }> }>(docsFile)
+  if (!data?.documents) return ''
+
+  const keyDocs = data.documents
+    .filter((d) => /staff|forecast|budget|p&l|board|art planning|отпуска/i.test(`${d.title} ${d.description ?? ''}`))
+    .slice(0, 8)
+
+  if (keyDocs.length === 0) return ''
+
+  const lines = ['Key company documents (Drive): ' + keyDocs.map((d) => d.title).join(', ')]
+  lines.push('→ Use kb_registry(section="drive") for full list with URLs, then Drive tools to read content.')
+  return lines.join('\n')
+}
+
+/**
+ * Safely load a project card without throwing — returns null if not found.
+ */
+function loadProjectCardSafe(name: string): { slack_channels: Record<string, string>; clickup_lists: Array<{ list: string; chunks: number }> } | null {
+  try {
+    return loadProjectCard(name)
+  } catch {
+    return null
+  }
 }
 
 // ─── Counters ───

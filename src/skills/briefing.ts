@@ -32,76 +32,83 @@ const briefingSkill: Skill = {
     // Milestones, wiki, verification
     'майлстоун', 'milestone', 'вики', 'wiki',
     'проверь', 'правильно ли', 'корректно ли', 'по правилам',
+    // Financial, HR, documents
+    'зарплата', 'salary', 'заработал', 'бюджет', 'budget', 'P&L',
+    'документ', 'document', 'таблица', 'spreadsheet', 'планнинг', 'planning',
+    'отпуск', 'vacation', 'больничн', 'sick',
+    'посмотри в', 'открой', 'посчитай', 'сколько стоит', 'сколько денег',
   ],
 
   async preProcess(ctx) {
     return {
       prompt: ctx.message.text,
-      systemPromptExtra: `## Data tools — live sources + Knowledge Base + Registry
+      systemPromptExtra: `## Data tools
 
-**CRITICAL:**
-- ALWAYS call actual tools. NEVER answer from conversation history.
-- Never fabricate data — if results are empty, say so.
-- If a tool fails, retry once. If still failing, tell user which service is unavailable.
+- **kb_registry(project?, section?)** — org registry with team, channels, docs, status. Returns Drive doc URLs!
+- **briefing(sources, query_type, period, slack_channels?, clickup_list_names?)** — live data from Slack, Gmail, Calendar, ClickUp. Fuzzy-matches list names. Set include_closed=true for completion checks.
+- **kb_search(query, source?, person?, project?, period?, limit?)** — historical indexed data (Slack, Gmail, Drive, Notion). Hybrid semantic + keyword search.
+- **kb_entities(name?, type?)** — entity graph lookup (people, projects, relations).
+- **audit_tasks(list_name, include_closed?)** — checks ALL tasks in a ClickUp list against wiki rules.
+- **Drive tools** (via google-workspace MCP): search_drive, read_drive_file — can read Google Docs/Sheets content.
+- **Drill-down:** get_slack_thread(channel_name, thread_ts), get_email_content(message_id, account?)
 
-### Navigation pattern (recommended workflow):
-1. Check **Knowledge Map** in system prompt → identify project and relevant sources
-2. **kb_registry(project=X)** → get full project card: team, Slack channels, Drive doc URLs, ClickUp lists, current status
-3. Use specific names from the card to make targeted calls:
-   - briefing(slack_channels=[...], clickup_list_names=[...]) for live data
-   - kb_search(project="...") for historical/wiki data
-   - audit_tasks(list_name="...") for compliance checks
-4. Drill down: get_slack_thread(), get_email_content() for details
+## How to handle requests:
 
-### Registry tool (start here for project/org questions)
+### Quick questions (project list, team, structure):
+Answer from Knowledge Map / Quick Reference in system prompt above. 0 tool calls.
 
-**\`kb_registry(project?, section?)\`** — navigate the organizational Knowledge Registry.
-- kb_registry(project="Aquarium") → full project card with team, channels, docs (URLs!), tasks, status
-- kb_registry(section="people") → all internal + external people
-- kb_registry(section="processes") → all processes across projects
-- kb_registry(section="drive") → Google Drive document catalog index
-- kb_registry(section="channels") → Slack channel directory
-- kb_registry() → full knowledge map (table of contents)
+### Today's updates / daily digest:
+1. briefing(sources=["slack","clickup","calendar"], period="today") → ALL today's data in one call
+2. Group by project. Highlight: blockers, expiring deadlines, decisions.
 
-### Live tools (real-time data from services)
+### Project details / document lookup:
+1. kb_registry(project=X) → full card with team, docs (with URLs!), channels, status
+2. If user asks about a specific document: find it in registry, then use Drive tools to read content
 
-**\`briefing\` — multi-source queries in ONE call:**
-- briefing(sources=["calendar","gmail","slack","clickup"], query_type="recent", period="today")
-- Specific channels: briefing(sources=["slack"], slack_channels=["ohbibi-mwcf-project"], period="last_week")
-- Set include_closed=true when checking task completion status
-- Fuzzy-matches list names against ClickUp lists, folders, AND spaces
+### Financial / HR / salary questions:
+Financial data lives in Google Drive spreadsheets. Navigate:
+1. kb_registry(section="drive") → find Staff Reports, P&L, Staff Forecast with URLs
+2. Use **Drive tools** (search_drive or read_drive_file) to read actual spreadsheet content
+3. If needed: kb_search(query="salary/budget/cost") for indexed historical data
 
-**search_everywhere(search_term)** — keyword search across all live sources.
+### Document analysis / calculations:
+1. Find the document: check Key Documents in system prompt, or kb_registry(section="drive"), or kb_registry(project=X)
+2. **Read the document content** using Drive tools
+3. Extract data, calculate, present results
+4. If Drive tool fails: provide the document URL so user can open it manually
 
-**Drill-down:**
-- get_slack_thread(channel_name, thread_ts) — full Slack thread
-- get_email_content(message_id, account?) — full email body
+### Investigation / ticket creation / deep research:
+Be THOROUGH — quality over speed. Max 8 tool calls.
 
-### KB tools (historical indexed data: facts, entities, milestones, wiki)
+**Phase 1 — Project context:**
+Use Quick Reference from system prompt for channels/lists. If not there → kb_registry(project=X).
 
-**\`kb_search(query, source?, person?, project?, period?, limit?)\`** — hybrid semantic + keyword search.
-- kb_search(query="правила оформления", project="Аквариум") — wiki/rules search
-- kb_search(query="дедлайн M10") — find milestone deadlines
-- period: "last_week", "last_month", "last_3_months", or ISO range
+**Phase 2 — Internal sources:**
+- kb_search(query="problem keywords", project="X") → historical data
+- briefing(sources=["slack"], slack_channels=[...], query_type="search", query="problem") → recent Slack
+- briefing(sources=["clickup"], clickup_list_names=[...]) → task data
+- Try alternative keywords (English AND Russian) if results are sparse
 
-**\`kb_entities(name?, type?)\`** — entity graph lookup (people, projects, relations).
+**Phase 3 — External web search (for investigation only):**
+Search the web for: user reviews, community wikis, forum posts, public bug reports.
+Only do this for investigation/research tasks, NOT for daily updates.
 
-### Task audit tool
+**Phase 4 — Compile:**
+Internal evidence (Slack + dates) + external evidence (URLs). Structured format.
 
-**\`audit_tasks(list_name, include_closed?)\`** — checks ALL tasks in a ClickUp list against wiki rules. Returns ONLY violations.
+### Process / rules lookup:
+kb_registry(section="processes") + kb_search(query="правила/rules")
 
-### Decision strategy:
-
-1. **Project info, team, docs** → kb_registry(project=X) FIRST
-2. **Deadlines, milestones, historical facts** → kb_search
-3. **Wiki rules, processes** → kb_search + kb_registry(section="processes")
-4. **Current task status, today's updates** → briefing (live data)
-5. **Verify tasks against rules** → audit_tasks
-6. **People info** → kb_registry(section="people") + kb_entities
-7. **Documents with URLs** → kb_registry(project=X) has Drive doc URLs
-
-**Bail early — MANDATORY:**
-If after 3 tool calls you haven't found what the user asked about, STOP and respond with what you know. Say "не нашёл X в [sources checked]" and suggest where the user might look.`,
+**RULES:**
+- Knowledge Map + Quick Reference → 0 tool calls for project lists
+- Simple questions: max 3 calls
+- Investigation: max 8 calls
+- Daily updates: 1-2 calls
+- Financial/document: max 4 calls
+- NEVER call kb_registry() without arguments
+- Web search: ONLY for investigation tasks
+- Try both Russian AND English search terms
+- **BAIL OUT:** If after 3 calls you found NO relevant data, STOP. Tell user what you checked and ask where data lives. Do NOT keep searching same sources with different keywords.`,
     }
   },
 }

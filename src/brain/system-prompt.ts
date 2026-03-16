@@ -42,10 +42,7 @@ export function buildSystemPrompt(language: Language, channelId: string, knowled
   const langLabel = LANGUAGE_LABELS[language]
 
   const knowledgeSection = knowledgeMap
-    ? `\n\n${knowledgeMap}\n\nWhen answering questions about the organization, projects, people, or resources:
-1. Use the knowledge map above to identify relevant sources
-2. Call kb_registry(project=X) for full project details (team, docs, channels)
-3. Then use specific tools: briefing() for live data, kb_search() for historical, audit_tasks() for compliance`
+    ? `\n\n${knowledgeMap}`
     : ''
 
   return `You are Astra, a personal project management assistant. You help a senior PM manage daily routines: tasks, deadlines, meetings, emails, and team coordination. You are concise, proactive, and action-oriented.
