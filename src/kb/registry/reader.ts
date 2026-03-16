@@ -272,15 +272,12 @@ function ensureDriveLoaded(): void {
 
     // Multi-project catalog (small-projects.yaml, company-ops.yaml)
     if (data.projects) {
-      for (const p of data.projects) {
-        // Docs with project field go to that project
-        for (const doc of data.documents) {
-          if (doc.project) {
-            const key = doc.project.toLowerCase()
-            const existing = driveIndex.get(key) ?? []
-            existing.push(doc)
-            driveIndex.set(key, existing)
-          }
+      for (const doc of data.documents) {
+        if (doc.project) {
+          const key = doc.project.toLowerCase()
+          const existing = driveIndex.get(key) ?? []
+          existing.push(doc)
+          driveIndex.set(key, existing)
         }
       }
     }

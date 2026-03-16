@@ -215,12 +215,12 @@ export async function main(): Promise<void> {
           slack_channels: args.slack_channels as string[] | undefined,
           clickup_list_names: args.clickup_list_names as string[] | undefined,
           include_closed: (args.include_closed as boolean) ?? false,
-          limit_per_source: Math.max(1, Math.min(rawLimit, 50)),
+          limit_per_source: Math.max(1, Math.min(rawLimit, 200)),
           fields: args.fields as FieldName[] | undefined,
         })
       } else if (toolName === 'search_everywhere') {
         if (!args.search_term) throw new Error('search_term is required')
-        const searchLimit = Math.max(1, Math.min((args.limit_per_source as number) ?? 5, 50))
+        const searchLimit = Math.max(1, Math.min((args.limit_per_source as number) ?? 5, 200))
         result = await executeBriefing({
           sources: ['slack', 'gmail', 'calendar', 'clickup'],
           query_type: 'search',

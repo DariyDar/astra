@@ -80,6 +80,13 @@ export function buildKnowledgeMap(): string {
     }
   }
 
+  // Naming conventions
+  const namingRules = buildNamingConventions()
+  if (namingRules) {
+    lines.push(``)
+    lines.push(namingRules)
+  }
+
   lines.push(``)
   lines.push(`Navigation: call kb_registry(project="X") to get full project card (team, channels, docs with URLs, tasks, status).`)
   lines.push(`Call kb_registry(section="processes"|"wiki"|"drive"|"people"|"channels") for cross-project info.`)
@@ -123,14 +130,31 @@ function countExternalOrgs(): number {
 }
 
 function countChannels(): number {
+  // Count from slack-channels.yaml (organizational + legacy)
   const chFile = join(REGISTRY_DIR, 'channels', 'slack-channels.yaml')
   const data = loadYamlFile<Record<string, unknown[]>>(chFile)
-  if (!data) return 0
   let count = 0
-  for (const channels of Object.values(data)) {
-    if (Array.isArray(channels)) count += channels.length
+  if (data) {
+    for (const channels of Object.values(data)) {
+      if (Array.isArray(channels)) count += channels.length
+    }
   }
-  return count
+
+  // Also count project-level channels from projects/*.yaml
+  const channelNames = new Set<string>()
+  const projectsDir = join(REGISTRY_DIR, 'projects')
+  if (existsSync(projectsDir)) {
+    for (const file of readdirSync(projectsDir).filter((f) => f.endsWith('.yaml') && !f.startsWith('_'))) {
+      const proj = loadYamlFile<{ slack_channels?: Record<string, string> }>(join(projectsDir, file))
+      if (proj?.slack_channels) {
+        for (const ch of Object.keys(proj.slack_channels)) {
+          channelNames.add(ch)
+        }
+      }
+    }
+  }
+
+  return count + channelNames.size
 }
 
 function getClickUpSummary(): string {
@@ -166,6 +190,34 @@ function countProcesses(): number {
   const data = loadYamlFile<{ cross_project?: unknown[]; per_project?: unknown[] }>(overviewFile)
   if (!data) return 0
   return (data.cross_project?.length ?? 0) + (data.per_project?.length ?? 0)
+}
+
+/**
+ * Build a compact naming conventions block for the system prompt.
+ * Maps English names (from Slack/Gmail) → canonical Russian names + short forms.
+ */
+function buildNamingConventions(): string | null {
+  const dir = join(REGISTRY_DIR, 'people', 'internal')
+  if (!existsSync(dir)) return null
+
+  const mappings: string[] = []
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.yaml') && !f.startsWith('_'))) {
+    const data = loadYamlFile<{ name: string; aliases?: string[] }>(join(dir, file))
+    if (!data?.name || !data.aliases?.length) continue
+
+    // Find English alias(es) and short Russian names
+    const englishAliases = data.aliases.filter((a) => /[a-zA-Z]/.test(a))
+    const shortRussian = data.aliases.filter((a) => /[а-яА-ЯёЁ]/.test(a) && a !== data.name)
+
+    if (englishAliases.length > 0) {
+      const shortForm = shortRussian.length > 0 ? ` (${shortRussian[0].split(' ')[0]})` : ''
+      mappings.push(`${englishAliases[0]} → ${data.name}${shortForm}`)
+    }
+  }
+
+  if (mappings.length === 0) return null
+
+  return `Naming conventions (ALWAYS use Russian names in responses):\n${mappings.join(', ')}`
 }
 
 function loadYamlFile<T>(filePath: string): T | null {
