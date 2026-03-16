@@ -1,0 +1,91 @@
+# Alumni — internal team members who have left the company
+# Individual active people have their own YAML files
+
+- name: Денис Попов
+  aliases: [Denis Popov]
+  company: ac
+  status: left
+  roles:
+    - project: "SpongeBob: Krusty Cook-Off"
+      role: Build Engineer
+
+- name: Александр Прудко
+  aliases: [Aleksandr Prudko]
+  company: [ac, hg]
+  status: left
+  roles:
+    - project: "SpongeBob: Krusty Cook-Off"
+      role: VFX Artist
+    - project: "SpongeBob: Get Cookin'"
+      role: VFX Artist
+    - project: Level Two
+      role: VFX Artist
+    - project: Block Puzzle
+      role: VFX Artist
+    - project: Pivot Pumps
+      role: VFX Artist
+
+- name: Алексей Мащенко
+  aliases: [Aleksey Mashchenko]
+  company: [ac, hg]
+  status: left
+  note: >
+    Last day 2026-02-23.
+  roles:
+    - project: "SpongeBob: Krusty Cook-Off"
+      role: Developer
+    - project: "Motor World: Car Factory"
+      role: Developer / Audio
+    - project: Block Puzzle
+      role: Developer
+    - project: Idle Axe Thrower
+      role: Developer
+
+- name: Евгений Кутепов
+  aliases: [Evgeniy Kutepov]
+  company: ac
+  status: left
+  roles:
+    - project: Star Trek Timelines
+      role: Server Developer
+
+- name: Стас Гончар
+  aliases: [Stas Gonchar]
+  company: ac
+  status: left
+  roles:
+    - project: Star Trek Timelines
+      role: Developer, DevOps/deploys
+
+- name: Антон Морев
+  aliases: [Anton Morev]
+  company: ac
+  status: left
+  roles:
+    - project: Star Trek Timelines
+      role: PM, LiveOps operations
+
+- name: Василий Смагин
+  aliases: [Vasiliy Smagin]
+  company: ac
+  status: left
+  roles:
+    - project: Star Trek Timelines
+      role: QA Lead
+  note: >
+    Transferred responsibilities to Дарий.
+
+- name: Денис Киселёв
+  aliases: [Denis Kiselyov]
+  company: ac
+  status: left
+  roles:
+    - project: Star Trek Timelines
+      role: Developer, server/sys admin
+
+- name: Ангелина Заика
+  aliases: [Angelina Zaika]
+  company: ac
+  status: left
+  role: Artist
+  projects: [Star Trek Timelines]

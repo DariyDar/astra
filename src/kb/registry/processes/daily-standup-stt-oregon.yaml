@@ -1,0 +1,26 @@
+name: "Stand Up || STT & Oregon"
+cadence: daily
+projects: [Star Trek Timelines, The Oregon Trail]
+participants:
+  - Anastasia Voronova
+  - Ivan Shchelokov
+  - Yan Rimarchuk
+  - Danil Koryakin
+  - Ilya Voronov
+  - Rustam
+  - Valera
+  - Ilya Bocharov
+  - Anna Butkeeva
+  - Marina Lyandina
+  - Marina Nazarova
+  - Denis Art
+  - Slava Kotyonok
+  - Danil
+  - Dariy
+time: "16:00 Bali (08:00 Yerevan)"
+duration: "15 min"
+description: >
+  Shared daily standup for Star Trek Timelines and Oregon Trail teams.
+  ~17 attendees from AC/HG. Uses shared agenda doc
+  "STT || Standup Agenda & Meeting Notes" (populated from digest).
+  Sections: Design, Engineering, ART, Managers.

@@ -1,0 +1,13 @@
+name: Nickelodeon
+code: nick
+type: licensor
+slack_workspace: ac
+projects:
+  - name: "SpongeBob: Krusty Cook-Off"
+    status: active
+  - name: "SpongeBob: Get Cookin'"
+    status: active
+note: >
+  Licensor (Paramount/Nickelodeon) for all SpongeBob projects. Approves art themes,
+  character usage, and IP compliance. Previously had Marin Yoshino as direct contact;
+  now handled through Kaitlynn Hegarty (Tilting Point).

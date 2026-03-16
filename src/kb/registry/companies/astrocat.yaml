@@ -1,0 +1,40 @@
+name: AstroCat
+code: ac
+type: internal
+slack_workspace: ac
+projects:
+  - name: "SpongeBob: Krusty Cook-Off"
+    status: active
+  - name: "SpongeBob: Get Cookin'"
+    status: active
+  - name: Star Trek Timelines
+    status: active
+  - name: The Oregon Trail
+    status: active
+  - name: "Motor World: Car Factory"
+    status: active
+  - name: Aquarium
+    status: active
+  - name: Idle Axe Thrower
+    status: active
+  - name: Tough Guy
+    status: active
+  - name: Vector
+    status: active
+  - name: Symphonia
+    status: active
+  - name: Puppet Master
+    status: active
+  - name: Clash of Gods
+    status: active
+  - name: Pong Breaker Royale
+    status: active
+  - name: Block Puzzle
+    status: inactive
+  - name: MOBA BACALHAU
+    status: inactive
+note: >
+  Internal game studio. Co-founders include Dariy (CPO / VP Production).
+  Develops own IP (Aquarium, Idle Axe, Vector, Tough Guy, etc.) and works on
+  client projects (Tilting Point, Ohbibi). Shares team and infrastructure with
+  Highground (HG). Based in Bali timezone (UTC+8).

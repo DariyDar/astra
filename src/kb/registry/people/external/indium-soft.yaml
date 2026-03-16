@@ -1,0 +1,89 @@
+organization: Indium Soft
+type: qa_outsource
+projects: [SpongeBob Krusty Cook-Off, The Oregon Trail]
+slack_uids_workspace: [ac, hg]
+contacts:
+  - name: Nisha Ubaid
+    role: QA Lead — Scrum updates, координация regression testing, feature checklists
+    slack_uids: {ac: U06A55793T4}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Jijo M Mathews
+    role: QA Tester — также работает на Oregon Trail (shared с SBKCO)
+    slack_uids: {ac: U069YFT22EA}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off, The Oregon Trail]
+
+  - name: Ramzy Ahmed
+    role: QA Tester — regression, bug verification, build testing
+    slack_uids: {ac: U069QGZMULX}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Preethi Pandit
+    role: QA Tester — Jira tickets
+    slack_uids: {ac: U06P288N1K8}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Sanyam Srivastava
+    role: QA Tester — regression updates
+    slack_uids: {ac: U06K66MA8G1, hg: U09GPH8GFAT}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Saravana Muthu
+    role: QA Tester
+    slack_uids: {ac: U06P5VC1Q2Z}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Javed Alam
+    role: QA Tester
+    slack_uids: {ac: U06AHPSB4C9}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Dileep GK
+    role: QA Tester — bug verification, regression
+    slack_uids: {ac: U08MXBTT33K}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Neehar Kulkarni
+    role: QA/Art asset координация
+    slack_uids: {ac: U06APTJSGBZ}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Vishnu Naik N
+    role: QA Tester
+    slack_uids: {ac: U08TFGHN9PW}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: MohammedRazeen M Ajaravi
+    role: QA Tester
+    slack_uids: {ac: U09SYBTP1QF}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Juwaina R Gogeri
+    role: QA Tester
+    slack_uids: {ac: U06A2767VFX}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Abhishek Kishor Solat
+    role: QA Tester — must-fix issues
+    slack_uids: {ac: U0ACF9RQ8DR}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+note: >
+  Внешний QA аутсорс (Индия). Компания: Indium Soft.
+  Ежедневный email-отчёт с результатами работы за день.
+  Jijo M Mathews shared между SBKCO и Oregon Trail.
+  Sanyam Srivastava — единственный с UID в обоих воркспейсах (ac + hg).
+  Заменили Snoopgame на Oregon Trail.

@@ -1,0 +1,44 @@
+# Google Drive — SpongeBob KCO (F2P / LiveOps)
+# Client: Tilting Point / Nickelodeon
+# Generated: 2026-03-16
+
+project: SpongeBob KCO
+aliases: [SBKCO, SpongeBob F2P]
+client: Tilting Point
+
+documents:
+  - title: "Sponge Bob Weekly Calls Agenda"
+    url: https://docs.google.com/document/d/1FCLlBjnXhtmASoMDE661C3ockjG1jR9-NjdSkornJNc/edit
+    type: document
+    owner: avoronova
+    last_modified: 2026-03-12
+    description: >
+      Running agenda and notes for the weekly SpongeBob KCO sync calls with Tilting Point.
+      Covers status updates, blockers, upcoming milestones, and action items.
+
+  - title: "SpongeBob Product Roadmap"
+    url: https://docs.google.com/spreadsheets/d/19OV38LqNNn_FDLGO2Yx6pyQjKeRK5YmnJHPudAQPNxQ/edit
+    type: spreadsheet
+    owner: smelanson
+    last_modified: 2026-03-11
+    description: >
+      High-level product roadmap for SpongeBob KCO. Outlines planned features,
+      content updates, LiveOps events, and target release dates.
+
+  - title: "SpongeBobCalendarEvents"
+    url: https://docs.google.com/spreadsheets/d/11ZsZk2ttaE51gkFj0NEnJFJq09uNMUUMSvS1cFNV09c/edit
+    type: spreadsheet
+    owner: admin
+    last_modified: 2026-03-09
+    description: >
+      Calendar of in-game events for SpongeBob KCO. Tracks event type, start/end dates,
+      featured content, and associated promotions for the LiveOps schedule.
+
+  - title: "[NEW] SBKCO - Localization Unified (in-game)"
+    url: https://docs.google.com/spreadsheets/d/1_91JHC0h4xbTVPuVuD2G3dzCnnAV_k5De62I6ht75hM/edit
+    type: spreadsheet
+    owner: avoronova
+    last_modified: 2026-02-25
+    description: >
+      Unified localization sheet for all SpongeBob KCO in-game strings.
+      Consolidates translations across features into a single source of truth.

@@ -1,0 +1,94 @@
+name: Level One
+aliases: [L1, Левел Ван, LEV1, LVL1, Gluc, Глюк]
+company: hg
+client: Relevate Health
+status: active
+platform: [iOS, Android]
+note: >
+  Проект Highground для клиента Relevate Health.
+  Медицинское/образовательное приложение (диабет).
+  Семён Чиненов — основной разработчик, Фарид — GD.
+  Алёна Субботина — поддержка/QA.
+
+slack_channels:
+  level-one-team: Канал команды (AC, 10.7K msgs + HG, 414 msgs)
+  level-one-qa: QA канал (HG, 214 msgs)
+  level-one-project: Канал проекта (HG, 15 msgs)
+  relevate_health-high_ground: Общий канал с Relevate Health (HG, 549 msgs)
+
+team_internal:
+  - name: Семён Чиненов
+    role: Developer
+    status: active
+  - name: Фарид Хайбуллин
+    role: Game Designer
+    status: active
+  - name: Данил Корякин
+    role: QA
+    status: active
+  - name: Екатерина Дочкина
+    role: UI/UX Designer
+    status: active
+  - name: Валерий Богородский
+    role: Developer
+    status: active
+  - name: Никита Кокарев
+    role: Art Director
+    status: active
+  - name: Алёна Субботина
+    role: Support / QA
+    status: active
+  - name: Юлия Гречаная
+    role: Org
+    status: active
+  - name: Арсен Чаталян
+    role: COO
+    status: active
+
+team_external:
+  relevate_health:
+    note: >
+      Клиент — Relevate Health (Levelex). Коммуникация в Slack канале
+      hg/relevate_health-high_ground (549 msgs). Основные контакты:
+      Noah Kolman (основной ревьюер билдов), Kyle Shafer (маркетинг/ассеты).
+    - name: Noah Kolman
+      role: Product / Build Review — ревьюит билды, даёт фидбек по геймплею
+      slack_uids: {hg: U07RD5QSG4B}
+      status: active
+    - name: Kyle Shafer
+      role: Marketing / Creative — ревью ассетов, Livtencity, видео
+      slack_uids: {hg: U07RFR0NDT6}
+      status: active
+    - name: Амир Лотан
+      role: Product Manager
+      slack_uids: {hg: U07R6M1MQNS}
+      status: active
+    - name: Chris Day
+      role: Designer — 2D ассеты, Figma
+      slack_uids: {hg: U07RAE7JU69}
+      status: active
+    - name: Paul Bellinghiere
+      role: Team member
+      slack_uids: {hg: U07RD7VRC8K}
+      status: active
+    - name: Philip Hollingsworth
+      role: Team member
+      slack_uids: {hg: U07RD7W90G3}
+      status: active
+    - name: Kimberly Moreland
+      role: Team member
+      slack_uids: {hg: U08JUEXGB39}
+      status: active
+
+processes:
+  - name: MWCF / Aquarium / Level One || Sync
+    cadence: weekly
+    description: >
+      Совместный синк по трём проектам. 16:00 UTC+8 (Bali).
+      Участники: Дарий + Семён Чиненов.
+    participants: [Дарий, Семён Чиненов]
+
+resources:
+  - name: ClickUp — Level One Tasks
+    type: project_management
+    description: ClickUp list "Level One - Tasks" (~12 задач)

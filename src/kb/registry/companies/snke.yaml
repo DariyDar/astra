@@ -1,0 +1,10 @@
+name: SNKE
+code: snke
+type: client
+slack_workspace: hg
+projects:
+  - name: Karl Storz
+    status: finished
+note: >
+  Client for Karl Storz urology project (finished). Sent Unreal Engine port
+  questionnaire. Project handled by Highground.

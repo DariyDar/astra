@@ -1,0 +1,54 @@
+organization: Relevate Health
+type: client
+projects: [Level One, Level Two, Botox, HTML5 Banners, Playable Ads, Relevate Health Promo, Pivot Pumps]
+slack_uids_workspace: [hg]
+contacts:
+  - name: Amir Lotan
+    display: Амир Лотан
+    role: Product Manager / Product Owner
+    slack_uids: {hg: U07R6M1MQNS}
+    status: active
+    projects: [Level One, Level Two]
+
+  - name: Noah Kolman
+    role: Product / Build Review — ревьюит билды, даёт фидбек по геймплею
+    slack_uids: {hg: U07RD5QSG4B}
+    status: active
+    projects: [Level One]
+
+  - name: Kyle Shafer
+    role: Marketing / Creative — ревью ассетов, Livtencity, видео
+    slack_uids: {hg: U07RFR0NDT6}
+    status: active
+    projects: [Level One]
+
+  - name: Chris Day
+    role: Designer — 2D ассеты, Figma
+    slack_uids: {hg: U07RAE7JU69}
+    status: active
+    projects: [Level One]
+
+  - name: Paul Bellinghiere
+    role: Team member
+    slack_uids: {hg: U07RD7VRC8K}
+    status: active
+    projects: [Level One]
+
+  - name: Philip Hollingsworth
+    role: Team member
+    slack_uids: {hg: U07RD7W90G3}
+    status: active
+    projects: [Level One]
+
+  - name: Kimberly Moreland
+    role: Team member
+    slack_uids: {hg: U08JUEXGB39}
+    status: active
+    projects: [Level One]
+
+note: >
+  Relevate Health (Levelex) — основной клиент Highground.
+  Медицинские/образовательные приложения и промо-контент.
+  Коммуникация в Slack канале hg/relevate_health-high_ground.
+  Амир Лотан — product owner, участвует в Level One и Level Two.
+  Остальные контакты появляются пока только в Level One.

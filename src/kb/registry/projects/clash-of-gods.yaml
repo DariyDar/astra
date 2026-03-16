@@ -1,0 +1,24 @@
+name: Clash of Gods
+aliases: [CoG, Боу, Bow]
+company: ac
+status: active
+note: >
+  Внутренний проект AstroCat.
+  НЕ путать с Block Puzzle (разные проекты).
+  Проект изначально был в HG, потом перешёл в AC.
+
+slack_channels:
+  tech-dev-bow: Канал разработки (HG, 259 msgs)
+  bow-team: Канал команды (HG, 16 msgs)
+  hg-bow: Канал проекта (HG, 14 msgs)
+  bow-project: Канал проекта (HG, 2 msgs)
+  bow-feedback: Фидбек (HG, 1 msg)
+  bow-qa: QA (HG, 1 msg)
+
+team_internal:
+  - name: Илья Бочаров
+    role: Game Designer
+    status: active
+  - name: Валерий Богородский
+    role: CTO
+    status: active

@@ -1,0 +1,15 @@
+organization: Beamable
+type: partner
+projects: [Star Trek Timelines]
+slack_uids_workspace: [ac]
+contacts:
+  - name: Allister MacLeod
+    role: Engineer/Support Lead — Federated Identity, purchasing, SDK, Unity
+    slack_uids: {ac: U1779FG9H}
+    status: active
+    projects: [Star Trek Timelines]
+
+note: >
+  Backend-as-a-service провайдер для Star Trek Timelines.
+  Beamable Portal v2 используется для Commercial Catalog, LiveClone, Offer Definitions.
+  Канал: #stt-beamable-support (HG, 20 msgs).

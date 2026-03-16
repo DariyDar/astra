@@ -1,0 +1,32 @@
+name: Pong Breaker Royale
+aliases: [Pong, Понг]
+company: ac
+status: active
+note: >
+  Внутренний проект AstroCat. Bekzod Xasanov — разработчик.
+  Проект изначально был в HG, потом перешёл в AC.
+
+slack_channels:
+  pong-team: Канал команды (HG, 13 msgs)
+  pong-project: Канал проекта (HG, 2 msgs)
+  pong-qa: QA (HG, 1 msg)
+
+team_internal:
+  - name: Bekzod Xasanov
+    role: Developer
+    status: active
+  - name: Валерий Богородский
+    role: CTO
+    status: active
+  - name: Руслан Гадельшин
+    role: Dev Lead
+    status: active
+  - name: Марина Назарова
+    role: Artist
+    status: active
+  - name: Никита Кокарев
+    role: Art Director
+    status: active
+  - name: Вячеслав Куряков
+    role: Lead GD / Co-founder HG
+    status: active

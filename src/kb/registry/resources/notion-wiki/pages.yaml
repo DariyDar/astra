@@ -1,0 +1,318 @@
+# Notion & ClickUp Wiki Catalog
+# Generated: 2026-03-15
+
+# =============================================================================
+# NOTION PAGES
+# Source: kb_chunks WHERE source='notion'
+# Total: 1,442 unique pages, 15,823 chunks
+# =============================================================================
+
+notion:
+  summary:
+    total_pages: 1442
+    total_chunks: 15823
+    note: >
+      Most pages are GDD sections, task specs, and internal docs.
+      Pages with 100+ chunks are substantive documents.
+      Pages with 1-5 chunks are typically task references or templates.
+
+  # --- Star Trek Timelines ---
+  star_trek_timelines:
+    project: Star Trek Timelines
+    pages:
+      - "FBB Endless Sink + Starbase Access"        # 107 chunks
+      - "Daily Quests and Weekly Event Systems"      # 107 chunks
+      - "How to pick Reruns || Instruction"          # 110 chunks
+      - "Crew limit override (Add crew slots)"       # 102 chunks
+      - "FBB Leaderboard"                            # 102 chunks
+      - "9.2.0"                                      # 104 chunks — release notes
+      - "9.3.0"                                      # 102 chunks — release notes
+      - "Content Update Pipeline"                    # 105 chunks
+      - "Modifying Leaderboard Data"                 # 103 chunks
+      - "Server update checklist"                    # 103 chunks
+
+  # --- Puppet Master (ex-Summoner) ---
+  puppet_master:
+    project: Puppet Master
+    pages:
+      - "Puppet Master GDD"                          # 111 chunks
+      - "Skills Descriptions"                        # 104 chunks
+      - "Skills GDD ARCHIVE"                         # 103 chunks
+      - "Skill Activation"                           # 102 chunks
+      - "Skill Usage"                                # 102 chunks
+      - "Bots Activity GDD"                          # 103 chunks
+      - "Post-Immortalization Advancement"           # 103 chunks
+
+  # --- Pong Breaker / Level Two ---
+  pong_breaker:
+    project: Level Two
+    pages:
+      - "Opponent"                                   # 110 chunks
+      - "Boosters GDD"                               # 104 chunks
+      - "Blocks"                                     # 102 chunks
+      - "Blocks Spawning"                            # 102 chunks
+      - "Blocks Visual States"                       # 102 chunks
+      - "Trails"                                     # 102 chunks
+      - "Tornado"                                    # 103 chunks
+      - "Explosions"                                 # 103 chunks
+      - "Score System"                               # 103 chunks
+      - "Fake Multiplayer"                           # 103 chunks
+      - "Trophy Road (Archived)"                     # 103 chunks
+      - "Trophy Road + Battle Pass + Master League"  # 103 chunks
+      - "Paddle GDD"                                 # 102 chunks
+      - "Art. Paddle"                                # 103 chunks
+      - "Art. Avatars"                               # 102 chunks
+      - "Opponent Search Logic + UI"                 # 102 chunks
+      - "Hits"                                       # 102 chunks
+      - "Plasma Beam"                                # 102 chunks
+      - "Fallout Missile"                            # 102 chunks
+      - "UI Battle Screen"                           # 102 chunks
+      - "Aura"                                       # 1 chunk
+      - "Black Hole"                                 # 1 chunk
+
+  # --- Level One ---
+  level_one:
+    project: Level One
+    pages:
+      - "Tile-by-Tile Level Results"                 # 204 chunks — largest Notion doc
+      - "Ho to configure Themed level"               # 106 chunks
+      - "Tutorial"                                   # 106 chunks
+      - "Level Design"                               # 104 chunks
+      - "Level Configuration Parameters"             # 102 chunks
+      - "Level progression/Tutorial scenarios"       # 102 chunks
+      - "Levels"                                     # 102 chunks
+      - "Progression Modes"                          # 102 chunks
+      - "First Launch User Flow"                     # 102 chunks
+      - "Difficulty Auto-Adjustment System"          # 102 chunks
+
+  # --- SpongeBob Get Cookin' ---
+  spongebob_get_cookin:
+    project: SpongeBob Get Cookin'
+    pages:
+      - "Meal Generation System"                     # 105 chunks
+      - "Ресторан"                                   # 102 chunks
+      - "Кухонные предметы"                          # 102 chunks
+      - "Продукты"                                   # 102 chunks
+      - "Настройки геймплея"                         # 102 chunks
+      - "Интерьер Декор"                             # 102 chunks
+      - "Ассеты"                                     # 102 chunks
+      - "Food Unlock/Mastering"                      # 102 chunks
+      - "[ART] Food Icons"                           # 102 chunks
+      - "[ART] Создать концепт заброшенной пиццерии" # 103 chunks
+
+  # --- Botox / Pivot ---
+  botox_pivot:
+    project: Pivot Pumps
+    pages:
+      - "Ketone Management Scenario"                 # 104 chunks
+      - "Dose Evaluation System (Rhythm System)"     # 104 chunks
+      - "P-I Tutorial"                               # 105 chunks
+      - "Global Configuration Parameters"            # 104 chunks
+      - "Settings and Data"                          # 106 chunks
+      - "[DEV] Medium/Long-digested foods fully countered with single injection" # 102
+      - "[GD] Medium/Lang-digested foods fully countered with single dose"       # 102
+      - "[GD] Punish frequent dosing/juice usage"    # 102 chunks
+      - "[ART] Mockup/Particles of Ketones Scenario" # 102 chunks
+
+  # --- Idle Axe Thrower ---
+  idle_axe:
+    project: Idle Axe Thrower
+    pages:
+      - "Setup Booster Packs & Weekend/StepUp Offers 1.2" # 105 chunks
+      - "Setup Digging Event 1.2"                    # 104 chunks
+      - "Setup Collection Event 1.2"                 # 103 chunks
+      - "Messengage Flow"                            # 102 chunks
+
+  # --- Aquarium ---
+  aquarium:
+    project: Aquarium
+    pages:
+      - "Extraction Zone (OUT OF CONTEST)"           # 102 chunks
+      - "Aquarium Home"                              # 1 chunk
+
+  # --- Game Concept Briefs (prototypes / pitches) ---
+  game_concepts:
+    project: ~prototypes
+    note: Game concept briefs for pitched/prototype projects
+    pages:
+      - "[Game Concept Brief] Heat Punk (Oasis in the desert)"   # 105 chunks
+      - "[Game Concept Brief] Elixir Idle Tycoon"                # 105 chunks
+      - "[Game Concept Brief] Galactic Pet Shop Tycoon"          # 104 chunks
+      - "[Game Concept Brief] Dead per Dead"                     # 103 chunks
+      - "[Game Concept Brief] Tree City Simulator"               # 102 chunks
+      - "[Game Concept Brief] Merge Tactics"                     # 102 chunks
+
+  # --- Cross-Project / Company-Wide ---
+  cross_project:
+    project: ~company-ops
+    pages:
+      # Processes
+      - "[DEV] Release Instructions"                 # 110 chunks
+      - "Создание GDD"                              # 109 chunks
+      - "Создание Баланса"                           # 109 chunks
+      - "New Release Pipeline"                       # 108 chunks
+      - "Production processes"                       # 107 chunks
+      - "Gitflow"                                    # 106 chunks
+      - "Localization"                               # 106 chunks
+      - "VFX & Animations"                           # 106 chunks
+      - "Analytics"                                  # 105 chunks
+      - "Onboarding"                                 # 105 chunks
+      - "Питчинг проектов"                           # 105 chunks
+      - "Трекинг времени (Time Tracking)"            # 105 chunks
+      - "Cross Repo Flow"                            # 105 chunks
+      - "GitHub Actions CI/CD Setup (Rus)"           # 105 chunks
+      - "Self-testing check-list & Recommendations"  # 104 chunks
+      - "C# Coding Conventions"                      # 103 chunks
+      - "Milestones"                                 # 103 chunks
+      - "Builds"                                     # 103 chunks
+      - "Scrum"                                      # 103 chunks
+      - "Remote Config"                              # 103 chunks
+      - "Achievements"                               # 103 chunks
+      - "Поддержка проекта"                          # 104 chunks
+      - "Localization [outdated]"                    # 103 chunks
+      - "Supplementary Texts (Tips/Hints/Cheer-ups)" # 103 chunks
+      # HR / Admin
+      - "Payment & invoices"                         # 103 chunks
+      - "How to use vacation/sick leave"             # 102 chunks
+      - "Performance review"                         # 102 chunks
+      - "New project starting guide"                 # 102 chunks
+      - "Unity project setup"                        # 102 chunks
+      - "Production environment upgrade plan"        # 102 chunks
+      - "Getting started with Projects & Tasks"      # 102 chunks
+      - "Что такое Эпики и Майлстоуны"               # 102 chunks
+      - "Тестирование фичи"                          # 102 chunks
+      - "Тестирование релиза"                        # 102 chunks
+      - "Monthly data update process"                # 102 chunks
+      - "Grades matrix"                              # 102 chunks
+      - "Build machines"                             # 102 chunks
+      - "VPN"                                        # 102 chunks
+      - "Clockify"                                   # 102 chunks
+      - "Company Intro"                              # 102 chunks
+      - "IAP / Offers"                               # 102 chunks
+      - "GDD"                                        # 105 chunks — generic template
+
+  # --- Templates (low-chunk, Notion templates) ---
+  templates:
+    project: ~templates
+    note: Notion database templates (2-5 chunks each)
+    pages:
+      - "Architecture Overview"                      # 5 chunks
+      - "Bug"                                        # 5 chunks
+      - "Project Kickoff"                            # 5 chunks
+      - "Technical Spec"                             # 5 chunks
+      - "New Project"                                # 4 chunks
+      - "New sprint"                                 # 4 chunks
+      - "Sprint 1-13"                                # 2-4 chunks each
+      - "Task"                                       # 3 chunks
+      - "Feature Request"                            # 2 chunks
+
+
+# =============================================================================
+# CLICKUP WIKI (stored as source='clickup', chunkType='document')
+# Total: 5,081 chunks across 4 doc groups
+# Ingested via: src/kb/ingest-wiki.ts
+# =============================================================================
+
+wiki:
+  summary:
+    total_chunks: 5081
+    doc_groups: 4
+    note: >
+      ClickUp Docs API v3 wiki dump. Stored under source='clickup'
+      with metadata.chunkType='document' and metadata.wikiSource=true.
+
+  company_wiki:
+    doc_group: "Company Wiki"
+    project: ~company-ops
+    total_sections: 63
+    sections:
+      # HR & Onboarding
+      - title: "Vacation and Sick Leave"                         # 117 chunks
+      - title: "Добро пожаловать в команду! (Анбординг)"         # 114 chunks
+      - title: "Compensation Policy"                             # 112 chunks
+      - title: "Vacation & Sick-leave"                           # 110 chunks
+      - title: "Onboarding onto a new project"                   # 109 chunks
+      - title: "Овертаймы"                                       # 107 chunks
+      - title: "Benefits cafeteria"                              # 106 chunks
+      - title: "Performance Review"                              # 106 chunks
+      - title: "Core Values"                                     # 107 chunks
+      - title: "Holidays & non-working days"                     # 102 chunks
+      - title: "Working With Me Docs"                            # 102 chunks
+      - title: "Working With Me, [First Last Name]"              # 102 chunks
+      # Task Management & Processes
+      - title: "Task Management from A to Z"                     # 112 chunks
+      - title: "Ведение задач от А до Я"                         # 112 chunks
+      - title: "Managing Your Workflow in ClickUp"               # 111 chunks
+      - title: "Task Management"                                 # 109 chunks
+      - title: "Роль Релиз Менеджера и процесс релизов"          # 109 chunks
+      - title: "Gitflow"                                         # 108 chunks
+      - title: "Трекинг времени"                                 # 107 chunks
+      - title: "Получение оплаты за проделанную работу: 4Dev"    # 107 chunks
+      # Technical
+      - title: "Sign in with Apple User Transfer"                # 108 chunks
+      - title: "Transferring an App on App Store Connect - Initiator Side"   # 108 chunks
+      - title: "Transferring an App on App Store Connect - Recipient Side"   # 105 chunks
+      - title: "Facebook App Transfer"                           # 102 chunks
+      - title: "C# Coding Conventions"                           # 104 chunks
+      - title: "Perfomance testing"                              # 104 chunks
+      - title: "Tested feature, tested RC"                       # 104 chunks
+      - title: "VPN"                                             # 103 chunks
+      - title: "ClickUp Resources"                               # 103 chunks
+      # Departments
+      - title: "Development"                                     # 102 chunks
+      - title: "HR"                                              # 102 chunks
+      - title: "Marketing"                                       # 102 chunks
+      - title: "Sales"                                           # 102 chunks
+      - title: "Services"                                        # 102 chunks
+      - title: "List of questions"                               # 104 chunks
+      - title: "Links"                                           # 102 chunks
+      - title: "Tools tips"                                      # 102 chunks
+      # Stubs (1 chunk each — section headers only)
+      - title: "Benefits"
+      - title: "Brand Assets"
+      - title: "Career Pathways"
+      - title: "Departments"
+      - title: "Employee Handbook"
+      - title: "Game development pipeline"
+      - title: "Growth & Career"
+      - title: "HR Room"
+      - title: "Post-Release Monitoring & Support"
+      - title: "Pre-production"
+      - title: "Processes"
+      - title: "Production"
+      - title: "Productivity Resources"
+      - title: "QA documentation"
+      - title: "QA syncs"
+      - title: "Release Preparation"
+      - title: "Resources"
+      - title: "Systems & Tools"
+      - title: "Tool 1"
+      - title: "Tool 2"
+      - title: "Tool 3"
+      - title: "Travel & Expense Policy"
+      # Process stubs
+      - title: "Process 1"                                       # 102 chunks
+      - title: "Process 2"                                       # 102 chunks
+      - title: "Process 3"                                       # 102 chunks
+
+  departments_wiki:
+    doc_group: "Departments Wiki"
+    project: ~company-ops
+    sections:
+      - title: "AB-tests pipeline"                               # 104 chunks
+      - title: "Project first release: analytics integration"    # 105 chunks
+      - title: "Analytical resorces"                             # 103 chunks
+      - title: "Project regular release: analytics coverage"     # 103 chunks
+
+  project_overview:
+    doc_group: "Project Overview"
+    project: ~company-ops
+    sections:
+      - title: "Project Overview Doc"                            # 103 chunks
+
+  projects_info:
+    doc_group: "Project's Info"
+    project: ~company-ops
+    sections:
+      - title: "Art v3.0 requirements"                           # 103 chunks
+      - title: "Project's Info"                                  # 102 chunks

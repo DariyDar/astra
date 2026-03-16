@@ -1,0 +1,25 @@
+# Google Drive — Botox / Pivot Pumps
+# Internal AstroCat project (insulin pump / glucose gameplay)
+# Generated: 2026-03-15
+
+project: Botox
+aliases: [Pivot Pumps, Insulin Pump, Gluc]
+
+documents:
+  - title: "Insuluin Pump GDD"
+    url: https://docs.google.com/document/d/18LqnwJfhJdC-lXKr3OKlVbbKnCMVBk_pOJrMfGiuoyo/edit
+    type: document
+    owner: Vyacheslav Kuryakov
+    last_modified: 2026-02-03
+    description: >
+      Game Design Document for the Insulin Pump gameplay mechanic in Botox.
+      Defines the core pump management loop, difficulty progression, and player feedback systems.
+
+  - title: "Localization - Gluc Project"
+    url: https://docs.google.com/spreadsheets/d/1N-04IkhGox9vdM7PZK_v_CXXAIe6Mq9oLaH0JSZL7mA/edit
+    type: spreadsheet
+    owner: Valeriy Bogorodskiy
+    last_modified: 2026-03-05
+    description: >
+      Localization strings for the Botox project (codenamed "Gluc" for glucose theme).
+      Contains all translatable strings with language-specific translations and status.

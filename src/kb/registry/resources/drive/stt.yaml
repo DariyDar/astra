@@ -1,0 +1,242 @@
+# Google Drive — Star Trek Timelines (STT)
+# Includes all CABs (Crew Appearance Briefs), tracking sheets, QA docs, event data.
+# Generated: 2026-03-15
+
+project: Star Trek Timelines
+aliases: [STT]
+client: Tilting Point
+
+# ---------------------------------------------------------------------------
+# Crew Appearance Briefs (CABs)
+# Each CAB is a detailed character spec: art direction, costume references,
+# pose/expression notes, and asset requirements for a new STT crew member.
+# All owned by avoronova (Anastasia Voronova), ~102-103 chunks each.
+# ---------------------------------------------------------------------------
+cab_batch:
+  count: 39
+  type: document
+  owner: avoronova
+  last_modified_range: "2026-02-02 — 2026-03-08"
+  description: >
+    Character Appearance Briefs for STT crew releases. Each document specifies
+    the visual direction for one crew variant — costume, pose, expression,
+    background, and reference images. Used by the art team to produce crew assets.
+  characters:
+    - name: Ah'len
+      url: https://docs.google.com/document/d/1zhJhE2Yk7R_L2PTxB_IkXDP7t8sgsQhC6L6ImZ_J2RQ/edit
+    - name: Bartender Trelane
+      url: https://docs.google.com/document/d/19eIo9EbpOQBauOpOze_C-F9YklUhc8X7rwjFhJeY2DA/edit
+    - name: Captain Lawrence H. Styles
+      url: https://docs.google.com/document/d/1kF9KWqMXmkfSqEjuCFiGqEt_LcDR3TVXZm8-q_W6ZUk/edit
+    - name: Chief Andy Billups
+      url: https://docs.google.com/document/d/1_663aiXHtlO6f0_Yt4QQ2bAOk9BB0UjX7EXQfh2XnLE/edit
+    - name: Chimera Batel
+      url: https://docs.google.com/document/d/1V8PxENrkfx74yt508lm4bBvli5YupDzx4mhKnxQp_-w/edit
+    - name: Colonel West
+      url: https://docs.google.com/document/d/1yEMXX-lQEybJnkfMCDzzXvWPaWdeIJ7Bemrm9pk3U10/edit
+    - name: Colyus
+      url: https://docs.google.com/document/d/1ed7SjxJkVJyWPUDZuiNNQ7xyJTMwyYqKMrHgAVpOYGs/edit
+    - name: Coutu
+      url: https://docs.google.com/document/d/1dU2rIyY6wuG6HqlXgvwW_uSyCKHkS5EYGaGYLD96xyU/edit
+    - name: Date Night Sisko
+      url: https://docs.google.com/document/d/1oESRput2XdnXLdjpHEktT2i8gotIt09EL1-ID9HgEok/edit
+    - name: Dr. Renée Picard
+      url: https://docs.google.com/document/d/1PpGiZ2lef_jnSKFo5N3vx2NXrtpAX9HpbW3rwU3Y0LY/edit
+    - name: Editor Q
+      url: https://docs.google.com/document/d/1rPu9E6Z238GOIUWoa1NjjlNYck_5bDBWSXQ8NHq43r0/edit
+    - name: Ee'char
+      url: https://docs.google.com/document/d/1fYXoROCoCju682ItQe-TE2DVQlYJQ1Y9pHJRclAcds0/edit
+    - name: Emissary K'Ehleyr
+      url: https://docs.google.com/document/d/1lVKj16Qe_4kW00LeiHLWM2ubGR9TC4yfS53pe4LCHs0/edit
+    - name: Farmer Sulu
+      url: https://docs.google.com/document/d/1crSJwk7VSd0muqsoHtt-pOnObliA3_wCsU-ME-O2Hl0/edit
+    - name: Gardener Keiko
+      url: https://docs.google.com/document/d/1kdcpiVxIt4zPJIE9wxJUjtcmWqgaS6hQ8awLYqGlppY/edit
+    - name: Golin Shel'la
+      url: https://docs.google.com/document/d/1bkTAPACFPGhMxHaw9j2QKxXdijmJa1CGMv2PlduKKiQ/edit
+    - name: Grace Declan
+      url: https://docs.google.com/document/d/13Goeb_G2YRV_WuNfsyycOd_HvG0ts5TbZUimgKeNf_Y/edit
+    - name: Groom Saru
+      url: https://docs.google.com/document/d/1pwVglEDtg3kqOeiyaDIIX_OGSHjJBYM2SrBiL7BGIS8/edit
+    - name: Instructor Keiko
+      url: https://docs.google.com/document/d/1btLuHVUp_9tl9P7nj1fMzaFCOomP3dNGuQrf97THi-o/edit
+    - name: Interrogator Dolim
+      url: https://docs.google.com/document/d/1tOhd1cFzedMYARyDPi-LmpFO_fhZ8u7U2QasLF3b7Vk/edit
+    - name: Jabin
+      url: https://docs.google.com/document/d/1il1UKbfBUzNibE7bE_sNW1MFpfWB12kdeoRkDvPzfbM/edit
+    - name: Jillur Gueta Garek
+      url: https://docs.google.com/document/d/1oUEZYr-qWftg-3kRWr_hCZaYcbv8Ra4RHg4SAXdDNjE/edit
+    - name: Juliet Pike
+      url: https://docs.google.com/document/d/1XH40sHcnR1b2DeLGo0e3NHi-xiPSs1nVGLvc914gDB0/edit
+    - name: Krog
+      url: https://docs.google.com/document/d/1eMchPqJ_-bJwx_W9_-eNr6c9PYPh2N4QaoYK8OkC15Q/edit
+    - name: Lt. Cmdr. Finney
+      url: https://docs.google.com/document/d/1SqRKN9DUWVcUUtcRK6VhR4xrzG-ja4mmvFLHS4IkZpI/edit
+    - name: Mayor Q
+      url: https://docs.google.com/document/d/12LvCLSlS6vsx_3BR0gSUq_2CX6R0fuY1g8oR4aB-ngs/edit
+    - name: Op-Ed Quinn
+      url: https://docs.google.com/document/d/1Lwb2uxlsBy2fLIOESkzKk7-ARJWyohc-V77EJYEo6ck/edit
+    - name: Paxan Entity Troi
+      url: https://docs.google.com/document/d/17vWAGXrjjWpi9McduOT6XJnNQLQK5u0UGB_eqLdT__c/edit
+    - name: Petra Aberdeen
+      url: https://docs.google.com/document/d/1Jdcq2aVhHorHnq884RZ-F_7XjO0jau5WrKmg4K9cI58/edit
+    - name: Pick-up Game Reed
+      url: https://docs.google.com/document/d/1nGPSmaZ_RgxUu1FAU1Dhhk8w0mfnvY7flHrGuJOXMBo/edit
+    - name: Professor Tilly
+      url: https://docs.google.com/document/d/1oy0B7TSSeM5mcMTN8zrvcJxsNUsvQglqthI7LhJoSfM/edit
+    - name: Rishon Uxbridge
+      url: https://docs.google.com/document/d/1dAwo8jJqsY5MmNupQzuWZ2hu6pxvHB5NmkmfNznKOf4/edit
+    - name: Space Rescue Tom Paris
+      url: https://docs.google.com/document/d/1MhmwHoa812r-RJn1biaidPWRlIoG5BMqPsfiB_Q5y84/edit
+    - name: Sunny Lupino Una
+      url: https://docs.google.com/document/d/1k8TeqE5q7TZZrSE4aYs6gW-LMe-qqVkbYy3LnyUBGyg/edit
+    - name: Talos IV J.M. Colt
+      url: https://docs.google.com/document/d/1k8Q9f95e4DBElb2xzI2UX2zuy8XjfM8jSvUp04FYi9c/edit
+    - name: Tango La'an
+      url: https://docs.google.com/document/d/1ZPXllyFmhX_pQNDq_ZntMSfUB3XJ4iu7Pv51GtR712c/edit
+    - name: Vadia Nine Korby
+      url: https://docs.google.com/document/d/11B1NuY9E3cEOvaLh-GXbofy0H3eMadfAdWL_VLV_fdU/edit
+    - name: Vash in Red
+      url: https://docs.google.com/document/d/1K4PtXJ4hkEHwLxC_eE7E08_Gz17qjfRNLqdhoed6T_0/edit
+    - name: Wingman Q
+      url: https://docs.google.com/document/d/1QZie7hl6WWVXASb08zNWiaBfVtXfxiGnypWoNm46uvA/edit
+
+# ---------------------------------------------------------------------------
+# Key STT Documents
+# ---------------------------------------------------------------------------
+documents:
+  - title: "Content Calendar - STT"
+    url: https://docs.google.com/spreadsheets/d/1_RtGy-AZLBdGtz6dyWSIxXeC0DxiK7C5NdEE7tXP-G0/edit
+    type: spreadsheet
+    owner: mwallace
+    last_modified: 2026-03-06
+    description: >
+      Calendar view of STT content releases — events, packs, crew drops, and campaigns.
+      Used for scheduling and coordinating upcoming content across the team.
+
+  - title: "Continuum Quest Balance Sheet"
+    url: https://docs.google.com/spreadsheets/d/191qzATn5PuelVEmpfiwI6IwJcizrCknj876t1ZXo6GA/edit
+    type: spreadsheet
+    owner: Ilia Bocharov
+    last_modified: 2026-03-09
+    description: >
+      Balance and economy data for the Continuum Quest feature within STT.
+      Tracks reward tiers, currency costs, and progression tuning.
+
+  - title: "STT Improvement Recommendations - Store Experience Detailed"
+    url: https://docs.google.com/document/d/1kFFgKhsVtInCGpGbZHfDeNlTpBqW1N5mhkauMUcc_aA/edit
+    type: document
+    owner: brent
+    last_modified: 2026-02-02
+    description: >
+      Detailed UX improvement recommendations for the STT in-game store.
+      Covers layout, pricing display, pack presentation, and purchase flow optimization.
+
+  - title: "STT Master Tracking Sheet"
+    url: https://docs.google.com/spreadsheets/d/11v4s5rd0UxHTQGKv7ERzvJNi9ERVl36nvsDVdn0v5J8/edit
+    type: spreadsheet
+    owner: jrousseau
+    last_modified: 2026-03-13
+    description: >
+      Master schedule for STT events, crew releases, flashbacks, and reruns.
+      The single source of truth for the STT content pipeline — columns include
+      server, event name, symbol, event type, announce date, and phase changes.
+
+  - title: "STT Standup Agenda & Meeting Notes"
+    url: https://docs.google.com/document/d/182ta8UWR4b2FS7iyJ2EymhCCzh1XfXI5QW3xxniSS4g/edit
+    type: document
+    owner: Dariy Shatskikh
+    last_modified: 2026-03-13
+    description: >
+      Running document for STT daily standup meetings. Contains agenda items,
+      blockers, action items, and historical meeting notes.
+
+  - title: "STT: Feature Exclusive Crew Seasonal Event Shop GDD"
+    url: https://docs.google.com/document/d/1ehOJSNkcUzOdA6H-s6ZzeMUI9ValE1Ty7PadI71U_0k/edit
+    type: document
+    owner: avoronova
+    last_modified: 2026-02-20
+    description: >
+      Game design document for the Seasonal Event Shop feature in STT.
+      Defines exclusive crew availability, shop rotation, pricing, and event mechanics.
+
+  - title: "Rerun pack filtering data (Oct 2021)"
+    url: https://docs.google.com/spreadsheets/d/1V8W7WY-WRlRLSPHfSV63hBgWmII2PC0oewYqxAwL6Gk/edit
+    type: spreadsheet
+    owner: dhague
+    last_modified: 2026-03-08
+    description: >
+      Historical data used to determine which packs qualify for rerun rotation.
+      Filters by performance, crew popularity, and revenue metrics from Oct 2021.
+
+  - title: "Ben's working sheet and formula farm"
+    url: https://docs.google.com/spreadsheets/d/17hBA8aYcj8GXTmcVOkOXz_LpKusyLaPfeRAr3WQpIHM/edit
+    type: spreadsheet
+    owner: btsacoyianis
+    last_modified: 2026-02-26
+    description: >
+      Working spreadsheet by Ben (Tilting Point) with formulas for STT economy modeling,
+      pack value calculations, and revenue projections.
+
+  - title: "TP Employee Production DBID List"
+    url: https://docs.google.com/spreadsheets/d/1rTtb_bQH1n6y-e1c0C7xGKrLEzOeGNtXVZ1hAgPOuao/edit
+    type: spreadsheet
+    owner: btsacoyianis
+    last_modified: 2026-02-20
+    description: >
+      Tilting Point employee database IDs used for STT production access.
+      Maps TP staff to their in-game admin accounts and permission levels.
+
+  - title: "Pre-release TP- 5.10.5"
+    url: https://docs.google.com/spreadsheets/d/1djE7qDAwcaVSLQ_5abydyYDwIZwYy_4cuxy8MTgLzoE/edit
+    type: spreadsheet
+    owner: ramzy.a
+    last_modified: 2026-02-12
+    description: >
+      Pre-release QA checklist for STT version 5.10.5. Tracks test cases,
+      pass/fail status, and bug reports before the build goes live.
+
+  - title: "Feature Checklist 5.10.6"
+    url: https://docs.google.com/spreadsheets/d/1HjxjNkjzpNB7Q3wmtrkvinzPTTVh8DI_PJyoOAu-EaM/edit
+    type: spreadsheet
+    owner: ramzy.a
+    last_modified: 2026-03-05
+    description: >
+      Feature-level QA checklist for STT 5.10.6. Lists every feature/change
+      in the release with verification status and notes.
+
+  - title: "Gacha TP - 5.4.6"
+    url: https://docs.google.com/spreadsheets/d/1mrNbSmAWVfxT_r66_10bSd9Jsb9QcpvHoj8w4NTJx98/edit
+    type: spreadsheet
+    owner: ramzy.a
+    last_modified: 2026-02-09
+    description: >
+      Gacha (loot box) configuration and QA data for STT 5.4.6.
+      Documents drop rates, pack contents, and probability verification.
+
+  - title: "Post-release TP- 5.10.4"
+    url: https://docs.google.com/spreadsheets/d/1_PZ_ZCzjyFeuojWnQEbF0Ut8QgjddQFDP86Cap9ufL0/edit
+    type: spreadsheet
+    owner: ramzy.a
+    last_modified: 2026-02-09
+    description: >
+      Post-release QA report for STT 5.10.4. Covers live issues found after deployment,
+      hotfix tracking, and regression test results.
+
+  - title: "Post-release TP- 5.10.5"
+    url: https://docs.google.com/spreadsheets/d/1ZvMpvowNXh9zMdnaYD2umQf-1__c18Dju0o84J7f6Lk/edit
+    type: spreadsheet
+    owner: ramzy.a
+    last_modified: 2026-02-20
+    description: >
+      Post-release QA report for STT 5.10.5. Documents live bugs,
+      severity classification, and resolution status after deployment.
+
+  - title: "Pre-release TP- 5.10.4"
+    url: https://docs.google.com/spreadsheets/d/1drZR_k6C5xLsKZyygZLyEpWKSOk2LwFGvryqRNNrCtU/edit
+    type: spreadsheet
+    owner: ramzy.a
+    last_modified: 2026-02-03
+    description: >
+      Pre-release QA checklist for STT 5.10.4. Test plan and execution tracking
+      for all features and fixes included in this build.

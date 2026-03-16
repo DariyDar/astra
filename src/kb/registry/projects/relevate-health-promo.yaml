@@ -1,0 +1,48 @@
+name: Relevate Health Promo
+aliases: [RH Promo, Промо Релевейт, Welireg Banners]
+company: hg
+client: Relevate Health
+status: active
+note: >
+  Проект Highground для клиента Relevate Health.
+  Промо-контент: видео, баннеры (Welireg/NPP для Merck), маркетинговые материалы.
+  Фарма-реклама с ISI compliance (Important Safety Information).
+  Задачи обсуждаются в т.ч. в общем канале relevate_health-high_ground.
+  PM — Александра Федюшина.
+  Связанные проекты: HTML5 Banners (отдельный YAML), Playable Ads (отдельный YAML).
+
+slack_channels:
+  relevate-health-promo: Канал проекта (HG, 53 msgs)
+  hgg-npp-drivers: Баннеры Welireg/NPP (HG, 565 msgs)
+  relevate-health-video: Видео-контент (HG, 31 msgs)
+  hgg-level-one-ua-videos: UA видео для Level One (HG, 5 msgs)
+  relevate_health-high_ground: Общий канал с Relevate Health (HG, 549 msgs)
+
+team_internal:
+  - name: Александра Федюшина
+    role: PM
+    status: active
+  - name: Всеволод
+    role: Developer (HTML5 banners)
+    status: active
+  - name: Марина Ляндина
+    role: Designer
+    status: active
+  - name: Алехандро Гудков
+    role: Developer (playable ads)
+    status: active
+  - name: Денис Артсюховский
+    role: VFX Artist
+    status: active
+  - name: Никита Кокарев
+    role: Art Director
+    status: active
+  - name: Екатерина Дочкина
+    role: UI/UX Designer
+    status: active
+  - name: Арсен Чаталян
+    role: COO
+    status: active
+  - name: Валерий Богородский
+    role: CTO
+    status: active

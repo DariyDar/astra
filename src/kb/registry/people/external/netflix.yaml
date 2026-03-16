@@ -1,0 +1,57 @@
+organization: Netflix Games
+type: client
+projects: [SpongeBob Get Cookin']
+slack_uids_workspace: [ac]
+contacts:
+  - name: Josh Lee
+    role: Game Producer — основной контакт Netflix, мониторинг ANR, compliance, content updates
+    slack_uids: {ac: U06AD5VELGM}
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+  - name: Joel Aguirre
+    role: Production POC — roadmaps, design docs, milestones, 30-month plan
+    slack_uids: {ac: U04U5TGR4KH}
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+  - name: Kristine Braid
+    role: Production (interim) — Flying Dutchman feedback, introduced Joel back as POC
+    slack_uids: {ac: U07FM5QAK8A}
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+  - name: Robert Kazanov
+    role: Security/Engineering — compliance, build ingestion, security remediation
+    slack_uids: {ac: U04AAR4U753}
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+  - name: Alexandra Souter
+    role: CS/Support — escalation player issues, freezing bugs
+    slack_uids: {ac: U07T8MMPVB4}
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+  - name: Peter Eykemans
+    role: Build Ingestion — tagged for ingestion notifications
+    slack_uids: {ac: U07FTDCQ9M4}
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+  - name: Victor Wang
+    role: Business/Strategy
+    slack_uids: {ac: U04HFE51FCP}
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+  - name: Guillaume Leroy
+    role: Engineer — Netflix SDK integration, Unity
+    status: active
+    projects: [SpongeBob Get Cookin']
+
+note: >
+  Netflix Games — платформа-держатель для SpongeBob Get Cookin'.
+  Игра выходит эксклюзивно на Netflix (iOS/Android).
+  Основной канал: #netflixgames-spongebob-pe.
+  Josh Lee — основной контакт, мониторит стабильность через внутренний Netflix dashboard.

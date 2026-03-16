@@ -1,0 +1,40 @@
+organization: Pley
+type: partner
+projects: [SpongeBob Krusty Cook-Off, Star Trek Timelines]
+slack_uids_workspace: [ac]
+contacts:
+  - name: Will Wadbrant
+    role: Product/Engineering — platform changelogs, QA tools, SDK updates
+    slack_uids: {ac: U045YGHQQSX}
+    status: active
+    projects: [Star Trek Timelines]
+    note: Marked as "left" in SBKCO but "active" in STT context
+
+  - name: Michael van der Poll
+    role: SDK support
+    slack_uids: {ac: U05661DQ20Z}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Guilhem Morer
+    role: SDK technical support
+    slack_uids: {ac: U01LU1R9DPV}
+    status: active
+    projects: [SpongeBob Krusty Cook-Off]
+
+  - name: Jack Karlsson
+    role: Engineer — web platform integration
+    slack_uids: {ac: U08J1CNP66A}
+    status: active
+    projects: [Star Trek Timelines]
+
+  - name: Ryan Tomaselli
+    role: Engineer — Xsolla webhook, payment integration
+    slack_uids: {ac: U05CB4W9E1E}
+    status: active
+    projects: [Star Trek Timelines]
+
+note: >
+  Pley — web-платформа для WebGL версий игр.
+  Используется для SBKCO (WebGL builds) и STT (web store).
+  Каналы: #pley-tp-ac_sbkco, #pley-tp-ac_stt, #pley-tp-ac_ot (мёртвый).

@@ -1,0 +1,16 @@
+organization: Nickelodeon (Paramount)
+type: client
+projects: [SpongeBob Krusty Cook-Off, SpongeBob Get Cookin']
+slack_uids_workspace: [ac]
+contacts:
+  - name: Marin Yoshino
+    role: Former licensor contact — ревью art themes. Функции переданы Kaitlynn Hegarty (TP).
+    slack_uids: {ac: U04MAFWC2AH}
+    status: left
+    projects: [SpongeBob Krusty Cook-Off]
+
+note: >
+  Nickelodeon (Paramount) — лицензиар SpongeBob IP.
+  Art themes отправляются на approval в Nickelodeon.
+  Marin Yoshino была контактом от Nick, но её функции переданы Kaitlynn Hegarty (TP).
+  Marin Yoshino также числится в TP (STT) — это одна и та же персона.

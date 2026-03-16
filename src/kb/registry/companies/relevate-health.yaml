@@ -1,0 +1,27 @@
+name: Relevate Health
+code: rh
+type: client
+slack_workspace: hg
+projects:
+  - name: Level One
+    status: active
+  - name: Level Two
+    status: active
+  - name: Pivot Pumps
+    status: active
+  - name: Botox
+    status: active
+  - name: HTML5 Banners
+    status: active
+  - name: Playable Ads
+    status: active
+  - name: Relevate Health Promo
+    status: active
+note: >
+  Medical/pharma client (also known as Levelex). All projects go through
+  Highground. Main communication channel: hg/relevate_health-high_ground.
+  Key contacts: Amir Lotan (Product Manager), Noah Kolman (Build Review),
+  Kyle Shafer (Marketing/Creative). Products include medical training apps
+  (Level One/Two for diabetes, Pivot Pumps for insulin pumps, Botox),
+  HTML5 banners, playable ads, and promo content (Welireg/NPP for Merck)
+  with ISI compliance requirements.

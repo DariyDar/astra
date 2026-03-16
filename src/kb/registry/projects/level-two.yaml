@@ -1,0 +1,87 @@
+name: Level Two
+aliases: [L2, Левел Ту, LEV2, LVL2]
+company: hg
+client: Relevate Health
+status: active
+platform: [iOS, Android]
+note: >
+  Проект Highground для клиента Relevate Health.
+  Следующая версия/продолжение Level One.
+  PM — Александра Федюшина. TL — Алехандро Гудков.
+  Амир Лотан — product owner на стороне клиента.
+
+slack_channels:
+  level-two-team: Канал команды (HG, 2.3K msgs)
+  level-two-project: Канал проекта (HG, 1.1K msgs)
+  relevate_health-high_ground: Общий канал с Relevate Health (HG, 549 msgs)
+
+team_internal:
+  - name: Александра Федюшина
+    role: PM
+    status: active
+  - name: Алехандро Гудков
+    role: Mini-TL
+    status: active
+  - name: Амгалан Токуренов
+    role: Developer
+    status: active
+  - name: Семён Чиненов
+    role: Developer
+    status: active
+  - name: Игорь Князев
+    role: Developer
+    status: active
+  - name: Дияр Тайкенов
+    role: Developer
+    status: active
+  - name: Фарид Хайбуллин
+    role: Game Designer
+    status: active
+  - name: Марина Назарова
+    role: Artist
+    status: active
+  - name: Сергей Гуменюк
+    role: QA
+    status: active
+  - name: Данил Корякин
+    role: QA
+    status: active
+  - name: Никита Кокарев
+    role: Art Director
+    status: active
+  - name: Арсен Чаталян
+    role: COO
+    status: active
+  - name: Вячеслав Куряков
+    role: Lead GD / Co-founder HG
+    status: active
+  - name: Денис Артсюховский
+    role: VFX Artist
+    status: active
+  # Бывшие
+  - name: Александр Прудко
+    role: VFX Artist
+    status: left
+
+team_external:
+  relevate_health:
+    note: >
+      Клиент — Relevate Health (Levelex). Амир Лотан — product owner.
+      Коммуникация в Slack канале hg/relevate_health-high_ground.
+    - name: Амир Лотан
+      role: Product Manager
+      slack_uids: {hg: U07R6M1MQNS}
+      status: active
+
+processes:
+  - name: Level 2 Sync
+    cadence: weekly (Wednesday)
+    description: >
+      Еженедельный синк с Амиром. Slack Huddle в #level-two-project.
+      25 мин, 00:00 UTC+8 (16:00 UTC).
+    participants: [Арсен Чаталян, Фарид Хайбуллин, Александра Федюшина, Вячеслав Куряков, Дарий, Никита Кокарев, Амир Лотан]
+
+resources:
+  - name: ClickUp — Level Two Tasks
+    type: project_management
+    description: ClickUp list "Level Two - Tasks" (~424 задачи)

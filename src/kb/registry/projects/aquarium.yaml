@@ -1,0 +1,74 @@
+name: Aquarium
+aliases: [Аквариум, Дрифт]
+company: ac
+status: active
+platform: [iOS, Android]
+note: >
+  Внутренний проект AstroCat. Мобильная игра-аквариум.
+  PM — Александра Федюшина, TL — Алехандро Гудков.
+  Sonets Studio — внешняя QA команда, приглашались только на перформанс-тестирование.
+
+slack_channels:
+  aquarium-project: Основной канал проекта (AC, 5.0K msgs)
+  aquarium-team: Внутренняя команда (AC, 540 msgs)
+
+team_internal:
+  - name: Александра Федюшина
+    role: PM
+    status: active
+  - name: Алехандро Гудков
+    role: Mini-TL
+    status: active
+  - name: Амгалан Токуренов
+    role: Developer
+    status: active
+  - name: Семён Чиненов
+    role: Developer (основной)
+    status: active
+  - name: Алмасхан Баймышев
+    role: Developer
+    status: active
+  - name: Игорь Князев
+    role: Developer
+    status: active
+  - name: Марина Назарова
+    role: Artist
+    status: active
+  - name: Екатерина Дочкина
+    role: UI/UX Designer
+    status: active
+  - name: Наиля
+    role: 3D Artist
+    status: active
+  - name: Сергей Гуменюк
+    role: QA
+    status: active
+  - name: Юлия Дюфлот
+    role: Analyst
+    status: active
+  - name: Богдан Хашиев
+    role: UA
+    status: active
+  - name: Никита Кокарев
+    role: Art Director
+    status: active
+  - name: Hanna Samusenka
+    role: Creative Producer
+    status: active
+
+team_external:
+  sonets_studio:
+    note: Внешняя QA команда. Привлекались только для перформанс-тестирования.
+
+processes:
+  - name: MWCF / Aquarium / Level One || Sync
+    cadence: weekly
+    description: >
+      Совместный синк по трём проектам (MWCF, Aquarium, Level One).
+      16:00 UTC+8 (Bali). Участники: Дарий + Семён Чиненов.
+    participants: [Дарий, Семён Чиненов]
+
+resources:
+  - name: ClickUp — Tasks Aquarium
+    type: project_management
+    description: ClickUp list "Tasks Aquarium" (~396 задач)

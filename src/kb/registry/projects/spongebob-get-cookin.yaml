@@ -1,0 +1,265 @@
+name: "SpongeBob: Get Cookin'"
+aliases: [SBGC, Get Cookin, Get Cooking, Netflix SpongeBob, СпанчБоб Нетфликс]
+company: ac
+client: Tilting Point
+platform_holder: Netflix Games
+licensor: Nickelodeon (Paramount)
+status: active
+platform: [iOS (Netflix), Android (Netflix)]
+tech_stack: Unity client, Playfab (cloud saves), CleverTap/Leanplum (analytics), Backtrace/Bugsnag (crash reporting), deltaDNA
+tools: Jira (issues.nrd.netflix.net)
+note: >
+  Netflix Games версия SpongeBob. НЕ путать со SpongeBob KCO (F2P LiveOps — отдельный проект).
+  Перешла от Illogika к AstroCat. Won Pocket Gamer Award.
+  Milestone-based roadmap (M08-M30), thematic maps, costumes, events (Flying Dutchman, Treasure Trail, Daily Quest).
+
+slack_channels:
+  netflixgames-spongebob-pe: Основной канал с Netflix и TP (AC + HG)
+  spongebob-getcooking-loc: Локализация — Lionbridge + Netflix (AC)
+
+team_internal:
+  - name: Руслан Гадельшин
+    role: Dev Lead
+    status: active
+  - name: Анастасия Воронова
+    role: PM
+    status: active
+  - name: Никита Щукин
+    role: Developer
+    status: active
+  - name: Арсен Чаталян
+    role: COO
+    status: active
+  - name: Дмитрий Денисов
+    role: Developer
+    status: active
+  - name: Дияр Тайкенов
+    role: Developer
+    status: active
+  - name: Фарид Хайбуллин
+    role: Game Designer
+    status: active
+  - name: Ян Римарчук
+    role: Game Designer
+    status: active
+  - name: Марина Назарова
+    role: Artist
+    status: active
+  - name: Екатерина Дочкина
+    role: UI/UX Designer
+    status: active
+  # Бывшие
+  - name: Ангелина Заика
+    role: Artist
+    status: left
+  - name: Александр Прудко
+    role: VFX Artist
+    status: left
+
+team_external:
+  tilting_point:
+    - name: Kaitlynn Hegarty
+      role: Producer — координация с Netflix, ревью фич, CS reports
+      slack_uids: {ac: U02E96U9M2P}
+      status: active
+    - name: Steve Melanson
+      role: Senior Production — PR/marketing, Pocket Gamer submissions, Backtrace tooling
+      slack_uids: {ac: U24KF0NTY}
+      status: active
+    - name: David Hague
+      role: Senior VP Product
+      slack_uids: {ac: U0D7BNKQQ}
+      status: active
+    - name: Jay Daniels
+      role: QA / Production
+      slack_uids: {ac: U02REGAQMDW}
+      status: active
+    - name: Jake Houston
+      role: QA Lead — test reports, bug management. Заменён на Reyvn.
+      slack_uids: {ac: U03K90F4Z54}
+      status: left
+    - name: Reyvn Nunziata
+      role: QA (заменил Jake Houston)
+      slack_uids: {ac: U055AQAV517}
+      status: active
+    - name: Graciela Ruiz
+      role: QA
+      slack_uids: {ac: U01S2FYP1EE}
+      status: active
+    - name: Mel Wallace
+      role: Marketing/Production
+      slack_uids: {ac: U01SJJ6FP39}
+      status: active
+    - name: Sophie Pickens
+      role: Localization PM — manages loc meetings
+      slack_uids: {ac: U02EN1V22JD}
+      status: active
+    - name: Tom Fitch
+      role: Team member
+      slack_uids: {ac: WSLDSC43F}
+      status: active
+    - name: Simon Bourdon
+      role: Team member
+      slack_uids: {ac: U01TE2F15DY}
+      status: active
+
+  lionbridge:
+    note: Отдельная компания (не TP). QA локализации.
+    - name: Dariusz Kosinski
+      role: Localization Project Manager
+      slack_uids: {ac: U03AYQDD33L}
+      status: active
+    - name: Guillermo Alvarez Lloret
+      role: Localization QA
+      slack_uids: {ac: U05UTKNJR9V}
+      status: active
+    - name: Michael Santer
+      role: Localization
+      slack_uids: {ac: U03SQSRHLRK}
+      status: active
+    - name: Simona Pelli
+      role: Localization
+      slack_uids: {ac: U033G9HL86Q}
+      status: active
+
+  illogika:
+    note: Предыдущая студия-разработчик. Mylene вела Netflix версию SpongeBob до передачи AstroCat.
+    - name: Mylene Ares
+      display: Mylène
+      role: Developer (Illogika) — вела Netflix SpongeBob, managed transition
+      slack_uids: {ac: U03J0TZ361Y}
+      status: left
+
+  netflix:
+    - name: Josh Lee
+      role: Game Producer — основной контакт Netflix, мониторинг ANR, compliance, content updates
+      slack_uids: {ac: U06AD5VELGM}
+      status: active
+    - name: Joel Aguirre
+      role: Production POC — roadmaps, design docs, milestones, 30-month plan
+      slack_uids: {ac: U04U5TGR4KH}
+      status: active
+    - name: Kristine Braid
+      role: Production (interim) — Flying Dutchman feedback, introduced Joel back as POC
+      slack_uids: {ac: U07FM5QAK8A}
+      status: active
+    - name: Robert Kazanov
+      role: Security/Engineering — compliance, build ingestion, security remediation
+      slack_uids: {ac: U04AAR4U753}
+      status: active
+    - name: Alexandra Souter
+      role: CS/Support — escalation player issues, freezing bugs
+      slack_uids: {ac: U07T8MMPVB4}
+      status: active
+    - name: Peter Eykemans
+      role: Build Ingestion — tagged for ingestion notifications
+      slack_uids: {ac: U07FTDCQ9M4}
+      status: active
+    - name: Victor Wang
+      role: Business/Strategy
+      slack_uids: {ac: U04HFE51FCP}
+      status: active
+    - name: Guillaume Leroy
+      role: Engineer — Netflix SDK integration, Unity
+      status: active
+
+processes:
+  - name: Production Bi-weekly
+    cadence: bi-weekly
+    description: >
+      Sync meeting: TP (Melanson, Wallace, Hague, Hegarty) + Netflix (Josh Lee) + AC/HG (Voronova, Shatskikh, Gadelshin).
+    participants: [Steve Melanson, Mel Wallace, David Hague, Kaitlynn Hegarty, Josh Lee, Анастасия Воронова, Дарий, Руслан Гадельшин]
+    docs:
+      - name: "Production Bi-weekly Agenda"
+        url: https://docs.google.com/document/d/1QHtyR47tdWTwdz-N5sTAdErOstnrFVcid5lsRQErZN4/edit
+
+  - name: Localization Sync
+    cadence: monthly
+    description: >
+      TP (Sophie Pickens) + Lionbridge (Pelli, Alvarez Lloret) + AC/HG.
+    participants: [Sophie Pickens, Simona Pelli, Guillermo Alvarez Lloret, Kaitlynn Hegarty, Steve Melanson, Анастасия Воронова, Арсен Чаталян, Руслан Гадельшин]
+    docs:
+      - name: "Localization Meeting Agenda"
+        url: https://docs.google.com/document/d/1XDCs58v9i5GsVGQBP4JienkYV1ZbVPX10s6OY0Xf564/edit
+
+  - name: Release Candidate Submission
+    cadence: per release
+    description: >
+      Анастасия Воронова submit RC builds (Android + iOS) в Netflix PE channel.
+      Tags: Netflix (Josh Lee, Peter Eykemans) + TP (Kaitlynn, David Hague).
+      Robert Kazanov handles build ingestion в Netflix systems.
+      Josh Lee creates Content Update entries.
+    participants: [Анастасия Воронова, Josh Lee, Peter Eykemans, Robert Kazanov, Kaitlynn Hegarty]
+
+  - name: ANR/Stability Monitoring
+    cadence: continuous
+    description: >
+      Josh Lee мониторит Netflix internal stability dashboard.
+      Руслан Гадельшин implements client-side fixes.
+      Content updates include ANR reduction work.
+    participants: [Josh Lee, Руслан Гадельшин]
+
+  - name: Daily Standup (Sponge Bob)
+    cadence: daily
+    description: >
+      Внутренний daily standup. ~14 attendees из AC.
+    participants: [Анастасия Воронова, Руслан Гадельшин, Никита Щукин, Ян Римарчук, Дмитрий Денисов, Дияр Тайкенов, Арсен Чаталян, Марина Назарова, Екатерина Дочкина]
+
+resources:
+  - name: "Sponge Bob || Weekly Calls Agenda"
+    type: document
+    url: https://docs.google.com/document/d/1FCLlBjnXhtmASoMDE661C3ockjG1jR9-NjdSkornJNc/edit
+    owner: Анастасия Воронова
+    description: >
+      Общая агенда weekly sync с TP (shared между KCO и Get Cookin').
+      Статусы версий, Netflix milestones (M07-M11), Pley.
+
+  - name: "SpongeBob || 2025 plans"
+    type: spreadsheet
+    owner: Дарий
+
+  - name: "Sponge Bob || 36 Months plan"
+    type: spreadsheet
+    owner: Дарий
+
+  - name: "Sponge Bob - Teams Roadmap 2024"
+    type: spreadsheet
+
+  - name: "SpongeBob - MASTER Feedback Sheet"
+    type: spreadsheet
+    owner: Steve Melanson
+
+  - name: "SB Themes Plan for Flying Dutchman"
+    type: document
+    owner: Ян Римарчук
+
+  - name: "EXT: SpongeBob: Get Cooking - Flying Dutchman's Feedback Notes"
+    type: document
+    owner: Kristine Braid
+
+  - name: "[int] GDD - Spongebob-Mastersheet"
+    type: spreadsheet
+
+  - name: "HighGround Accesses - SpongeBob"
+    type: spreadsheet
+    owner: Анастасия Воронова
+
+  - name: "Netflix SpongeBob : GetCooking - Version/ReleaseNotes"
+    type: document
+    owner: Mylene Ares
+
+  - name: Netflix unity project setup (Notion)
+    type: wiki
+    url: https://www.notion.so/Netflix-unity-project-setup-b1d325008bda44cc88fe6efc1ea0bd8f
+
+  - name: Build (Notion)
+    type: wiki
+    url: https://www.notion.so/Build-5432f00f5cd7459bade9615d5c354e2f
+
+  - name: Gitflow (Notion)
+    type: wiki
+    url: https://www.notion.so/Gitflow-5f860991d20f4143be6423a33940540f
+
+  - name: Localization (Notion)
+    type: wiki
+    url: https://www.notion.so/Localization-f31724a896c04255b5f73d1edd54613a

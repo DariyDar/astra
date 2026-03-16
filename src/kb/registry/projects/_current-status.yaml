@@ -1,0 +1,206 @@
+# Актуальные статусы проектов
+# Обновляется ежедневно (процесс: daily-project-status-update)
+# last_updated заполняется автоматически
+# Если updated_at > 3 дней назад — статус stale
+
+last_updated: "2026-03-15"
+
+# ═══════════════════════════════════════════════════════════════
+# AstroCat Projects
+# ═══════════════════════════════════════════════════════════════
+
+astrocat:
+
+  - project: "Star Trek Timelines"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [stt-dev, stt-live-ops, stt-content, stt-qa]
+      clickup: false
+      jira: "tiltingpoint.atlassian.net (ST-)"
+    updated_at: "2026-03-15"
+
+  - project: "The Oregon Trail"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [oregon_tp, oregon_dev, oregon_tp_qa]
+      clickup: "Oregon - Tasks (~39)"
+      jira: "enixan-limited.atlassian.net"
+    updated_at: "2026-03-15"
+
+  - project: "SpongeBob: Krusty Cook-Off"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [sbkco-development, sbkco-qa, sponge-team]
+      clickup: false
+      jira: "tiltingpoint.atlassian.net (SKCO-)"
+    updated_at: "2026-03-15"
+
+  - project: "SpongeBob: Get Cookin'"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [netflixgames-spongebob-pe]
+      clickup: false
+      jira: "issues.nrd.netflix.net"
+    updated_at: "2026-03-15"
+
+  - project: "Motor World: Car Factory"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [ohbibi-mwcf-project, ohbibi-mwcf-internal, ohbibi-mwcf-testing]
+      clickup: "MWCF - Tasks"
+    updated_at: "2026-03-15"
+
+  - project: "Idle Axe Thrower"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [idle-axe-project, idle-axe-team]
+      clickup: "Idle Axe Tasks (~1029)"
+    updated_at: "2026-03-15"
+
+  - project: "Tough Guy"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [tough-guy-project]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Aquarium"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [aquarium-project, aquarium-team]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Vector"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [vector-project]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Symphonia"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [symphonia-project]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Puppet Master"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [puppet-master-vibe-edition]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Clash of Gods"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [tech-dev-bow]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Pong Breaker Royale"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [pong-team]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Block Puzzle"
+    status: inactive
+    current_focus: На паузе с октября 2025
+    monitoring:
+      slack: [block-puzzle-project]
+      clickup: "Tasks BP (1)"
+    updated_at: "2026-03-15"
+
+  - project: "MOBA BACALHAU"
+    status: inactive
+    current_focus: На паузе с сентября 2025
+    monitoring:
+      slack: [moba-bacalhau-project]
+      clickup: false
+    updated_at: "2026-03-15"
+
+# ═══════════════════════════════════════════════════════════════
+# Highground Projects
+# ═══════════════════════════════════════════════════════════════
+
+highground:
+
+  - project: "Level One"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [level-one-team, level-one-qa]
+      clickup: "Level One - Tasks (~12)"
+    updated_at: "2026-03-15"
+
+  - project: "Level Two"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [level-two-team]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Pivot Pumps"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [pivot-pump-team, hgg-pivot-custom]
+      clickup: "Pivot - Tasks (~978)"
+    updated_at: "2026-03-15"
+
+  - project: "Botox"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [botox-team]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "HTML5 Banners"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [hgg-npp-drivers]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Playable Ads"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [hg-playable-ads]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Relevate Health Promo"
+    status: active
+    current_focus: TBD
+    monitoring:
+      slack: [relevate-health-promo, hgg-npp-drivers, relevate_health-high_ground]
+      clickup: false
+    updated_at: "2026-03-15"
+
+  - project: "Karl Storz"
+    status: finished
+    current_focus: Проект завершён
+    monitoring:
+      slack: [karl-storz-team]
+      clickup: false
+    updated_at: "2026-03-15"

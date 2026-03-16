@@ -1,0 +1,32 @@
+name: Botox
+aliases: [Ботокс]
+company: hg
+client: Relevate Health
+status: active
+note: >
+  Проект Highground для клиента Relevate Health.
+  Anel Bektassova — основной разработчик (Unreal Engine).
+
+slack_channels:
+  botox-team: Канал команды (HG, 408 msgs)
+  relevate_health-high_ground: Общий канал с Relevate Health (HG, 549 msgs)
+
+team_internal:
+  - name: Anel Bektassova
+    role: Developer (Unreal Engine)
+    status: active
+  - name: Алмасхан Баймышев
+    role: Developer
+    status: active
+  - name: Вячеслав Куряков
+    role: Lead GD / Co-founder HG
+    status: active
+  - name: Арсен Чаталян
+    role: COO
+    status: active
+  - name: Валерий Богородский
+    role: CTO
+    status: active
+  - name: Данил Корякин
+    role: QA
+    status: active

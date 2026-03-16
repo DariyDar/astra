@@ -1,0 +1,190 @@
+name: "Motor World: Car Factory"
+aliases: [MWCF, Motor World Car Factory, Ohbibi MWCF, ohbibi-mwcf, MotorW]
+company: ac
+client: Ohbibi
+status: active
+platform: [iOS, Android]
+tech_stack: Unity client, Firebase Analytics, Adjust (attribution/UA), Facebook SDK
+tools: Jira (Atlassian)
+note: >
+  Мобильная игра. Клиент — Oh BiBi Games (Париж, ~65 чел, $25.1M funding, FRAG Pro Shooter).
+  AC/HG работает на два направления: production/dev (MWCF) и UA/креативы (OhBibi Creatives).
+  Ключевые темы: FB saves migration, consent screens (ATT/GDPR), purchase verification,
+  Adjust integration, Steam port (задачи есть, но пока не в продакшене).
+  Анастасия Воронова — Creative Producer на креативах.
+  ClickUp: list "MWCF - Tasks".
+
+slack_channels:
+  ohbibi-mwcf-project: Основной канал с Ohbibi (AC, 5.8K msgs)
+  ohbibi-mwcf-internal: Внутренняя команда (AC, 4.6K msgs)
+  ac-ohbibi-creatives: Креативы — UA/маркетинг (HG, 1.2K msgs). Переименован из ohbibi-mwcf-creatives.
+  ohbibi-rus: Внутренний русскоязычный канал (AC, 815 msgs)
+  ohbibi-mwcf-testing: QA/тестирование (AC, 539 msgs)
+  astrocat_sup: Slack Connect с Ohbibi — партнёрский канал (AC, 161 msgs)
+
+team_internal:
+  # Production/Dev
+  - name: Дарий
+    role: PM
+    status: active
+  - name: Семён Чиненов
+    role: Developer
+    status: active
+  - name: Алмасхан Баймышев
+    role: Developer
+    status: active
+  - name: Данил Корякин
+    role: QA
+    status: active
+  - name: Сергей Гуменюк
+    role: QA
+    status: active
+  # Creatives/UA
+  - name: Анастасия Воронова
+    role: Creative Producer
+    status: active
+  - name: Богдан Хашиев
+    role: UA Manager
+    status: active
+  - name: Hanna Samusenka
+    role: Creative Producer
+    status: active
+    note: Joined Feb 2026, background in hypercasual
+  - name: Chelsea Marie Dua
+    role: Producer / Marketing
+    status: active
+  - name: Алексей Адоньяев
+    role: Creative (Video/Motion Design)
+    status: active
+  # Analytics
+  - name: Юлия Дюфлот
+    role: Analyst
+    status: active
+  - name: Юлия Гречаная
+    role: Org
+    status: active
+  # Бывшие
+  - name: Алексей Мащенко
+    role: Developer / Audio
+    status: left
+    note: Last day 2026-02-23
+
+team_external:
+  ohbibi:
+    note: >
+      Клиент — Oh BiBi Games, Париж. Основана 2012, ~65 сотрудников.
+      Финансирование: $25.1M (Atomico, Gumi, Time for Growth).
+      Известные игры: FRAG Pro Shooter (150M+ downloads), SUP Racing, Motor World.
+      Slack Connect guests.
+    - name: Stanislas Dewavrin
+      role: CEO & Co-Founder — ex-VP Creation Gameloft (Minion Rush, Asphalt). UA стратегия, ad networks.
+      slack_uids: {ac: U7ZB3CHA5}
+      status: active
+    - name: Guillaume Alemanni
+      role: Game Lead / Senior PM — координация, Adjust, локализация, ATT consent. Ex-Gameloft, HEC Paris.
+      slack_uids: {ac: U02GD99SRL4}
+      status: active
+    - name: Guillaume Lacava
+      role: Technical / DevOps — Adjust dashboard, Firebase, service accounts, 1Password
+      slack_uids: {ac: U03JCC6T4PQ}
+      status: active
+    - name: Matthieu Brossard
+      role: Producer — delivery calendar
+      slack_uids: {ac: U08KHQP0S5P}
+      status: active
+    - name: Michal Glebicki
+      role: QA Lead — smoke tests, bug reports, player investigations, Jira/Atlassian
+      slack_uids: {ac: U055TL35G2E}
+      status: active
+    - name: Romain Blanchais
+      role: Game Dev Leadership — 18+ years, 11 shipped titles. Branch management, builds.
+      slack_uids: {ac: U09FAHK06AX}
+      status: active
+    - name: Raphael Lhoir
+      role: Support / QA — crash logs, player issues
+      slack_uids: {ac: UKPK36GD9}
+      status: active
+    - name: Antoine A.
+      role: Customer Support — tickets, crash reports, player spending
+      slack_uids: {ac: U02SLKY8QUA}
+      status: active
+    - name: Georges Choucair
+      role: IT / DevOps — Firebase access, console management
+      slack_uids: {ac: U064DMWCW5C}
+      status: active
+    - name: Moshi Blum
+      role: Team member
+      slack_uids: {ac: U09DUBVFTLP}
+      status: active
+    - name: Yann Le Blevec
+      role: Team member
+      slack_uids: {ac: U03BZ6D13K4}
+      status: active
+    - name: Guillaume S
+      role: Team member
+      slack_uids: {ac: U018YKC4BTR}
+      status: active
+    - name: Rebecca Alexander
+      role: Team member
+      slack_uids: {ac: U09T1GS2TMX}
+      status: active
+    - name: Herve Phan
+      role: Team member
+      slack_uids: {ac: U09J9DD41PY}
+      status: active
+
+processes:
+  - name: Stand Up || MWCF
+    cadence: Tue/Fri
+    description: >
+      Standup в 17:00 Bali (09:00 Yerevan), 15 мин. Проходит в Slack (internal канал).
+    participants: [Алмасхан Баймышев, Данил Корякин, Дарий, Семён Чиненов, Сергей Гуменюк]
+
+  - name: Ohbibi || Weekly Report
+    cadence: weekly (Wednesday)
+    description: >
+      Yang (CEO AC) постит weekly report в #ohbibi-mwcf-project.
+      Покрывает Marketing & Growth, creative rotation.
+
+  - name: Weekly Creatives Sync
+    cadence: weekly (Friday)
+    description: >
+      Пятница, 17:00 Yerevan. Sync по креативам (UA). Организует Анастасия Воронова.
+    participants: [Анастасия Воронова, Богдан Хашиев, Chelsea Marie Dua, Hanna Samusenka]
+    channel: ac-ohbibi-creatives
+
+  - name: Release Process
+    cadence: per release
+    description: >
+      Семён Чиненов собирает release builds (bundleCarRelease). Данил тестирует (sandbox vs release).
+      iOS + Android одновременно. FB migration, consent flows, purchase verification.
+    participants: [Семён Чиненов, Данил Корякин, Алмасхан Баймышев]
+
+resources:
+  - name: "MWCF UA+CREO PERFORMANCE"
+    type: spreadsheet
+    description: UA и креативная перформанс аналитика
+
+  - name: "Quote For AstroCat MWCF Facebook Save"
+    type: document
+    description: Документ по миграции Facebook saves
+
+  - name: "MWCF || Astro Cat Accesses"
+    type: spreadsheet
+    description: Доступы команды AC к сервисам Ohbibi
+
+  - name: "Motor World Car Factory - Bugs"
+    type: spreadsheet
+    description: Bug tracker
+
+  - name: "Ohbibi Motor World || First Decomposition"
+    type: document
+    description: Первоначальная декомпозиция проекта
+
+  - name: "MWCF_Steam_Port_Tasks"
+    type: spreadsheet
+    description: Задачи по Steam порту
+
+  - name: ClickUp — MWCF Tasks
+    type: project_management
+    description: ClickUp list "MWCF - Tasks"

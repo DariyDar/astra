@@ -1,0 +1,108 @@
+# ClickUp Spaces & Lists Catalog
+# Source: kb_chunks WHERE source='clickup' AND chunkType='task'
+# Total: 3,987 task chunks indexed
+# Generated: 2026-03-15
+
+clickup_lists:
+
+  - list: "Idle Axe Tasks"
+    chunks: 1029
+    project: Idle Axe Thrower
+    company: ac
+    note: Largest ClickUp list. Includes Magic Archery tasks.
+
+  - list: "Pivot - Tasks"
+    chunks: 978
+    project: Pivot Pumps
+    company: ac
+
+  - list: "Level Two - Tasks"
+    chunks: 424
+    project: Level Two
+    company: ac
+
+  - list: "Tasks Aquarium"
+    chunks: 396
+    project: Aquarium
+    company: ac
+
+  - list: "MWCF - Tasks"
+    chunks: 369
+    project: Motor World Car Factory
+    company: ac
+    note: Ohbibi project (Motor World Car Factory)
+
+  - list: "Shared with me"
+    chunks: 209
+    project: ~cross-project
+    note: Tasks shared across projects, no single owner
+
+  - list: "List"
+    chunks: 167
+    project: ~unknown
+    note: Generic list name, likely default ClickUp list
+
+  - list: "HR internal task list"
+    chunks: 139
+    project: ~company-ops
+    company: hg
+    note: HR department internal tasks
+
+  - list: "SMM"
+    chunks: 120
+    project: ~company-ops
+    company: ac
+    note: Social Media Marketing tasks
+
+  - list: "Main tasks"
+    chunks: 58
+    project: ~unknown
+    note: Generic list name
+
+  - list: "Oregon - Tasks"
+    chunks: 39
+    project: Oregon Trail
+    company: hg
+
+  - list: "Tasks"
+    chunks: 24
+    project: ~unknown
+    note: Generic list name
+
+  - list: "Level One - Tasks"
+    chunks: 12
+    project: Level One
+    company: ac
+
+  - list: "Contractors Requests"
+    chunks: 11
+    project: ~company-ops
+    note: External contractor management
+
+  - list: "Analytics Tasks"
+    chunks: 8
+    project: ~company-ops
+    note: Analytics department tasks
+
+  - list: "Leads and PMs tasks"
+    chunks: 3
+    project: ~company-ops
+    note: Leadership/PM task list
+
+  - list: "Tasks BP"
+    chunks: 1
+    project: Block Puzzle
+    company: ac
+    note: Very few tasks indexed
+
+# Task status distribution (across all lists):
+# Closed: 1,490 | Open: 1,029 | in progress: 460
+# complete: 417 | planned: 113 | blocked: 110
+# implementation: 109 | on hold: 103 | to do: 63
+# cancelled: 19 | to testing: 17 | done: 16
+# review: 12 | requested: 10 | reopen/re-open: 11
+# backlog: 3 | success: 2 | rejected: 1 | in review: 1
+
+# Wiki documents (chunkType='document') stored under source='clickup':
+# Total: 5,081 chunks across 4 wiki doc groups
+# See notion-wiki-catalog.yaml for wiki section details
