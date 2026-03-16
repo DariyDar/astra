@@ -382,9 +382,10 @@ async function runClaude(systemPrompt: string, userPrompt: string): Promise<RunR
           num_turns?: number
         }
 
-        // Count tool calls from stderr (each "Tool use:" line = 1 call)
-        const toolCallMatches = stderr.match(/Tool use:/g)
-        const toolCalls = toolCallMatches?.length ?? 0
+        // Count tool calls: num_turns from JSON (each tool call = 2 turns: request + result)
+        // Subtract 1 for the initial user message turn
+        const numTurns = parsed.num_turns ?? 0
+        const toolCalls = numTurns > 1 ? Math.floor((numTurns - 1) / 2) : 0
 
         resolve({
           text: parsed.result ?? stdout.trim(),
