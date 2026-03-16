@@ -15,7 +15,7 @@ import { fetchCalendar } from './calendar.js'
 import { fetchClickUp } from './clickup.js'
 import { executeClockifyReport, clockifyReportTool, type ClockifyReportType } from './clockify.js'
 import { executeAuditTasks, auditTasksTool } from './audit.js'
-import { kbSearchTool, kbEntitiesTool, handleKBSearch, handleKBEntities } from '../../kb/mcp-tools.js'
+import { kbSearchTool, kbEntitiesTool, kbRegistryTool, handleKBSearch, handleKBEntities, handleKBRegistry } from '../../kb/mcp-tools.js'
 
 // ── Main briefing logic ──
 
@@ -189,7 +189,7 @@ export async function main(): Promise<void> {
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbSearchTool, kbEntitiesTool, auditTasksTool],
+    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbSearchTool, kbEntitiesTool, kbRegistryTool, auditTasksTool],
   }))
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -272,6 +272,10 @@ export async function main(): Promise<void> {
       } else if (toolName === 'kb_entities') {
         const text = await handleKBEntities(args)
         log(`tool=${toolName} done`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'kb_registry') {
+        const text = handleKBRegistry(args)
+        log(`tool=${toolName} done len=${text.length}`)
         return { content: [{ type: 'text', text }] }
       } else if (toolName === 'audit_tasks') {
         if (!args.list_name) throw new Error('list_name is required')

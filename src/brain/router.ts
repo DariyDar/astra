@@ -18,6 +18,7 @@ import type { SkillRegistry } from '../skills/registry.js'
 import { buildRecentContext } from './context-builder.js'
 import { detectLanguage } from './language.js'
 import { buildSystemPrompt } from './system-prompt.js'
+import { getKnowledgeMap } from '../kb/registry/knowledge-map-builder.js'
 
 /** Regex to match <preference_update>...</preference_update> tags in Claude responses */
 const PREFERENCE_UPDATE_RE = /<preference_update>\s*([\s\S]*?)\s*<\/preference_update>/g
@@ -118,8 +119,9 @@ export class MessageRouter {
       requestLogger.info({ skill: skillResult.skill.name }, 'Skill matched for message')
     }
 
-    // 4. Build system prompt with channelId, skill catalog, and skill-specific extra
-    const systemPrompt = buildSystemPrompt(language, message.channelId)
+    // 4. Build system prompt with channelId, knowledge map, and skill-specific extra
+    const knowledgeMap = this.mcpEnabled ? getKnowledgeMap() : undefined
+    const systemPrompt = buildSystemPrompt(language, message.channelId, knowledgeMap)
     let fullSystem = systemPrompt
     if (skillResult.systemPromptExtra) {
       fullSystem += `\n\n${skillResult.systemPromptExtra}`

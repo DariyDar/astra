@@ -1,14 +1,14 @@
 /**
  * Core digest compiler — "Краткое содержание предыдущих серий".
- * Fetches YESTERDAY's data from all sources + KB context,
- * sends to Gemini LLM to produce a formatted Telegram HTML digest.
+ * Fetches YESTERDAY's data from all sources + KB context + project statuses,
+ * sends to Claude LLM to produce a formatted Telegram HTML digest.
  *
  * Data separation happens IN CODE: each company gets ONLY its own data.
  * Gmail/Calendar/ClickUp are filtered by project name/alias matching.
  * Slack is naturally separated by workspace.
  */
 
-import { callGemini } from '../llm/gemini.js'
+import { callClaude } from '../llm/client.js'
 import { logger } from '../logging/logger.js'
 import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
 import { fetchGmail } from '../mcp/briefing/gmail.js'
@@ -21,6 +21,7 @@ import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
 import { DIGEST_SYSTEM_PROMPT, buildDigestUserPrompt } from './prompt.js'
 import { buildNameMap, resolveDisplayName, type NameMap } from './name-resolver.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
+import { getAllStatuses, type ProjectStatus } from '../kb/registry/reader.js'
 
 type Company = 'astrocat' | 'highground'
 
@@ -316,6 +317,9 @@ export async function compileDigest(company: Company): Promise<string> {
     kbProjects: kbContext.length,
   }, 'Digest: data fetched and filtered for company')
 
+  // Load project statuses from registry
+  const projectStatuses = getProjectStatusesForCompany(wsLabel)
+
   // Build LLM prompt with company-filtered data
   const userPrompt = buildDigestUserPrompt({
     company: companyLabel,
@@ -327,29 +331,17 @@ export async function compileDigest(company: Company): Promise<string> {
     myTasks,
     kbContext,
     allProjects: companyProjects.map((p) => p.name),
+    projectStatuses,
   })
 
-  // Call Gemini to compile the digest
-  // thinkingBudget: 0 — disable thinking to maximize output token budget
-  // (thinking consumed ~8K tokens leaving only 326 for output)
-  const response = await callGemini(userPrompt, {
-    systemInstruction: DIGEST_SYSTEM_PROMPT,
-    maxOutputTokens: 8192,
-    timeoutMs: 120_000,
-    thinkingBudget: 0,
+  // Call Claude to compile the digest
+  const response = await callClaude(userPrompt, {
+    system: DIGEST_SYSTEM_PROMPT,
+    timeoutMs: 180_000,
   })
 
   if (!response.text || response.text.trim().length === 0) {
-    throw new Error(`Gemini returned empty response for ${company} digest`)
-  }
-
-  // Warn if output was truncated (MAX_TOKENS finish reason)
-  if (response.finishReason && response.finishReason !== 'STOP') {
-    logger.warn({
-      company,
-      finishReason: response.finishReason,
-      outputLen: response.text.length,
-    }, 'Digest: Gemini output may be truncated')
+    throw new Error(`Claude returned empty response for ${company} digest`)
   }
 
   logger.info({
@@ -360,6 +352,16 @@ export async function compileDigest(company: Company): Promise<string> {
   }, 'Digest: LLM compilation done')
 
   return response.text
+}
+
+/** Get project statuses from the YAML registry for a company. */
+function getProjectStatusesForCompany(companyCode: string): ProjectStatus[] {
+  try {
+    const statuses = getAllStatuses()
+    return companyCode === 'ac' ? statuses.astrocat : statuses.highground
+  } catch {
+    return []
+  }
 }
 
 /** Fetch KB facts for projects belonging to a company. */

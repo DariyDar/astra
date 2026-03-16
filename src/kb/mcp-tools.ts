@@ -5,6 +5,8 @@ import {
   getRelationsFor,
 } from './kb-facade.js'
 import type { EntityType, ChunkSource } from './types.js'
+import { loadProjectCard, loadSection, formatProjectCard } from './registry/reader.js'
+import { getKnowledgeMap } from './registry/knowledge-map-builder.js'
 
 // ── Tool definitions ──
 
@@ -166,4 +168,53 @@ export async function handleKBEntities(
   }
 
   return JSON.stringify({ error: 'Provide either "name" or "type" parameter' })
+}
+
+// ── kb_registry tool ──
+
+export const kbRegistryTool = {
+  name: 'kb_registry',
+  description: `Navigate the organizational Knowledge Registry — structured YAML catalog of all projects, people, documents, channels, and processes.
+
+Without arguments: returns the full knowledge map (table of contents).
+With project="X": returns the full project card — team, Slack channels, Drive docs with URLs, ClickUp lists, Notion pages, current status.
+With section="X": returns a specific section of the registry.
+
+Use this FIRST when you need to identify which tools/sources to query for a specific project or topic.`,
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      project: {
+        type: 'string' as const,
+        description: 'Project name or alias to look up (fuzzy-matched). Returns full project card.',
+      },
+      section: {
+        type: 'string' as const,
+        enum: ['people', 'processes', 'drive', 'clickup', 'wiki', 'channels'],
+        description: 'Registry section to browse.',
+      },
+    },
+  },
+}
+
+export function handleKBRegistry(args: Record<string, unknown>): string {
+  // Project card
+  if (args.project) {
+    const card = loadProjectCard(args.project as string)
+    if (!card) {
+      return JSON.stringify({
+        error: `Project not found: "${args.project}"`,
+        hint: 'Try a different name or alias. Call kb_registry() without arguments to see all projects.',
+      })
+    }
+    return formatProjectCard(card)
+  }
+
+  // Section
+  if (args.section) {
+    return loadSection(args.section as string)
+  }
+
+  // No arguments → full knowledge map
+  return getKnowledgeMap()
 }

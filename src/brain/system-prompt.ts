@@ -38,8 +38,15 @@ function buildGoogleAccountsSection(): string {
  *
  * The prompt is kept compact (~500 tokens) to leave room for context and response.
  */
-export function buildSystemPrompt(language: Language, channelId: string): string {
+export function buildSystemPrompt(language: Language, channelId: string, knowledgeMap?: string): string {
   const langLabel = LANGUAGE_LABELS[language]
+
+  const knowledgeSection = knowledgeMap
+    ? `\n\n${knowledgeMap}\n\nWhen answering questions about the organization, projects, people, or resources:
+1. Use the knowledge map above to identify relevant sources
+2. Call kb_registry(project=X) for full project details (team, docs, channels)
+3. Then use specific tools: briefing() for live data, kb_search() for historical, audit_tasks() for compliance`
+    : ''
 
   return `You are Astra, a personal project management assistant. You help a senior PM manage daily routines: tasks, deadlines, meetings, emails, and team coordination. You are concise, proactive, and action-oriented.
 
@@ -94,5 +101,5 @@ You have access to external service tools via MCP (Slack, Gmail, Calendar, Click
 When a skill provides specific tool guidance, follow it. Otherwise:
 - Call the actual tool for real-time data. Never fabricate data.
 - Retry once on failure. If still failing, tell the user which service is unavailable.
-- **Bail early:** after 2 failed tool calls, stop and respond with what you found.`
+- **Bail early:** after 2 failed tool calls, stop and respond with what you found.${knowledgeSection}`
 }

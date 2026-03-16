@@ -18,6 +18,8 @@ import { createNotionAdapter } from '../kb/ingestion/notion.js'
 import { extractKnowledgeBatch, markLowValueChunks } from '../kb/knowledge-extractor.js'
 import type { SourceAdapter } from '../kb/ingestion/types.js'
 import { deliverDailyDigest } from '../digest/scheduler.js'
+import { generateProjectStatuses } from '../kb/registry/status-generator.js'
+import { refreshKnowledgeMap } from '../kb/registry/knowledge-map-builder.js'
 
 const useGraphiti = env.KB_BACKEND === 'graphiti'
 
@@ -125,6 +127,14 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
         chunkBatchSize: 100,
       }, qdrantClient)
       logger.info(extractionStats, 'KB nightly knowledge extraction complete')
+    }
+
+    // Generate per-project statuses from fresh data
+    try {
+      await generateProjectStatuses()
+      refreshKnowledgeMap()
+    } catch (error) {
+      logger.error({ error }, 'Project status generation failed (non-blocking)')
     }
   } catch (error) {
     logger.error({ error }, 'KB nightly ingestion failed')
