@@ -65,6 +65,8 @@ export class MessageRouter {
   private readonly preferences?: NotificationPreferences
   private readonly mcpEnabled: boolean
   private readonly skillEngine?: SkillEngine
+  private inFlightCount = 0
+  private shuttingDown = false
 
   constructor(config: MessageRouterConfig) {
     this.shortTerm = config.shortTerm
@@ -86,6 +88,22 @@ export class MessageRouter {
    * 6. Return outbound message
    */
   async process(message: InboundMessage): Promise<OutboundMessage> {
+    if (this.shuttingDown) {
+      const language = detectLanguage(message.text)
+      throw new Error(language === 'ru'
+        ? 'Перезагрузка, подожди пару секунд.'
+        : 'Restarting, please wait a few seconds.')
+    }
+
+    this.inFlightCount++
+    try {
+      return await this.processInternal(message)
+    } finally {
+      this.inFlightCount--
+    }
+  }
+
+  private async processInternal(message: InboundMessage): Promise<OutboundMessage> {
     const requestLogger = createRequestLogger({
       userId: message.userId,
       action: 'message_processing',
@@ -238,9 +256,14 @@ export class MessageRouter {
   }
 
   /**
-   * Stop all adapters.
+   * Stop all adapters, waiting for in-flight requests to complete.
+   * New messages received during shutdown get a "restarting" error.
+   * Waits up to 30s for in-flight Claude requests, then force-stops.
    */
   async stop(): Promise<void> {
+    this.shuttingDown = true
+
+    // Stop adapters first — no new messages will arrive
     for (const adapter of this.adapters) {
       try {
         await adapter.stop()
@@ -250,6 +273,24 @@ export class MessageRouter {
           'Error stopping adapter',
         )
       }
+    }
+
+    logger.info({ inFlightCount: this.inFlightCount }, 'Adapters stopped, waiting for in-flight requests')
+
+    // Wait for in-flight requests to complete (poll every 500ms, max 30s)
+    const maxWaitMs = 30_000
+    const pollMs = 500
+    let waited = 0
+    while (this.inFlightCount > 0 && waited < maxWaitMs) {
+      await new Promise((r) => setTimeout(r, pollMs))
+      waited += pollMs
+      if (waited % 5000 === 0) {
+        logger.info({ inFlightCount: this.inFlightCount, waitedMs: waited }, 'Still waiting for in-flight requests')
+      }
+    }
+
+    if (this.inFlightCount > 0) {
+      logger.warn({ inFlightCount: this.inFlightCount }, 'Force-stopping with in-flight requests still pending')
     }
 
     logger.info('Message router stopped')

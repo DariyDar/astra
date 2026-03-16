@@ -57,6 +57,16 @@ export class TelegramAdapter implements ChannelAdapter {
         return
       }
 
+      // Skip stale messages (queued while bot was offline)
+      const messageAge = Date.now() - ctx.message!.date * 1000
+      if (messageAge > 120_000) {
+        logger.info(
+          { messageId: ctx.update.update_id, ageMs: messageAge },
+          'Skipping stale message (>2min old)',
+        )
+        return
+      }
+
       // React with eyes to acknowledge receipt
       try {
         await ctx.react('👀')
@@ -135,7 +145,6 @@ export class TelegramAdapter implements ChannelAdapter {
 
   private startPolling(): void {
     this.bot.start({
-      drop_pending_updates: true,
       onStart: () => {
         this.pollingAttempt = 0
         logger.info('Telegram adapter started (polling active)')

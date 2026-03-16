@@ -6,7 +6,7 @@ module.exports = {
       cwd: '/home/clawdbot/personal-assistant',
       script: './node_modules/.bin/tsx',
       args: 'src/bot/index.ts',
-      kill_timeout: 10000,
+      kill_timeout: 40000,
       restart_delay: 10000,
       max_restarts: 10,
       min_uptime: 5000,

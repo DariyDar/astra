@@ -5,15 +5,15 @@ import { writeAuditEntry } from '../logging/audit.js'
 import { sendHealthAlert } from '../health/alerter.js'
 
 const MODEL = 'sonnet'
-const CLAUDE_TIMEOUT_MS = 180_000
+const CLAUDE_TIMEOUT_MS = 300_000
 /**
  * Max agentic turns for MCP tool calls.
- * Each tool call consumes ~2 turns (request + result), so 24 allows ~12 tool calls.
+ * Each tool call consumes ~2 turns (request + result), so 30 allows ~15 tool calls.
  * Composite queries (KB search + live briefing + analysis) can need 8-10 tool calls
  * when data is large (e.g. full project audit with custom fields).
  * Bail-early prompt keeps simple queries lean despite higher limit.
  */
-const MCP_MAX_TURNS = 24
+const MCP_MAX_TURNS = 30
 
 export interface UsageMetrics {
   inputTokens: number

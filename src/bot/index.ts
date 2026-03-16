@@ -342,7 +342,12 @@ async function startup(): Promise<void> {
 }
 
 // --- Graceful shutdown ---
+let isShuttingDown = false
+
 function shutdown(signal: string): void {
+  if (isShuttingDown) return // Prevent double shutdown
+  isShuttingDown = true
+
   logger.info({ signal }, 'Shutting down bot')
 
   // Stop digest cron job
@@ -360,6 +365,7 @@ function shutdown(signal: string): void {
     logger.info('MCP server stopped')
   }
 
+  // messageRouter.stop() waits for in-flight Claude requests (up to 30s)
   messageRouter.stop()
     .then(() => {
       healthChecker.stopPeriodicChecks()
@@ -374,6 +380,12 @@ function shutdown(signal: string): void {
       logger.error({ error }, 'Error during shutdown')
       process.exit(1)
     })
+
+  // Hard kill after 35s (PM2 kill_timeout should be >= 35s)
+  setTimeout(() => {
+    logger.warn('Shutdown timeout exceeded, forcing exit')
+    process.exit(1)
+  }, 35_000).unref()
 }
 
 process.on('SIGINT', () => shutdown('SIGINT'))
