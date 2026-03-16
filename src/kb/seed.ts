@@ -88,7 +88,7 @@ export const processes: SeedEntity[] = [
 export const people: SeedEntity[] = [
   // Leadership
   { type: 'person', name: 'Дарий', company: 'ac', aliases: ['Dariy', 'dariy', 'Дарий Шацких', 'Dariy Shatskikh'], metadata: { role: 'CPO HG, VP Production AC', display_name: 'Дарий' } },
-  { type: 'person', name: 'Арсен', company: 'hg', aliases: ['Arsen'], metadata: { role: 'CEO HG', display_name: 'Арсен' } },
+  { type: 'person', name: 'Арсен', company: 'hg', aliases: ['Arsen', 'Арсен Чаталян'], metadata: { role: 'COO', display_name: 'Арсен' } },
   { type: 'person', name: 'Никита Кокарев', company: 'hg', aliases: ['Никита К.', 'Nikita K', 'Nikita Kokarev'], metadata: { role: 'Co-founder, Art Director', display_name: 'Никита К.' } },
   { type: 'person', name: 'Слава', company: 'hg', aliases: ['Вячеслав Куряков', 'Slava', 'Vyacheslav'], metadata: { role: 'Co-founder HG', display_name: 'Слава' } },
   { type: 'person', name: 'Йенг', company: 'ac', aliases: ['Yeng', 'Yang Wen'], metadata: { role: 'CEO AC', display_name: 'Йенг' } },

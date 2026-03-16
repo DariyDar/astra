@@ -6,7 +6,7 @@
  * Called after KB ingestion in the nightly cron job.
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import yaml from 'js-yaml'
@@ -213,6 +213,9 @@ function writeStatusFile(data: StatusFileData): void {
     forceQuotes: false,
   })
 
-  writeFileSync(STATUS_FILE, header + '\n' + yamlContent, 'utf-8')
-  logger.info({ file: STATUS_FILE }, 'Project statuses written')
+  // Atomic write: write to temp file then rename to avoid corruption on crash
+  const tmpFile = STATUS_FILE + '.tmp'
+  writeFileSync(tmpFile, header + '\n' + yamlContent, 'utf-8')
+  renameSync(tmpFile, STATUS_FILE)
+  logger.info({ file: STATUS_FILE }, 'Project statuses written (atomic)')
 }

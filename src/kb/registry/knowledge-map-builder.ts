@@ -7,7 +7,7 @@
  */
 
 import { getAllProjects, getAllStatuses, refresh as refreshReader } from './reader.js'
-import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import yaml from 'js-yaml'
@@ -15,7 +15,10 @@ import { logger } from '../../logging/logger.js'
 
 const REGISTRY_DIR = join(fileURLToPath(import.meta.url), '..')
 
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
 let cachedMap: string | null = null
+let cachedAt: number = 0
 
 /**
  * Build the knowledge map from YAML registry files.
@@ -87,19 +90,31 @@ export function buildKnowledgeMap(): string {
     lines.push(namingRules)
   }
 
+  // Freshness indicator
+  const statusFile = join(REGISTRY_DIR, 'projects', '_current-status.yaml')
+  let lastStatusUpdate = 'unknown'
+  if (existsSync(statusFile)) {
+    const stat = statSync(statusFile)
+    lastStatusUpdate = stat.mtime.toISOString().slice(0, 16).replace('T', ' ') + ' UTC'
+  }
+  lines.push(``)
+  lines.push(`Registry data freshness: last updated ${lastStatusUpdate}`)
+
   lines.push(``)
   lines.push(`Navigation: call kb_registry(project="X") to get full project card (team, channels, docs with URLs, tasks, status).`)
   lines.push(`Call kb_registry(section="processes"|"wiki"|"drive"|"people"|"channels") for cross-project info.`)
 
   cachedMap = lines.join('\n')
+  cachedAt = Date.now()
   return cachedMap
 }
 
 /**
- * Get the cached knowledge map, or build it if not cached.
+ * Get the cached knowledge map, or build it if not cached or stale (>1 hour).
  */
 export function getKnowledgeMap(): string {
-  if (!cachedMap) {
+  if (!cachedMap || Date.now() - cachedAt > CACHE_TTL_MS) {
+    refreshReader()
     return buildKnowledgeMap()
   }
   return cachedMap
