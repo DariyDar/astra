@@ -79,6 +79,7 @@ export function buildDigestUserPrompt(params: {
   kbContext: Array<{ project: string; facts: string[] }>
   allProjects: string[]
   projectStatuses?: ProjectStatus[]
+  registryGaps?: { staleProjects: number; unknownUsers: number; unknownChannels: number }
 }): string {
   const sections: string[] = []
 
@@ -190,6 +191,22 @@ export function buildDigestUserPrompt(params: {
         const tasks = s.open_tasks !== undefined ? ` | ${s.open_tasks} задач, ${s.overdue_tasks ?? 0} просрочено` : ''
         sections.push(`[${s.project}] ${s.status}${tasks}`)
         sections.push(`  Фокус: ${s.current_focus}`)
+      }
+    }
+  }
+
+  // Registry gaps warning
+  if (params.registryGaps) {
+    const g = params.registryGaps
+    const warnings: string[] = []
+    if (g.staleProjects > 0) warnings.push(`${g.staleProjects} проектов с устаревшими статусами (>3 дней)`)
+    if (g.unknownUsers > 0) warnings.push(`${g.unknownUsers} новых людей в Slack не внесены в реестр`)
+    if (g.unknownChannels > 0) warnings.push(`${g.unknownChannels} каналов Slack не каталогизированы`)
+    if (warnings.length > 0) {
+      sections.push(`\n--- ПРЕДУПРЕЖДЕНИЯ О ДАННЫХ ---`)
+      sections.push(`Добавь в конец дайджеста секцию <b>⚠️ Актуальность данных</b> с этими замечаниями:`)
+      for (const w of warnings) {
+        sections.push(`• ${w}`)
       }
     }
   }

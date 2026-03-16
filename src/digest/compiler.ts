@@ -22,6 +22,7 @@ import { DIGEST_SYSTEM_PROMPT, buildDigestUserPrompt } from './prompt.js'
 import { buildNameMap, resolveDisplayName, type NameMap } from './name-resolver.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
 import { getAllStatuses, type ProjectStatus } from '../kb/registry/reader.js'
+import { loadDiscoveryReport } from '../kb/registry/entity-discovery.js'
 
 type Company = 'astrocat' | 'highground'
 
@@ -320,6 +321,14 @@ export async function compileDigest(company: Company): Promise<string> {
   // Load project statuses from registry
   const projectStatuses = getProjectStatusesForCompany(wsLabel)
 
+  // Load discovery report for staleness warnings
+  const discoveryReport = loadDiscoveryReport()
+  const registryGaps = discoveryReport ? {
+    staleProjects: discoveryReport.stale_projects.length,
+    unknownUsers: discoveryReport.unknown_slack_users.length,
+    unknownChannels: discoveryReport.unknown_channels.length,
+  } : undefined
+
   // Build LLM prompt with company-filtered data
   const userPrompt = buildDigestUserPrompt({
     company: companyLabel,
@@ -332,6 +341,7 @@ export async function compileDigest(company: Company): Promise<string> {
     kbContext,
     allProjects: companyProjects.map((p) => p.name),
     projectStatuses,
+    registryGaps,
   })
 
   // Call Claude to compile the digest
