@@ -7,6 +7,7 @@ import {
 import type { EntityType, ChunkSource } from './types.js'
 import { loadProjectCard, loadSection, formatProjectCard } from './registry/reader.js'
 import { getKnowledgeMap } from './registry/knowledge-map-builder.js'
+import { loadDiscoveryReport } from './registry/entity-discovery.js'
 
 // ── Tool definitions ──
 
@@ -190,8 +191,8 @@ Use this FIRST when you need to identify which tools/sources to query for a spec
       },
       section: {
         type: 'string' as const,
-        enum: ['people', 'processes', 'drive', 'clickup', 'wiki', 'channels'],
-        description: 'Registry section to browse.',
+        enum: ['people', 'processes', 'drive', 'clickup', 'wiki', 'channels', 'health'],
+        description: 'Registry section to browse. "health" shows data freshness and registry gaps.',
       },
     },
   },
@@ -212,9 +213,72 @@ export function handleKBRegistry(args: Record<string, unknown>): string {
 
   // Section
   if (args.section) {
+    if (args.section === 'health') {
+      return formatHealthReport()
+    }
     return loadSection(args.section as string)
   }
 
   // No arguments → full knowledge map
   return getKnowledgeMap()
+}
+
+function formatHealthReport(): string {
+  const report = loadDiscoveryReport()
+  if (!report) {
+    return '## Registry Health\n\nNo discovery report available yet. Report is generated during nightly ingestion (22:00 UTC).'
+  }
+
+  const lines = [
+    `## Registry Health Report`,
+    `Generated: ${report.generated_at}`,
+    '',
+  ]
+
+  if (report.stale_projects.length > 0) {
+    lines.push(`### Stale Project Statuses (${report.stale_projects.length})`)
+    for (const p of report.stale_projects) {
+      lines.push(`- **${p.name}**: last updated ${p.last_updated} (${p.days_stale} days ago)`)
+    }
+    lines.push('')
+  }
+
+  if (report.unknown_slack_users.length > 0) {
+    lines.push(`### Unknown Slack Users (${report.unknown_slack_users.length})`)
+    lines.push(`People in Slack not found in the YAML people registry:`)
+    for (const u of report.unknown_slack_users.slice(0, 20)) {
+      lines.push(`- ${u.name} (${u.workspace})`)
+    }
+    if (report.unknown_slack_users.length > 20) {
+      lines.push(`- ... and ${report.unknown_slack_users.length - 20} more`)
+    }
+    lines.push('')
+  }
+
+  if (report.unknown_channels.length > 0) {
+    lines.push(`### Uncatalogued Slack Channels (${report.unknown_channels.length})`)
+    for (const ch of report.unknown_channels.slice(0, 20)) {
+      lines.push(`- #${ch.name} (${ch.workspace}, ${ch.members} members)`)
+    }
+    if (report.unknown_channels.length > 20) {
+      lines.push(`- ... and ${report.unknown_channels.length - 20} more`)
+    }
+    lines.push('')
+  }
+
+  if (report.unknown_clickup_lists.length > 0) {
+    lines.push(`### Unknown ClickUp Lists (${report.unknown_clickup_lists.length})`)
+    for (const l of report.unknown_clickup_lists) {
+      lines.push(`- ${l.name} (space: ${l.space})`)
+    }
+    lines.push('')
+  }
+
+  const total = report.stale_projects.length + report.unknown_slack_users.length +
+    report.unknown_channels.length + report.unknown_clickup_lists.length
+  if (total === 0) {
+    lines.push('All data is fresh and all entities are registered. No gaps detected.')
+  }
+
+  return lines.join('\n')
 }
