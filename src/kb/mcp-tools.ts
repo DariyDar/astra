@@ -5,7 +5,7 @@ import {
   getRelationsFor,
 } from './kb-facade.js'
 import type { EntityType, ChunkSource } from './types.js'
-import { loadProjectCard, loadSection, formatProjectCard } from './registry/reader.js'
+import { loadProjectCard, loadSection, formatProjectCard, findCompanyProjects } from './registry/reader.js'
 import { getKnowledgeMap } from './registry/knowledge-map-builder.js'
 import { loadDiscoveryReport } from './registry/entity-discovery.js'
 
@@ -178,7 +178,7 @@ export const kbRegistryTool = {
   description: `Navigate the organizational Knowledge Registry — structured YAML catalog of all projects, people, documents, channels, and processes.
 
 Without arguments: returns the full knowledge map (table of contents).
-With project="X": returns the full project card — team, Slack channels, Drive docs with URLs, ClickUp lists, Notion pages, current status.
+With project="X": returns the full project card — team, Slack channels, Drive docs with URLs, ClickUp lists, Notion pages, current status. Also works with company/client names (e.g. "TP", "Tilting Point", "Ohbibi") — returns all projects for that company.
 With section="X": returns a specific section of the registry.
 
 Use this FIRST when you need to identify which tools/sources to query for a specific project or topic.`,
@@ -187,7 +187,7 @@ Use this FIRST when you need to identify which tools/sources to query for a spec
     properties: {
       project: {
         type: 'string' as const,
-        description: 'Project name or alias to look up (fuzzy-matched). Returns full project card.',
+        description: 'Project name, alias, or company/client name (e.g. "TP", "Ohbibi"). Returns project card(s).',
       },
       section: {
         type: 'string' as const,
@@ -199,16 +199,26 @@ Use this FIRST when you need to identify which tools/sources to query for a spec
 }
 
 export function handleKBRegistry(args: Record<string, unknown>): string {
-  // Project card
+  // Project card (also searches company/client names)
   if (args.project) {
     const card = loadProjectCard(args.project as string)
-    if (!card) {
-      return JSON.stringify({
-        error: `Project not found: "${args.project}"`,
-        hint: 'Try a different name or alias. Call kb_registry() without arguments to see all projects.',
-      })
+    if (card) return formatProjectCard(card)
+
+    // Fallback: search by company/client name (e.g. "TP" → Tilting Point → all its projects)
+    const companyResult = findCompanyProjects(args.project as string)
+    if (companyResult && companyResult.projects.length > 0) {
+      const lines = [`# ${companyResult.company} — Projects (${companyResult.projects.length})\n`]
+      for (const p of companyResult.projects) {
+        lines.push(formatProjectCard(p))
+        lines.push('\n---\n')
+      }
+      return lines.join('\n')
     }
-    return formatProjectCard(card)
+
+    return JSON.stringify({
+      error: `Project or company not found: "${args.project}"`,
+      hint: 'Try a different name or alias. Call kb_registry() without arguments to see all projects.',
+    })
   }
 
   // Section

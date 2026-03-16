@@ -669,6 +669,45 @@ export function formatProjectCard(card: ProjectCard): string {
 }
 
 /**
+ * Find a company/client by name, code, or alias and return all its projects.
+ * Used when user asks about "TP projects" or "Ohbibi projects".
+ */
+export function findCompanyProjects(query: string): { company: string; projects: ProjectCard[] } | null {
+  const companiesDir = join(REGISTRY_DIR, 'companies')
+  if (!existsSync(companiesDir)) return null
+
+  const lower = query.toLowerCase()
+  for (const file of readdirSync(companiesDir).filter((f) => f.endsWith('.yaml'))) {
+    const data = loadYaml<{
+      name: string
+      code?: string
+      aliases?: string[]
+      projects?: Array<{ name: string }>
+    }>(join(companiesDir, file))
+    if (!data?.name) continue
+
+    const terms = [data.name, data.code ?? '', ...(data.aliases ?? [])].filter(Boolean)
+    const match = terms.some((t) => {
+      const tl = t.toLowerCase()
+      if (tl.length <= 3) return new RegExp(`\\b${escapeRegex(tl)}\\b`, 'i').test(lower)
+      return lower.includes(tl) || tl.includes(lower)
+    })
+
+    if (match && data.projects) {
+      ensureProjectsLoaded()
+      const cards: ProjectCard[] = []
+      for (const p of data.projects) {
+        const card = findProject(p.name)
+        if (card) cards.push(card)
+      }
+      return { company: data.name, projects: cards }
+    }
+  }
+
+  return null
+}
+
+/**
  * Invalidate all caches. Call after YAML files are updated.
  */
 export function refresh(): void {

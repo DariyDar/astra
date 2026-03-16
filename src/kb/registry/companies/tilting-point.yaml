@@ -1,5 +1,6 @@
 name: Tilting Point
 code: tp
+aliases: [TP]
 type: client
 slack_workspace: [ac, hg]
 projects:
