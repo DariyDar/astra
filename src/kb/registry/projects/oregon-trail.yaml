@@ -70,79 +70,83 @@ team_internal:
 
 team_external:
   tilting_point:
-    - name: Veronique Belanger
-      role: Producer (TP lead) — #1 контакт, управляет Snoopgame/Lionbridge QA, локализация
-      slack_uids: {ac: U02THGG25D4}
-      status: active
-    - name: Daniel Serena
-      role: Release Manager — pushes builds, submits for review
-      slack_uids: {ac: U01HCCH0GUF}
-      status: active
-    - name: Anna Guida
-      role: QA/Producer — bug handling, admin tools
-      slack_uids: {ac: U05CLCHTVS5}
-      status: active
-    - name: Elena Agullo
-      role: Producer — release management, phased rollouts (10%→50%→100%)
-      slack_uids: {ac: U0457APM2SV}
-      status: active
-    - name: Gael Leprevost
-      role: Design/UX (TP)
-      slack_uids: {ac: U011ZC8UHV4}
-      status: active
-    - name: Mathias Royer
-      role: Analytics / Business Dev — Amplitude, community monitoring, licensor (Harper Collins) координация
-      slack_uids: {ac: UC35YVAV9}
-      status: active
-    - name: Dennis Heizmann
-      role: Meeting coordination (TP)
-      slack_uids: {ac: UDU09BQAV}
-      status: active
-    - name: Marc Galdo
-      role: PRIVO/Legal compliance lead от TP
-      slack_uids: {ac: U063TREF2KS}
-      status: active
-    - name: Joe Rousseau
-      role: Producer — licensor approvals, Build Summary
-      slack_uids: {ac: U013H8FTHFU}
-      status: active
-    - name: Benjamin Tsacoyianis
-      display: Ben
-      role: Communications — offers, changelogs, PRIVO
-      slack_uids: {ac: U0147349BJL}
-      status: active
-    - name: Diego Link
-      role: VP Engineering TP + AC advisor — Pley porting, websocket auth
-      slack_uids: {ac: UBQL4N8AC}
-      status: active
-    - name: Sylvain Etard
-      role: Monetization — A/B tests, interstitials, subscriptions
-      slack_uids: {ac: U02CY99SCJ3}
-      status: active
-    - name: Sidds
-      role: Producer — build submissions, store management, legal, Appbot integration
-      slack_uids: {ac: U05AXUGGHNU}
-      status: active
-    - name: Kaitlynn Hegarty
-      role: Firebase access, coordination
-      slack_uids: {ac: U02E96U9M2P}
-      status: active
-    - name: David Hague
-      role: Senior VP Product
-      slack_uids: {ac: U0D7BNKQQ}
-      status: active
-    - name: Ariadna Freixa
-      role: PRIVO/Legal — age gate questions
-      slack_uids: {ac: U01GBG5HWR3}
-      status: active
-    - name: Francesco Sorce
-      role: Social media / Comms — server downtime, update announcements
-      slack_uids: {ac: U08GQP85YRG}
-      status: active
-    - name: Kerem Ozer
-      role: Community Manager — FAQ, support docs, Facebook group
-      slack_uids: {ac: U05RBDJKCD8}
-      status: active
+    note: >
+      Tilting Point — паблишер Oregon Trail. Основные контакты: Veronique Belanger (producer),
+      Daniel Serena (release manager), Mathias Royer (analytics/biz dev).
+    contacts:
+      - name: Veronique Belanger
+        role: Producer (TP lead) — #1 контакт, управляет Snoopgame/Lionbridge QA, локализация
+        slack_uids: {ac: U02THGG25D4}
+        status: active
+      - name: Daniel Serena
+        role: Release Manager — pushes builds, submits for review
+        slack_uids: {ac: U01HCCH0GUF}
+        status: active
+      - name: Anna Guida
+        role: QA/Producer — bug handling, admin tools
+        slack_uids: {ac: U05CLCHTVS5}
+        status: active
+      - name: Elena Agullo
+        role: Producer — release management, phased rollouts (10%→50%→100%)
+        slack_uids: {ac: U0457APM2SV}
+        status: active
+      - name: Gael Leprevost
+        role: Design/UX (TP)
+        slack_uids: {ac: U011ZC8UHV4}
+        status: active
+      - name: Mathias Royer
+        role: Analytics / Business Dev — Amplitude, community monitoring, licensor (Harper Collins) координация
+        slack_uids: {ac: UC35YVAV9}
+        status: active
+      - name: Dennis Heizmann
+        role: Meeting coordination (TP)
+        slack_uids: {ac: UDU09BQAV}
+        status: active
+      - name: Marc Galdo
+        role: PRIVO/Legal compliance lead от TP
+        slack_uids: {ac: U063TREF2KS}
+        status: active
+      - name: Joe Rousseau
+        role: Producer — licensor approvals, Build Summary
+        slack_uids: {ac: U013H8FTHFU}
+        status: active
+      - name: Benjamin Tsacoyianis
+        display: Ben
+        role: Communications — offers, changelogs, PRIVO
+        slack_uids: {ac: U0147349BJL}
+        status: active
+      - name: Diego Link
+        role: VP Engineering TP + AC advisor — Pley porting, websocket auth
+        slack_uids: {ac: UBQL4N8AC}
+        status: active
+      - name: Sylvain Etard
+        role: Monetization — A/B tests, interstitials, subscriptions
+        slack_uids: {ac: U02CY99SCJ3}
+        status: active
+      - name: Sidds
+        role: Producer — build submissions, store management, legal, Appbot integration
+        slack_uids: {ac: U05AXUGGHNU}
+        status: active
+      - name: Kaitlynn Hegarty
+        role: Firebase access, coordination
+        slack_uids: {ac: U02E96U9M2P}
+        status: active
+      - name: David Hague
+        role: Senior VP Product
+        slack_uids: {ac: U0D7BNKQQ}
+        status: active
+      - name: Ariadna Freixa
+        role: PRIVO/Legal — age gate questions
+        slack_uids: {ac: U01GBG5HWR3}
+        status: active
+      - name: Francesco Sorce
+        role: Social media / Comms — server downtime, update announcements
+        slack_uids: {ac: U08GQP85YRG}
+        status: active
+      - name: Kerem Ozer
+        role: Community Manager — FAQ, support docs, Facebook group
+        slack_uids: {ac: U05RBDJKCD8}
+        status: active
 
   snoopgame_qa:
     note: >

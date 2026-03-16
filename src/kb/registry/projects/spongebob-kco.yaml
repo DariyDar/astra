@@ -80,43 +80,47 @@ team_internal:
 
 team_external:
   tilting_point:
-    - name: Kaitlynn Hegarty
-      role: Producer — основной контакт TP, weekly syncs, Nick feedback relay, compliance
-      slack_uids: {ac: U02E96U9M2P}
-      status: active
-    - name: Steve Melanson
-      role: SDK QA Manager — Adjust testing, compliance, pricing
-      slack_uids: {ac: U24KF0NTY}
-      status: active
-    - name: Diego Link
-      role: VP Engineering TP + AC advisor, Pley/SDK интеграция
-      slack_uids: {ac: UBQL4N8AC}
-      status: active
-    - name: Marc Galdo
-      role: Google Play Console, ESRB compliance, closed testing tracks
-      slack_uids: {ac: U063TREF2KS}
-      status: active
-    - name: Benjamin Tsacoyianis
-      display: Ben
-      role: Ad Monetization — ad placements, IronSource dashboard
-      slack_uids: {ac: U0147349BJL}
-      status: active
-    - name: Sylvain Etard
-      role: Ad Ops / Compliance — IronSource, ESRB compliance, ad blocking
-      slack_uids: {ac: U02CY99SCJ3}
-      status: active
-    - name: David Hague
-      role: Senior VP Product
-      slack_uids: {ac: U0D7BNKQQ}
-      status: active
-    - name: Joe Rousseau
-      role: Producer
-      slack_uids: {ac: U013H8FTHFU}
-      status: active
-    - name: Ariadna Freixa
-      role: Legal/Privacy — privacy policy, ToS, data collection
-      slack_uids: {ac: U01GBG5HWR3}
-      status: active
+    note: >
+      Tilting Point — паблишер SpongeBob: Krusty Cook-Off. Основные контакты: Kaitlynn Hegarty (producer),
+      Steve Melanson (SDK QA), Diego Link (VP Engineering, Pley/SDK).
+    contacts:
+      - name: Kaitlynn Hegarty
+        role: Producer — основной контакт TP, weekly syncs, Nick feedback relay, compliance
+        slack_uids: {ac: U02E96U9M2P}
+        status: active
+      - name: Steve Melanson
+        role: SDK QA Manager — Adjust testing, compliance, pricing
+        slack_uids: {ac: U24KF0NTY}
+        status: active
+      - name: Diego Link
+        role: VP Engineering TP + AC advisor, Pley/SDK интеграция
+        slack_uids: {ac: UBQL4N8AC}
+        status: active
+      - name: Marc Galdo
+        role: Google Play Console, ESRB compliance, closed testing tracks
+        slack_uids: {ac: U063TREF2KS}
+        status: active
+      - name: Benjamin Tsacoyianis
+        display: Ben
+        role: Ad Monetization — ad placements, IronSource dashboard
+        slack_uids: {ac: U0147349BJL}
+        status: active
+      - name: Sylvain Etard
+        role: Ad Ops / Compliance — IronSource, ESRB compliance, ad blocking
+        slack_uids: {ac: U02CY99SCJ3}
+        status: active
+      - name: David Hague
+        role: Senior VP Product
+        slack_uids: {ac: U0D7BNKQQ}
+        status: active
+      - name: Joe Rousseau
+        role: Producer
+        slack_uids: {ac: U013H8FTHFU}
+        status: active
+      - name: Ariadna Freixa
+        role: Legal/Privacy — privacy policy, ToS, data collection
+        slack_uids: {ac: U01GBG5HWR3}
+        status: active
   illogika:
     note: Предыдущая студия-разработчик. Проект перешёл к AstroCat.
     contacts:
@@ -127,10 +131,14 @@ team_external:
         status: left
 
   nickelodeon:
-    - name: Marin Yoshino
-      role: Former licensor contact — ревью art themes. Функции переданы Kaitlynn Hegarty.
-      slack_uids: {ac: U04MAFWC2AH}
-      status: left
+    note: >
+      Nickelodeon (Paramount) — лицензиар. Ревью art themes раньше через Marin Yoshino,
+      сейчас функции переданы Kaitlynn Hegarty (TP).
+    contacts:
+      - name: Marin Yoshino
+        role: Former licensor contact — ревью art themes. Функции переданы Kaitlynn Hegarty.
+        slack_uids: {ac: U04MAFWC2AH}
+        status: left
 
   indium_soft_qa:
     note: >
@@ -231,18 +239,21 @@ team_external:
         status: active
 
   pley:
-    - name: Will Wadbrant
-      role: Technical/dev support
-      slack_uids: {ac: U045YGHQQSX}
-      status: left
-    - name: Michael van der Poll
-      role: SDK support
-      slack_uids: {ac: U05661DQ20Z}
-      status: active
-    - name: Guilhem Morer
-      role: SDK technical support
-      slack_uids: {ac: U01LU1R9DPV}
-      status: active
+    note: >
+      Pley — веб-платформа для WebGL версии. SDK интеграция и техподдержка.
+    contacts:
+      - name: Will Wadbrant
+        role: Technical/dev support
+        slack_uids: {ac: U045YGHQQSX}
+        status: left
+      - name: Michael van der Poll
+        role: SDK support
+        slack_uids: {ac: U05661DQ20Z}
+        status: active
+      - name: Guilhem Morer
+        role: SDK technical support
+        slack_uids: {ac: U01LU1R9DPV}
+        status: active
 
 processes:
   - name: Daily QA Scrum (Indium Soft)

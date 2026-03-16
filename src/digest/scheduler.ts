@@ -13,155 +13,9 @@
  */
 
 import 'dotenv/config'
-import { Bot } from 'grammy'
 import { logger } from '../logging/logger.js'
 import { compileDigest } from './compiler.js'
-
-const MAX_TELEGRAM_MESSAGE_LENGTH = 4096
-
-/** Lazy-initialized Bot singleton for Telegram delivery. */
-let botInstance: InstanceType<typeof Bot> | null = null
-
-function getBot(): InstanceType<typeof Bot> {
-  const token = process.env.TELEGRAM_BOT_TOKEN
-  if (!token) throw new Error('TELEGRAM_BOT_TOKEN not configured')
-  if (!botInstance) botInstance = new Bot(token)
-  return botInstance
-}
-
-/** Telegram-supported HTML tags. Anything else gets stripped. */
-const ALLOWED_TAGS = new Set(['b', 'i', 'u', 's', 'a', 'code', 'pre'])
-
-/**
- * Sanitize LLM output to valid Telegram HTML.
- * - Strips unsupported tags (keeps content)
- * - Escapes bare < > & that aren't part of valid tags
- * - Closes any unclosed tags
- */
-function sanitizeTelegramHtml(html: string): string {
-  // Remove markdown artifacts the LLM might sneak in
-  let result = html.replace(/```[a-z]*/g, '').replace(/```/g, '')
-
-  // Replace all < with a placeholder, then restore valid allowed tags
-  // This prevents bare < in text (e.g., "retention < 35%") from breaking Telegram
-  const PLACEHOLDER = '\x00LT\x00'
-  result = result.replace(/</g, PLACEHOLDER)
-
-  // Restore allowed opening tags: <b>, <i>, <a href="...">, etc.
-  for (const tag of ALLOWED_TAGS) {
-    // Opening tag with attributes (e.g., <a href="...">)
-    const openRegex = new RegExp(`${PLACEHOLDER}(${tag})(\\s[^>]*)?>`, 'gi')
-    result = result.replace(openRegex, '<$1$2>')
-    // Opening tag without attributes
-    const openSimple = new RegExp(`${PLACEHOLDER}(${tag})>`, 'gi')
-    result = result.replace(openSimple, '<$1>')
-    // Closing tag
-    const closeRegex = new RegExp(`${PLACEHOLDER}/(${tag})>`, 'gi')
-    result = result.replace(closeRegex, '</$1>')
-  }
-
-  // Escape any remaining < placeholders as &lt;
-  result = result.replace(new RegExp(PLACEHOLDER, 'g'), '&lt;')
-
-  // Fix broken <a> tags: remove <a> without valid href, and their matching </a>
-  // Replace broken <a> with a marker, then clean up
-  result = result.replace(/<a\s*>/gi, '')  // <a> with no attributes
-  result = result.replace(/<a\s+href\s*=\s*""?\s*>/gi, '')  // <a href="">
-  result = result.replace(/<a\s+href\s*=\s*''?\s*>/gi, '')  // <a href=''>
-  result = result.replace(/<a\s+>/gi, '')  // <a > (just whitespace)
-
-  // Balance unclosed tags
-  result = balanceHtmlTags(result)
-
-  return result
-}
-
-/** Send a message via Telegram Bot API. */
-async function sendTelegramMessage(text: string): Promise<void> {
-  const chatId = process.env.TELEGRAM_ADMIN_CHAT_ID
-  if (!chatId) {
-    logger.warn('TELEGRAM_ADMIN_CHAT_ID not configured')
-    return
-  }
-
-  const sanitized = sanitizeTelegramHtml(text)
-  const bot = getBot()
-  const chunks = splitMessage(sanitized, MAX_TELEGRAM_MESSAGE_LENGTH)
-  for (const chunk of chunks) {
-    try {
-      await bot.api.sendMessage(chatId, chunk, { parse_mode: 'HTML' })
-    } catch (htmlError) {
-      // If HTML parsing fails, strip all tags and send as plain text
-      const errMsg = htmlError instanceof Error ? htmlError.message : String(htmlError)
-      logger.warn({ error: errMsg, chunkLen: chunk.length }, 'Telegram HTML parse failed, sending as plain text')
-      const plainText = chunk.replace(/<[^>]+>/g, '')
-      await bot.api.sendMessage(chatId, plainText)
-    }
-  }
-}
-
-/** Split a message into chunks that fit Telegram's limit, preserving line boundaries. */
-function splitMessage(text: string, maxLen: number): string[] {
-  if (text.length <= maxLen) return [text]
-
-  const chunks: string[] = []
-  let remaining = text
-
-  while (remaining.length > 0) {
-    if (remaining.length <= maxLen) {
-      chunks.push(remaining)
-      break
-    }
-
-    // Find last newline before maxLen
-    let splitAt = remaining.lastIndexOf('\n', maxLen)
-    if (splitAt === -1 || splitAt < maxLen / 2) {
-      splitAt = maxLen
-    }
-
-    chunks.push(remaining.slice(0, splitAt))
-    remaining = remaining.slice(splitAt).replace(/^\n/, '')
-  }
-
-  // Balance unclosed HTML tags in each chunk
-  return chunks.map(balanceHtmlTags)
-}
-
-/** Balance HTML tags: close unclosed tags and remove orphaned closing tags. */
-function balanceHtmlTags(chunk: string): string {
-  const openTags: string[] = []
-  const orphanedClosePositions: Array<{ start: number; end: number }> = []
-  const tagRegex = /<\/?([a-z]+)[^>]*>/gi
-  let match: RegExpExecArray | null
-  while ((match = tagRegex.exec(chunk)) !== null) {
-    const isClosing = match[0].startsWith('</')
-    const tagName = match[1].toLowerCase()
-    if (isClosing) {
-      const idx = openTags.lastIndexOf(tagName)
-      if (idx !== -1) {
-        openTags.splice(idx, 1)
-      } else {
-        // Orphaned closing tag — mark for removal
-        orphanedClosePositions.push({ start: match.index, end: match.index + match[0].length })
-      }
-    } else if (!match[0].endsWith('/>')) {
-      openTags.push(tagName)
-    }
-  }
-
-  // Remove orphaned closing tags (iterate in reverse to preserve positions)
-  let result = chunk
-  for (let i = orphanedClosePositions.length - 1; i >= 0; i--) {
-    const { start, end } = orphanedClosePositions[i]
-    result = result.slice(0, start) + result.slice(end)
-  }
-
-  // Close unclosed tags
-  if (openTags.length > 0) {
-    result += openTags.reverse().map((t) => `</${t}>`).join('')
-  }
-  return result
-}
+import { sendTelegramMessage } from '../telegram/sender.js'
 
 /** Full-compilation retry: if all per-source retries fail, retry entire compilation. */
 const COMPILATION_MAX_RETRIES = 3
@@ -183,7 +37,6 @@ async function compileWithRetry(company: 'astrocat' | 'highground'): Promise<str
       )
 
       if (attempt < COMPILATION_MAX_RETRIES) {
-        // Add jitter (0-30s) to prevent thundering herd when both companies retry simultaneously
         const jitter = Math.random() * 30_000
         const delay = COMPILATION_RETRY_DELAY_MS + jitter
         logger.info(
@@ -203,7 +56,6 @@ export async function deliverDailyDigest(): Promise<void> {
 
   logger.info('Starting daily digest compilation (with retry)')
 
-  // Compile both companies in parallel (each has its own retry chain)
   const [acResult, hgResult] = await Promise.allSettled([
     compileWithRetry('astrocat'),
     compileWithRetry('highground'),
@@ -212,7 +64,6 @@ export async function deliverDailyDigest(): Promise<void> {
   const acText = acResult.status === 'fulfilled' ? acResult.value : null
   const hgText = hgResult.status === 'fulfilled' ? hgResult.value : null
 
-  // Send AstroCat digest
   if (acText) {
     await sendTelegramMessage(acText)
     logger.info({ len: acText.length }, 'AstroCat digest sent')
@@ -227,7 +78,6 @@ export async function deliverDailyDigest(): Promise<void> {
     }
   }
 
-  // Send Highground digest
   if (hgText) {
     await sendTelegramMessage(hgText)
     logger.info({ len: hgText.length }, 'Highground digest sent')

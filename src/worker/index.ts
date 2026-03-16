@@ -22,6 +22,7 @@ import { generateProjectStatuses } from '../kb/registry/status-generator.js'
 import { refreshKnowledgeMap } from '../kb/registry/knowledge-map-builder.js'
 import { runEntityDiscovery } from '../kb/registry/entity-discovery.js'
 import { syncSlackChannels } from '../kb/registry/channel-sync.js'
+import { runSelfImprovement } from '../self-improve/runner.js'
 
 const useGraphiti = env.KB_BACKEND === 'graphiti'
 
@@ -165,6 +166,22 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
   }
 })
 
+/**
+ * Self-improvement agent: daily at 23:30 UTC.
+ * Analyzes today's interactions, identifies problems, applies safe YAML fixes,
+ * and sends a report to Telegram.
+ * Runs 1.5 hours after KB ingestion (22:00 UTC) to ensure fresh registry data.
+ */
+const selfImproveJob = cron.schedule('30 23 * * *', async () => {
+  logger.info('Starting self-improvement analysis')
+  try {
+    await runSelfImprovement()
+    logger.info('Self-improvement analysis complete')
+  } catch (error) {
+    logger.error({ error }, 'Self-improvement analysis failed')
+  }
+})
+
 logger.info('Worker started')
 
 /**
@@ -175,6 +192,7 @@ function shutdown(signal: string) {
   auditCleanupJob.stop()
   digestJob.stop()
   kbIngestionJob.stop()
+  selfImproveJob.stop()
   closeDb()
     .then(() => {
       logger.info('Database connection closed')
