@@ -168,7 +168,9 @@ Rules:
 - Include timestamps and source references where available
 - End with actionable recommendations if appropriate
 - Keep formatting compatible with Telegram (Markdown bold, italic, lists)
-- Do NOT use # headers — use **bold text** for section labels`
+- Do NOT use # headers — use **bold text** for section labels
+- NEVER use tables (| --- | format) — unreadable in Telegram. Use bullet lists instead.
+- Links: always use clean inline format [текст](url). Example: [тред в #stt-dev](https://...), [QA отчёт](https://...)`
 
   const synthPrompt = `Original question: ${query}
 
@@ -229,18 +231,23 @@ ${knowledgeMap}
 Tools available:
 - **kb_search(query, source?, person?, project?, period?, limit?)** — semantic + keyword search across indexed Slack, Gmail, Drive, Notion data
 - **kb_entities(name?, type?)** — entity graph lookup (people, projects, relations)
-- **kb_registry(project?, section?)** — org registry with team, channels, docs, status
+- **kb_registry(project?, section?)** — org registry with team, channels, docs, status. Returns full project card: team, milestones, current focus, channels, ClickUp lists.
+
+Important context:
+- Wiki has task management rules: "Ведение задач от А до Я" / "Task Management from A to Z" in Notion. If the query is about tasks or task compliance, search for these rules via kb_search(query="ведение задач правила", source="notion").
+- kb_registry(project=X) returns current milestones, team, and project focus — use this to understand which tasks are relevant NOW vs outdated.
 
 Strategy:
-1. Search kb_search() with relevant keywords
-2. Try variations: different keywords, English AND Russian terms
-3. If a specific person or project is mentioned, filter by them
-4. Use kb_entities() if you need to identify people or projects
+1. If query mentions a project → kb_registry(project=X) first to get context (milestones, focus, team)
+2. Search kb_search() with relevant keywords
+3. Try variations: different keywords, English AND Russian terms
+4. If a specific person or project is mentioned, filter by them
 5. Max 4 tool calls
 
 Output format:
 - List each finding with: source (Slack/Gmail/Drive/Notion), date, content summary
 - Include document URLs where available
+- Include project context (current milestone, focus) if relevant
 - Do NOT synthesize or give recommendations — just report raw findings`,
     prompt: `Search knowledge base for: ${query}`,
   }

@@ -36,17 +36,20 @@ const SKIP_SUBTYPES = new Set([
   'pinned_item', 'unpinned_item',
 ])
 
-/** Patterns that indicate a standup message — skip these. */
-const STANDUP_PATTERNS = [
-  /standup\s*(completed|submitted|posted|report)/i,
-  /daily\s*standup/i,
+/**
+ * Patterns that indicate a standup BOT TEMPLATE — skip these.
+ * Human standup responses (actual content from standups) are KEPT.
+ * Only skip automated standup prompts/templates.
+ */
+const STANDUP_BOT_PATTERNS = [
+  /standup\s*(completed|submitted|posted)/i,
   /стендап\s*(проведён|завершён|создан|отправлен)/i,
   /standup_report/i,
-  /What did you do|What will you do|Any blockers/i,
+  /^What did you do.*\nWhat will you do.*\nAny blockers/is,  // Only the template prompt itself
 ]
 
-function isStandupMessage(text: string): boolean {
-  return STANDUP_PATTERNS.some((p) => p.test(text))
+function isStandupBotMessage(text: string): boolean {
+  return STANDUP_BOT_PATTERNS.some((p) => p.test(text))
 }
 
 function sleep(ms: number): Promise<void> {
@@ -167,8 +170,8 @@ export async function fetchDigestSlack(
         // Skip empty messages
         if (!msg.text || msg.text.trim().length === 0) continue
 
-        // Skip standup messages
-        if (isStandupMessage(msg.text)) {
+        // Skip standup bot templates (keep actual human standup responses)
+        if (isStandupBotMessage(msg.text)) {
           skippedStandup++
           continue
         }

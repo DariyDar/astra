@@ -13,9 +13,13 @@
  */
 
 import 'dotenv/config'
+import { randomUUID } from 'node:crypto'
+import { QdrantClient } from '@qdrant/js-client-rest'
 import { logger } from '../logging/logger.js'
 import { compileDigest } from './compiler.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
+import { embed } from '../memory/embedder.js'
+import { env } from '../config/env.js'
 
 /** Full-compilation retry: if all per-source retries fail, retry entire compilation. */
 const COMPILATION_MAX_RETRIES = 3
@@ -66,7 +70,8 @@ export async function deliverDailyDigest(): Promise<void> {
 
   if (acText) {
     await sendTelegramMessage(acText)
-    logger.info({ len: acText.length }, 'AstroCat digest sent')
+    await saveDigestToKB('AstroCat', acText)
+    logger.info({ len: acText.length }, 'AstroCat digest sent + saved to KB')
   } else {
     logger.error('AstroCat digest: all compilation attempts exhausted')
     try {
@@ -80,7 +85,8 @@ export async function deliverDailyDigest(): Promise<void> {
 
   if (hgText) {
     await sendTelegramMessage(hgText)
-    logger.info({ len: hgText.length }, 'Highground digest sent')
+    await saveDigestToKB('Highground', hgText)
+    logger.info({ len: hgText.length }, 'Highground digest sent + saved to KB')
   } else {
     logger.error('Highground digest: all compilation attempts exhausted')
     try {
@@ -94,6 +100,51 @@ export async function deliverDailyDigest(): Promise<void> {
 
   const elapsed = Math.round((Date.now() - startTime) / 1000)
   logger.info({ elapsedSec: elapsed }, 'Daily digest delivery complete')
+}
+
+/**
+ * Save compiled digest to KB (Qdrant astra_knowledge) for future queries.
+ * Stored as source="digest", chunk_type="daily_digest".
+ * This enables kb_search to find recent project statuses from digests.
+ */
+async function saveDigestToKB(company: string, digestText: string): Promise<void> {
+  try {
+    const qdrant = new QdrantClient({ url: env.QDRANT_URL })
+    const now = new Date()
+    const dateStr = now.toISOString().slice(0, 10)
+    const sourceId = `digest-${company.toLowerCase()}-${dateStr}`
+
+    // Delete previous digest for same company+date (idempotent re-runs)
+    await qdrant.delete('astra_knowledge', {
+      wait: true,
+      filter: { must: [{ key: 'source_id', match: { value: sourceId } }] },
+    })
+
+    // Embed the digest text
+    const vector = await embed(`${company} daily digest ${dateStr}: ${digestText.slice(0, 500)}`)
+
+    await qdrant.upsert('astra_knowledge', {
+      wait: true,
+      points: [{
+        id: randomUUID(),
+        vector,
+        payload: {
+          source: 'digest',
+          source_id: sourceId,
+          chunk_type: 'daily_digest',
+          text: digestText,
+          company: company.toLowerCase(),
+          entity_ids: [],
+          source_date: now.getTime(),
+        },
+      }],
+    })
+
+    logger.info({ company, sourceId, textLen: digestText.length }, 'Digest saved to KB')
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.warn({ company, error: msg }, 'Failed to save digest to KB (non-critical)')
+  }
 }
 
 // --- CLI entry point: npx tsx src/digest/scheduler.ts --now ---

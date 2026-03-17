@@ -154,7 +154,12 @@ kb_registry(section="processes") + kb_search(query="правила/rules")
 - NEVER call kb_registry() without arguments
 - Web search: ONLY for investigation tasks
 - Try both Russian AND English search terms
-- **BAIL OUT (simple questions only):** If after 3 calls on a simple question you found nothing, stop and ask user. For investigation — exhaust all phases first.`,
+- **BAIL OUT (simple questions only):** If after 3 calls on a simple question you found nothing, stop and ask user. For investigation — exhaust all phases first.
+
+**FORMATTING:**
+- NEVER use tables (| --- | format) — unreadable in Telegram. Use bullet lists instead.
+- Links: always use clean inline format [описание](url). Hide URLs behind descriptive text.
+  Example: [тред в #stt-dev](https://...), [QA отчёт](https://...), [задача в ClickUp](https://...)`,
     }
   },
 }
