@@ -19,6 +19,7 @@ import { buildRecentContext } from './context-builder.js'
 import { detectLanguage } from './language.js'
 import { buildSystemPrompt } from './system-prompt.js'
 import { getKnowledgeMap } from '../kb/registry/knowledge-map-builder.js'
+import { runInvestigation } from './investigation.js'
 
 /** Regex to match <preference_update>...</preference_update> tags in Claude responses */
 const PREFERENCE_UPDATE_RE = /<preference_update>\s*([\s\S]*?)\s*<\/preference_update>/g
@@ -148,18 +149,34 @@ export class MessageRouter {
       fullSystem += `\n\n---\n\n${recentContext}`
     }
 
-    // 5. Call Claude (with MCP tools if enabled)
-    const response = await callClaude(
-      skillResult.prompt,
-      {
-        system: fullSystem,
-        ...(this.mcpEnabled ? { mcpConfigPath: MCP_CONFIG_PATH } : {}),
-      },
-      requestLogger,
-    )
+    // 5. Call Claude — investigation (parallel subagents) or single call
+    let response
+    if (skillResult.investigation && this.mcpEnabled && knowledgeMap) {
+      requestLogger.info('Using investigation subagents')
+      response = await runInvestigation(
+        skillResult.prompt,
+        {
+          mcpConfigPath: MCP_CONFIG_PATH,
+          knowledgeMap,
+          language,
+          channelId: message.channelId,
+          recentContext,
+        },
+        requestLogger,
+      )
+    } else {
+      response = await callClaude(
+        skillResult.prompt,
+        {
+          system: fullSystem,
+          ...(this.mcpEnabled ? { mcpConfigPath: MCP_CONFIG_PATH } : {}),
+        },
+        requestLogger,
+      )
+    }
 
     requestLogger.info(
-      { responseLength: response.text.length },
+      { responseLength: response.text.length, investigation: !!skillResult.investigation },
       'Claude response received',
     )
 

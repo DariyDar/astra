@@ -1,5 +1,34 @@
 import type { Skill } from './types.js'
 
+/**
+ * Detect if a query requires deep investigation (parallel subagents)
+ * vs a simple data lookup (single Claude call).
+ *
+ * Investigation signals: long questions, explicit research intent,
+ * bug investigation, multi-source requests ("и в слаке и в интернете").
+ */
+function isInvestigationQuery(text: string): boolean {
+  const lower = text.toLowerCase()
+
+  // Explicit investigation phrases
+  const investigationPhrases = [
+    'вся доступная информация', 'вся информация',
+    'разберись', 'расследуй', 'исследуй', 'проанализируй',
+    'deep dive', 'investigate', 'подробный анализ', 'подробности',
+    'что не так с', 'почему не работает', 'в чём проблема',
+    'и в интернете', 'и что пишут', 'и в каналах',
+    'шаги воспроизведения', 'все подробности',
+    'максимум информации', 'максимум инфы',
+    'собери всё', 'найди всё',
+  ]
+  if (investigationPhrases.some((p) => lower.includes(p))) return true
+
+  // Long query (>120 chars) with search intent = likely investigation
+  if (text.length > 120 && /(?:найди|поиск|search|bug|баг|проблем|ошибк)/i.test(lower)) return true
+
+  return false
+}
+
 const briefingSkill: Skill = {
   name: 'briefing',
   description: 'Universal data skill: live sources (Slack, Gmail, Calendar, ClickUp) + Knowledge Base (historical facts, entities, milestones)',
@@ -40,8 +69,10 @@ const briefingSkill: Skill = {
   ],
 
   async preProcess(ctx) {
+    const investigation = isInvestigationQuery(ctx.message.text)
     return {
       prompt: ctx.message.text,
+      investigation,
       systemPromptExtra: `## Data tools
 
 **LIVE data (real-time, always fresh):**

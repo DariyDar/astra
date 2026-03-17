@@ -12,6 +12,8 @@ export interface SkillResult {
   prompt: string
   /** Extra instructions appended to the system prompt for this skill */
   systemPromptExtra?: string
+  /** If true, router uses parallel subagent orchestration for deep research */
+  investigation?: boolean
 }
 
 export interface Skill {

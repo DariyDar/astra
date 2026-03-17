@@ -11,6 +11,8 @@ export interface SkillEngineResult {
   systemPromptExtra?: string
   /** Matched skill (for post-processing after Claude responds) */
   skill?: Skill
+  /** If true, router uses parallel subagent orchestration for deep research */
+  investigation?: boolean
 }
 
 export class SkillEngine {
@@ -44,6 +46,7 @@ export class SkillEngine {
         prompt: result.prompt,
         systemPromptExtra: result.systemPromptExtra,
         skill,
+        investigation: result.investigation,
       }
     } catch (error) {
       logger.warn({ skill: skill.name, error }, 'Skill preProcess failed, falling back to default')
