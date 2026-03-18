@@ -354,11 +354,13 @@ async function compileSlackSection(
     ),
   )
 
+  // Join batch summaries — each is already compressed bullets, total stays manageable
   return results
     .filter((r): r is PromiseFulfilledResult<{ batch: number; text: string }> => r.status === 'fulfilled')
     .sort((a, b) => a.value.batch - b.value.batch)
     .map((r) => r.value.text)
     .join('\n\n')
+    .slice(0, 6_000)  // Cap at 6K chars — ~3K tokens, sufficient for orchestrator
 }
 
 /**
@@ -432,7 +434,7 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
 
   const finalResult = await callClaude(orchestratorPrompt, {
     system: ORCHESTRATOR_SYSTEM,
-    timeoutMs: 180_000,
+    timeoutMs: 240_000,
   })
 
   logger.info({ company, outputLen: finalResult.text.length }, 'Digest subagents: orchestrator complete')
