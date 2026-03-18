@@ -319,45 +319,88 @@ export interface SubCompilerParams {
   registryGaps?: { staleProjects: number; unknownUsers: number; unknownChannels: number }
 }
 
+/** Split channels into batches and run one Slack subagent per batch in parallel. */
+async function compileSlackSection(
+  company: string,
+  date: string,
+  allProjects: string[],
+  channels: DigestSlackChannel[],
+): Promise<string> {
+  if (channels.length === 0) return ''
+
+  const BATCH_SIZE = 10
+  const batches: DigestSlackChannel[][] = []
+  for (let i = 0; i < channels.length; i += BATCH_SIZE) {
+    batches.push(channels.slice(i, i + BATCH_SIZE))
+  }
+
+  if (batches.length === 1) {
+    // Single batch — one call
+    const result = await callClaude(
+      buildSlackAgentPrompt(company, date, allProjects, batches[0]),
+      { system: SLACK_AGENT_SYSTEM, timeoutMs: 120_000 },
+    )
+    return result.text
+  }
+
+  // Multiple batches — run in parallel, concatenate results
+  logger.info({ company, batches: batches.length, channels: channels.length }, 'Digest: splitting Slack into batches')
+  const results = await Promise.allSettled(
+    batches.map((batch, i) =>
+      callClaude(
+        buildSlackAgentPrompt(company, date, allProjects, batch),
+        { system: SLACK_AGENT_SYSTEM, timeoutMs: 120_000 },
+      ).then((r) => ({ batch: i, text: r.text })),
+    ),
+  )
+
+  return results
+    .filter((r): r is PromiseFulfilledResult<{ batch: number; text: string }> => r.status === 'fulfilled')
+    .sort((a, b) => a.value.batch - b.value.batch)
+    .map((r) => r.value.text)
+    .join('\n\n')
+}
+
 /**
  * Compile digest using parallel subagents + orchestrator.
- * Phase 1: 3 Claude calls in parallel (Slack, Email+Cal, ClickUp+KB).
- * Phase 2: 1 Claude call (Orchestrator) merges sections into final HTML.
+ * Phase 1a: Slack channels split into batches of 10 (parallel per batch).
+ * Phase 1b: Email+Cal and ClickUp+KB run in parallel alongside Slack.
+ * Phase 2: Orchestrator merges all sections into final Telegram HTML.
  */
 export async function compileDigestWithSubagents(params: SubCompilerParams): Promise<string> {
   const { company, date, allProjects } = params
 
-  logger.info({ company, projects: allProjects.length }, 'Digest subagents: starting phase 1 (parallel extraction)')
+  logger.info(
+    { company, projects: allProjects.length, slackChannels: params.slackChannels.length },
+    'Digest subagents: starting phase 1 (parallel extraction)',
+  )
 
-  // Phase 1: run 3 extraction subagents in parallel
+  // Phase 1: all extraction in parallel (Slack internally batched if > 10 channels)
   const [slackResult, emailCalResult, clickupKbResult] = await Promise.allSettled([
-    callClaude(
-      buildSlackAgentPrompt(company, date, allProjects, params.slackChannels),
-      { system: SLACK_AGENT_SYSTEM, timeoutMs: 120_000 },
-    ),
+    compileSlackSection(company, date, allProjects, params.slackChannels),
     callClaude(
       buildEmailCalAgentPrompt(company, date, allProjects, params.gmailData, params.calendarData),
       { system: EMAIL_CAL_AGENT_SYSTEM, timeoutMs: 120_000 },
-    ),
+    ).then((r) => r.text),
     callClaude(
       buildClickUpKBAgentPrompt(company, date, allProjects, params.clickupData, params.kbContext),
       { system: CLICKUP_KB_AGENT_SYSTEM, timeoutMs: 120_000 },
-    ),
+    ).then((r) => r.text),
   ])
 
-  const slackSection = slackResult.status === 'fulfilled' ? slackResult.value.text : ''
-  const emailCalSection = emailCalResult.status === 'fulfilled' ? emailCalResult.value.text : ''
-  const clickupKbSection = clickupKbResult.status === 'fulfilled' ? clickupKbResult.value.text : ''
+  const slackSection = slackResult.status === 'fulfilled' ? slackResult.value : ''
+  const emailCalSection = emailCalResult.status === 'fulfilled' ? emailCalResult.value : ''
+  const clickupKbSection = clickupKbResult.status === 'fulfilled' ? clickupKbResult.value : ''
 
   // Log which subagents failed (non-fatal — orchestrator works with what it has)
   if (slackResult.status === 'rejected') {
-    logger.warn({ company, error: slackResult.reason?.message }, 'Digest: Slack subagent failed')
+    logger.warn({ company, error: (slackResult.reason as Error)?.message }, 'Digest: Slack subagent failed')
   }
   if (emailCalResult.status === 'rejected') {
-    logger.warn({ company, error: emailCalResult.reason?.message }, 'Digest: Email+Cal subagent failed')
+    logger.warn({ company, error: (emailCalResult.reason as Error)?.message }, 'Digest: Email+Cal subagent failed')
   }
   if (clickupKbResult.status === 'rejected') {
-    logger.warn({ company, error: clickupKbResult.reason?.message }, 'Digest: ClickUp+KB subagent failed')
+    logger.warn({ company, error: (clickupKbResult.reason as Error)?.message }, 'Digest: ClickUp+KB subagent failed')
   }
 
   if (!slackSection && !emailCalSection && !clickupKbSection) {
