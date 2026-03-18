@@ -139,9 +139,18 @@ export async function collectTodayInteractions(): Promise<InteractionRecord[]> {
   }
 
   // Also collect failed LLM requests that have NO matching exchange (= crash before response)
+  // Exclude system/scheduled jobs (digest, pre-meeting, self-improve) — they have no Telegram context
+  // and their failures are not actionable by self-improvement analysis.
+  const SYSTEM_CORRELATION_PREFIXES = ['digest-', 'pre-meeting-', 'self-improve-']
+  const isSystemCorrelation = (id: string) =>
+    id === 'unknown' || SYSTEM_CORRELATION_PREFIXES.some((p) => id.startsWith(p))
+
   const exchangeCorrelations = new Set(exchanges.map((e) => e.correlationId))
   const failedLlmRequests = llmRequests.filter(
-    (r) => r.status === 'error' && !exchangeCorrelations.has(r.correlationId),
+    (r) =>
+      r.status === 'error' &&
+      !exchangeCorrelations.has(r.correlationId) &&
+      !isSystemCorrelation(r.correlationId),
   )
 
   for (const failed of failedLlmRequests) {
