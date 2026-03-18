@@ -432,7 +432,7 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
 
   const finalResult = await callClaude(orchestratorPrompt, {
     system: ORCHESTRATOR_SYSTEM,
-    timeoutMs: 120_000,
+    timeoutMs: 180_000,
   })
 
   logger.info({ company, outputLen: finalResult.text.length }, 'Digest subagents: orchestrator complete')
