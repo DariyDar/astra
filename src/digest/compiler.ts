@@ -8,8 +8,8 @@
  * Slack is naturally separated by workspace.
  */
 
-import { callClaude } from '../llm/client.js'
 import { logger } from '../logging/logger.js'
+import { compileDigestWithSubagents } from './sub-compiler.js'
 import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
 import { fetchGmail } from '../mcp/briefing/gmail.js'
 import { fetchCalendar } from '../mcp/briefing/calendar.js'
@@ -18,7 +18,6 @@ import { parsePeriod } from '../mcp/briefing/period.js'
 import { findEntitiesByType, getFactsForEntity, getAliasesForEntityIds } from '../kb/kb-facade.js'
 import { fetchDigestSlack, type DigestSlackChannel } from './sources/slack.js'
 import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
-import { DIGEST_SYSTEM_PROMPT, buildDigestUserPrompt } from './prompt.js'
 import { buildNameMap, resolveDisplayName, type NameMap } from './name-resolver.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
 import { getAllStatuses, type ProjectStatus } from '../kb/registry/reader.js'
@@ -329,8 +328,8 @@ export async function compileDigest(company: Company): Promise<string> {
     unknownChannels: discoveryReport.unknown_channels.length,
   } : undefined
 
-  // Build LLM prompt with company-filtered data
-  const userPrompt = buildDigestUserPrompt({
+  // Compile via parallel subagents + orchestrator
+  const digestText = await compileDigestWithSubagents({
     company: companyLabel,
     date: dateStr,
     slackChannels,
@@ -344,24 +343,11 @@ export async function compileDigest(company: Company): Promise<string> {
     registryGaps,
   })
 
-  // Call Claude to compile the digest
-  const response = await callClaude(userPrompt, {
-    system: DIGEST_SYSTEM_PROMPT,
-    timeoutMs: 180_000,
-  })
-
-  if (!response.text || response.text.trim().length === 0) {
-    throw new Error(`Claude returned empty response for ${company} digest`)
+  if (!digestText || digestText.trim().length === 0) {
+    throw new Error(`Subagent compilation returned empty result for ${company} digest`)
   }
 
-  logger.info({
-    company,
-    outputLen: response.text.length,
-    promptLen: userPrompt.length,
-    usage: response.usage,
-  }, 'Digest: LLM compilation done')
-
-  return response.text
+  return digestText
 }
 
 /** Get project statuses from the YAML registry for a company. */

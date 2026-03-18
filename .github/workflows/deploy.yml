@@ -180,6 +180,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'START'
             cd /home/clawdbot/personal-assistant
+            pm2 delete all || true
             pm2 start ecosystem.config.cjs
             pm2 save
           START
