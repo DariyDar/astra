@@ -170,6 +170,11 @@ jobs:
             cd /home/clawdbot/personal-assistant
             docker compose up -d postgres redis
             docker compose up -d --build falkordb graphiti
+            # Wait for postgres+redis ports to be ready on host
+            for i in $(seq 1 10); do
+              nc -z 127.0.0.1 5432 && nc -z 127.0.0.1 6379 && break
+              sleep 2
+            done
             # Wait for Graphiti health (up to 60s)
             for i in $(seq 1 30); do
               curl -sf http://localhost:3200/healthcheck && break
