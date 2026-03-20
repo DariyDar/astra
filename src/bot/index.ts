@@ -327,7 +327,7 @@ async function startup(): Promise<void> {
   }
 
   // 5. Start health checker
-  healthChecker.startPeriodicChecks(60_000)
+  healthChecker.startPeriodicChecks(5 * 60_000)
 
   // 6. Start message router (which starts all adapters including Telegram)
   await messageRouter.start()

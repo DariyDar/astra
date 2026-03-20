@@ -6,7 +6,7 @@ import { logger } from '../logging/logger.js'
  * Don't send more than 1 alert per service per 5 minutes.
  */
 const lastAlertTimes = new Map<string, number>()
-const ALERT_COOLDOWN_MS = 5 * 60 * 1000 // 5 minutes
+const ALERT_COOLDOWN_MS = 60 * 60 * 1000 // 1 hour
 
 let alertBot: InstanceType<typeof Bot> | null = null
 

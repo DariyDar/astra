@@ -168,6 +168,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'DOCKER'
             cd /home/clawdbot/personal-assistant
+            docker compose up -d postgres redis
             docker compose up -d --build falkordb graphiti
             # Wait for Graphiti health (up to 60s)
             for i in $(seq 1 30); do

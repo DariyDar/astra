@@ -23,6 +23,7 @@ import { refreshKnowledgeMap } from '../kb/registry/knowledge-map-builder.js'
 import { runEntityDiscovery } from '../kb/registry/entity-discovery.js'
 import { syncSlackChannels } from '../kb/registry/channel-sync.js'
 import { runSelfImprovement } from '../self-improve/runner.js'
+import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
 
 const useGraphiti = env.KB_BACKEND === 'graphiti'
 
@@ -167,6 +168,22 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
 })
 
 /**
+ * Pre-meeting report: 1 hour before the weekly AC sync ("Lisbon").
+ * Sync is at 16:00 Bali = 08:00 UTC every Tuesday.
+ * Report runs at 07:00 UTC (15:00 Bali) — 1 hour before.
+ * Cron: "0 7 * * 2" = every Tuesday at 07:00 UTC.
+ */
+const preMeetingJob = cron.schedule('0 7 * * 2', async () => {
+  logger.info('Starting pre-meeting report')
+  try {
+    await deliverPreMeetingReport()
+    logger.info('Pre-meeting report delivered')
+  } catch (error) {
+    logger.error({ error }, 'Pre-meeting report failed')
+  }
+})
+
+/**
  * Self-improvement agent: daily at 23:30 UTC.
  * Analyzes today's interactions, identifies problems, applies safe YAML fixes,
  * and sends a report to Telegram.
@@ -192,6 +209,7 @@ function shutdown(signal: string) {
   auditCleanupJob.stop()
   digestJob.stop()
   kbIngestionJob.stop()
+  preMeetingJob.stop()
   selfImproveJob.stop()
   closeDb()
     .then(() => {

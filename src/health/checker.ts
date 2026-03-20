@@ -26,21 +26,21 @@ export class HealthChecker {
    * If any service is unhealthy, sends a Telegram alert.
    */
   async checkAll(): Promise<HealthResult[]> {
+    const useQdrant = (process.env.KB_BACKEND ?? 'legacy') === 'legacy'
     const checks = [
       this.checkPostgres(),
       this.checkRedis(),
-      this.checkQdrant(),
+      ...(useQdrant ? [this.checkQdrant()] : []),
     ]
 
     const settled = await Promise.allSettled(checks)
 
-    const results: HealthResult[] = settled.map((result, index) => {
-      const serviceName = ['PostgreSQL', 'Redis', 'Qdrant'][index]
+    const results: HealthResult[] = settled.map((result) => {
       if (result.status === 'fulfilled') {
         return result.value
       }
       return {
-        service: serviceName,
+        service: 'unknown',
         healthy: false,
         latencyMs: 0,
         error: result.reason instanceof Error ? result.reason.message : String(result.reason),
