@@ -227,10 +227,19 @@ export async function compileDigest(company: Company): Promise<string> {
   const yesterdayPeriod = parsePeriod('yesterday')
 
   // Build project map for company-based filtering + name map for display names
-  const [projectMap, nameMap] = await Promise.all([
+  // KB may be unavailable (e.g. Graphiti key expired) — use empty maps as fallback
+  const [projectMapResult, nameMapResult] = await Promise.allSettled([
     buildProjectMap(),
     buildNameMap(),
   ])
+  if (projectMapResult.status === 'rejected') {
+    logger.warn({ error: projectMapResult.reason instanceof Error ? projectMapResult.reason.message : String(projectMapResult.reason) }, 'Digest: buildProjectMap failed, using empty project map (KB unavailable)')
+  }
+  if (nameMapResult.status === 'rejected') {
+    logger.warn({ error: nameMapResult.reason instanceof Error ? nameMapResult.reason.message : String(nameMapResult.reason) }, 'Digest: buildNameMap failed, using empty name map')
+  }
+  const projectMap = projectMapResult.status === 'fulfilled' ? projectMapResult.value : new Map()
+  const nameMap = nameMapResult.status === 'fulfilled' ? nameMapResult.value : new Map()
   const companyProjects = projectMap.get(wsLabel) ?? []
   const otherWs = wsLabel === 'ac' ? 'hg' : 'ac'
   const otherProjects = projectMap.get(otherWs) ?? []

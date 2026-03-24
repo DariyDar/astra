@@ -187,11 +187,16 @@ export async function compilePreMeetingReport(): Promise<string> {
   const now = new Date()
   const dateStr = formatDateRu(now)
 
-  // Build AC project list + name map
-  const [acProjects, nameMap] = await Promise.all([
+  // Build AC project list + name map — KB may be unavailable, use empty fallback
+  const [acProjectsResult, nameMapResult] = await Promise.allSettled([
     buildACProjectList(),
     buildNameMap(),
   ])
+  if (acProjectsResult.status === 'rejected') {
+    logger.warn({ error: acProjectsResult.reason instanceof Error ? acProjectsResult.reason.message : String(acProjectsResult.reason) }, 'Pre-meeting report: buildACProjectList failed, using empty list (KB unavailable)')
+  }
+  const acProjects = acProjectsResult.status === 'fulfilled' ? acProjectsResult.value : []
+  const nameMap = nameMapResult.status === 'fulfilled' ? nameMapResult.value : new Map()
 
   // Build 2-day period: yesterday 00:00 to now
   const twoDaysAgo = new Date(now.getTime() - 2 * 86400_000)
@@ -304,8 +309,9 @@ export async function deliverPreMeetingReport(): Promise<void> {
     logger.error({ error: msg }, 'Pre-meeting report compilation failed')
 
     try {
+      const errorHint = msg ? `\n\nПричина: <code>${msg.slice(0, 200)}</code>` : ''
       await sendTelegramMessage(
-        '⚠️ Не удалось собрать отчёт перед синком. Смотри логи.',
+        `⚠️ Не удалось собрать отчёт перед синком. Смотри логи.${errorHint}`,
       )
     } catch (notifyErr) {
       logger.error({ error: notifyErr }, 'Failed to send pre-meeting error notification')

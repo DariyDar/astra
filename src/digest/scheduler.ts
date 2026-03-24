@@ -29,14 +29,16 @@ const COMPILATION_RETRY_DELAY_MS = 5 * 60_000 // 5 minutes between full retries
  * Compile a single company digest with full-compilation retry.
  * Returns the compiled text or null if all attempts exhausted.
  */
-async function compileWithRetry(company: 'astrocat' | 'highground'): Promise<string | null> {
+async function compileWithRetry(company: 'astrocat' | 'highground'): Promise<{ text: string | null; lastError: string | null }> {
+  let lastError: string | null = null
   for (let attempt = 1; attempt <= COMPILATION_MAX_RETRIES; attempt++) {
     try {
-      return await compileDigest(company)
+      const text = await compileDigest(company)
+      return { text, lastError: null }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
+      lastError = error instanceof Error ? error.message : String(error)
       logger.error(
-        { company, attempt, maxAttempts: COMPILATION_MAX_RETRIES, error: msg },
+        { company, attempt, maxAttempts: COMPILATION_MAX_RETRIES, error: lastError },
         'Digest compilation failed',
       )
 
@@ -51,7 +53,7 @@ async function compileWithRetry(company: 'astrocat' | 'highground'): Promise<str
       }
     }
   }
-  return null
+  return { text: null, lastError }
 }
 
 /** Compile and deliver digests for both companies. */
@@ -65,8 +67,8 @@ export async function deliverDailyDigest(): Promise<void> {
     compileWithRetry('highground'),
   ])
 
-  const acText = acResult.status === 'fulfilled' ? acResult.value : null
-  const hgText = hgResult.status === 'fulfilled' ? hgResult.value : null
+  const { text: acText, lastError: acError } = acResult.status === 'fulfilled' ? acResult.value : { text: null, lastError: String(acResult.reason) }
+  const { text: hgText, lastError: hgError } = hgResult.status === 'fulfilled' ? hgResult.value : { text: null, lastError: String(hgResult.reason) }
 
   if (acText) {
     await sendTelegramMessage(acText)
@@ -75,8 +77,9 @@ export async function deliverDailyDigest(): Promise<void> {
   } else {
     logger.error('AstroCat digest: all compilation attempts exhausted')
     try {
+      const errorHint = acError ? `\n\nПричина: <code>${acError.slice(0, 200)}</code>` : ''
       await sendTelegramMessage(
-        '\u26a0\ufe0f \u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0431\u0440\u0430\u0442\u044c \u0434\u0430\u0439\u0434\u0436\u0435\u0441\u0442 AstroCat \u043f\u043e\u0441\u043b\u0435 \u0432\u0441\u0435\u0445 \u043f\u043e\u043f\u044b\u0442\u043e\u043a. \u0421\u043c\u043e\u0442\u0440\u0438 \u043b\u043e\u0433\u0438.',
+        `⚠️ Не удалось собрать дайджест AstroCat после всех попыток. Смотри логи.${errorHint}`,
       )
     } catch (notifyErr) {
       logger.error({ error: notifyErr }, 'Failed to send AstroCat error notification')
@@ -90,8 +93,9 @@ export async function deliverDailyDigest(): Promise<void> {
   } else {
     logger.error('Highground digest: all compilation attempts exhausted')
     try {
+      const errorHint = hgError ? `\n\nПричина: <code>${hgError.slice(0, 200)}</code>` : ''
       await sendTelegramMessage(
-        '\u26a0\ufe0f \u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0431\u0440\u0430\u0442\u044c \u0434\u0430\u0439\u0434\u0436\u0435\u0441\u0442 Highground \u043f\u043e\u0441\u043b\u0435 \u0432\u0441\u0435\u0445 \u043f\u043e\u043f\u044b\u0442\u043e\u043a. \u0421\u043c\u043e\u0442\u0440\u0438 \u043b\u043e\u0433\u0438.',
+        `⚠️ Не удалось собрать дайджест Highground после всех попыток. Смотри логи.${errorHint}`,
       )
     } catch (notifyErr) {
       logger.error({ error: notifyErr }, 'Failed to send Highground error notification')
