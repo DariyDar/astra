@@ -21,7 +21,8 @@ import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
 import { buildNameMap, resolveDisplayName, type NameMap } from './name-resolver.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
 import { getAllStatuses, type ProjectStatus } from '../kb/vault-reader.js'
-import { loadDiscoveryReport } from '../kb/registry/entity-discovery.js'
+// Discovery report disabled — vault replaces YAML registry
+// import { loadDiscoveryReport } from '../kb/registry/entity-discovery.js'
 
 type Company = 'astrocat' | 'highground'
 
@@ -291,9 +292,9 @@ export async function compileDigest(company: Company): Promise<string> {
   )
   const companyCalendar = [...projectCalendar, ...sharedCalendar]
 
-  // ClickUp — filter by list name matching projects
+  // ClickUp — filter by list name matching projects (NO shared — unmatched tasks are noise)
   const allClickup = (clickupResult.status === 'fulfilled' ? clickupResult.value : []) as BriefingItem[]
-  const { matched: companyClickup, shared: sharedClickup } = filterItemsForCompany(
+  const { matched: companyClickup } = filterItemsForCompany(
     allClickup, companyProjects, otherProjects,
   )
 
@@ -320,7 +321,7 @@ export async function compileDigest(company: Company): Promise<string> {
     gmailTotal: allGmail.length,
     calendar: companyCalendar.length,
     calendarTotal: allCalendar.length,
-    clickup: companyClickup.length + sharedClickup.length,
+    clickup: companyClickup.length,
     clickupTotal: allClickup.length,
     myTasks: myTasks.length,
     kbProjects: kbContext.length,
@@ -329,13 +330,8 @@ export async function compileDigest(company: Company): Promise<string> {
   // Load project statuses from registry
   const projectStatuses = getProjectStatusesForCompany(wsLabel)
 
-  // Load discovery report for staleness warnings
-  const discoveryReport = loadDiscoveryReport()
-  const registryGaps = discoveryReport ? {
-    staleProjects: discoveryReport.stale_projects.length,
-    unknownUsers: discoveryReport.unknown_slack_users.length,
-    unknownChannels: discoveryReport.unknown_channels.length,
-  } : undefined
+  // Discovery report disabled — vault replaces YAML registry, gaps tracking moved to Phase 7
+  const registryGaps = undefined
 
   // Compile via parallel subagents + orchestrator
   const digestText = await compileDigestWithSubagents({
@@ -344,7 +340,7 @@ export async function compileDigest(company: Company): Promise<string> {
     slackChannels,
     gmailData: companyGmail,
     calendarData: companyCalendar,
-    clickupData: [...companyClickup, ...sharedClickup],
+    clickupData: companyClickup,
     myTasks,
     kbContext,
     allProjects: companyProjects.map((p) => p.name),
