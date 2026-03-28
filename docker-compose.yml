@@ -30,40 +30,5 @@ services:
 
   # Qdrant: uses existing shared instance on localhost:6333 (repos-qdrant-1)
 
-  falkordb:
-    image: falkordb/falkordb:latest
-    ports:
-      - "127.0.0.1:6381:6379"
-    volumes:
-      - falkordb_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  graphiti:
-    build: ./graphiti
-    ports:
-      - "127.0.0.1:3200:3200"
-    environment:
-      FALKORDB_HOST: falkordb
-      FALKORDB_PORT: "6379"
-      GEMINI_API_KEY: ${GEMINI_API_KEY_PERSONAL}
-      LLM_MODEL: ${LLM_MODEL:-gemini-2.5-flash}
-      EMBEDDER_MODEL: ${EMBEDDER_MODEL:-gemini-embedding-001}
-    depends_on:
-      falkordb:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3200/healthcheck"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-
 volumes:
   postgres_data:
-  falkordb_data:

@@ -181,7 +181,7 @@ export async function main(): Promise<void> {
   log('\n--- astra-briefing starting ---')
 
   // KB tools now use the facade (kb-facade.ts) which manages its own connections
-  log('KB: using facade (KB_BACKEND=' + (process.env.KB_BACKEND ?? 'legacy') + ')')
+  log('KB: using facade (legacy backend)')
 
   const server = new Server(
     { name: 'Astra Briefing Server', version: '1.0.0' },
