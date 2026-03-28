@@ -665,6 +665,55 @@ export function addProjectToPerson(personName: string, projectName: string, role
   return { success: true, file: ref.key, changes: [`Added ${projectName} (${role})`] }
 }
 
+/**
+ * Create a new vault file from structured data.
+ * Supports: person, project, process, external_contact
+ */
+export function createVaultFile(
+  type: 'person' | 'project' | 'process' | 'external_contact',
+  name: string,
+  data: Record<string, unknown>,
+): VaultUpdateResult {
+  const dirMap: Record<string, string> = {
+    person: join(VAULT_DIR, 'people', 'internal'),
+    project: join(VAULT_DIR, 'projects'),
+    process: join(VAULT_DIR, 'processes'),
+    external_contact: join(VAULT_DIR, 'people', 'external'),
+  }
+  const dir = dirMap[type]
+  if (!dir) return { success: false, file: '', changes: [`Unknown type: ${type}`] }
+
+  const filePath = join(dir, name + '.md')
+  if (existsSync(filePath)) return { success: false, file: name, changes: ['File already exists'] }
+
+  const frontmatter: Record<string, unknown> = { type: type === 'external_contact' ? 'external_contacts' : type, ...data }
+  delete frontmatter.body // body goes into content, not frontmatter
+
+  let body = ''
+  if (type === 'person') {
+    const role = (data.role as string) ?? ''
+    const status = (data.status as string) ?? 'active'
+    const companyStr = Array.isArray(data.company) ? (data.company as string[]).map(c => strip(c)).join(' / ') : ''
+    body = `\n# ${name}\n\n${role}${companyStr ? ` at ${companyStr}` : ''}${status === 'left' ? ' (бывший)' : ''}.\n\n## Проекты\n<!-- auto-updated: мониторинг по стендапам, ClickUp, Clockify -->\n<!-- /auto-updated -->\n`
+  } else if (type === 'project') {
+    const desc = (data.description as string) ?? ''
+    body = `\n# ${name}\n\n${desc}\n\n## Команда\n<!-- auto-updated -->\n<!-- /auto-updated -->\n\n## Каналы\n\n## Ресурсы\n\n## Статус\n<!-- auto-updated -->\nПоследнее обновление: —\n\nТекущий фокус: —\n<!-- /auto-updated -->\n`
+    delete frontmatter.description
+  } else if (type === 'process') {
+    body = (data.body as string) ?? `\n# ${name}\n`
+    delete frontmatter.body
+  } else if (type === 'external_contact') {
+    const org = strip(data.organization) ?? name
+    body = `\n# ${org} — Контакты\n\n## Активные контакты\n`
+    delete frontmatter.body
+  }
+
+  const content = matter.stringify(body, frontmatter)
+  writeFileSync(filePath, content, 'utf-8')
+  refresh()
+  return { success: true, file: name, changes: [`Created ${type}: ${name}`] }
+}
+
 // ── Cache control ──
 
 export function refresh(): void {

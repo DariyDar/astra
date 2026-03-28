@@ -8,6 +8,7 @@ import type { EntityType, ChunkSource } from './types.js'
 import {
   loadProjectCard, loadSection, formatProjectCard, findCompanyProjects, getKnowledgeMap,
   updateProjectStatus, markPersonLeft, addTeamMember, removeTeamMember, addProjectToPerson,
+  createVaultFile,
   type VaultUpdateResult,
 } from './vault-reader.js'
 import { loadDiscoveryReport } from './registry/entity-discovery.js'
@@ -307,16 +308,30 @@ Actions:
 - mark_left: Mark a person as fired/quit — removes from all projects, sets status: left
 - add_member: Add a person to a project team (updates both project and person cards)
 - remove_member: Remove a person from a project team
+- create_file: Create a new vault file (person, project, process, or external_contact)
 
-Use this when the user says information is outdated, someone was fired, team changed, or project status needs updating.
+Use this when the user says information is outdated, someone was fired, team changed, project status needs updating, or a new entity needs to be added to the knowledge base.
 After updating, confirm what was changed.`,
   inputSchema: {
     type: 'object' as const,
     properties: {
       action: {
         type: 'string' as const,
-        enum: ['update_status', 'mark_left', 'add_member', 'remove_member'],
+        enum: ['update_status', 'mark_left', 'add_member', 'remove_member', 'create_file'],
         description: 'Action to perform',
+      },
+      file_type: {
+        type: 'string' as const,
+        enum: ['person', 'project', 'process', 'external_contact'],
+        description: 'Type of file to create (for create_file action)',
+      },
+      name: {
+        type: 'string' as const,
+        description: 'Display name for the new file (for create_file). Must be unique.',
+      },
+      data: {
+        type: 'object' as const,
+        description: 'Frontmatter data for create_file. For person: {company, status, role, display_name, aliases, note}. For project: {company, status, display_name, aliases, client, description}.',
       },
       project: {
         type: 'string' as const,
@@ -370,6 +385,16 @@ export function handleVaultUpdate(args: Record<string, unknown>): string {
     case 'remove_member': {
       if (!args.project || !args.person) return JSON.stringify({ error: 'project and person are required for remove_member' })
       result = removeTeamMember(args.project as string, args.person as string)
+      break
+    }
+    case 'create_file': {
+      if (!args.file_type || !args.name) return JSON.stringify({ error: 'file_type and name are required for create_file' })
+      const fileData = (args.data as Record<string, unknown>) ?? {}
+      result = createVaultFile(
+        args.file_type as 'person' | 'project' | 'process' | 'external_contact',
+        args.name as string,
+        fileData,
+      )
       break
     }
     default:
