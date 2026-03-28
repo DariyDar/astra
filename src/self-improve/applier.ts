@@ -19,8 +19,8 @@ const MAX_AUTO_FIXES = 5
 /** Project root directory. */
 const PROJECT_ROOT = resolve(import.meta.dirname, '..', '..')
 
-/** Allowed directory for auto-fixes (only YAML registry). */
-const ALLOWED_PREFIX = join(PROJECT_ROOT, 'src', 'kb', 'registry')
+/** Allowed directory for auto-fixes (Obsidian vault). */
+const ALLOWED_PREFIX = join(PROJECT_ROOT, 'vault')
 
 /**
  * Validate that a fix targets an allowed file path.
@@ -28,7 +28,7 @@ const ALLOWED_PREFIX = join(PROJECT_ROOT, 'src', 'kb', 'registry')
  */
 function isPathAllowed(filePath: string): boolean {
   const absolutePath = resolve(PROJECT_ROOT, filePath)
-  return absolutePath.startsWith(ALLOWED_PREFIX) && filePath.endsWith('.yaml')
+  return absolutePath.startsWith(ALLOWED_PREFIX) && filePath.endsWith('.md')
 }
 
 /**
@@ -165,10 +165,10 @@ async function commitAndPush(fixes: AnalysisResult[]): Promise<void> {
     .map((f) => f.fix?.description ?? f.summary)
     .join('; ')
 
-  const commitMessage = `fix(kb): self-improve auto-fix — ${descriptions}`
+  const commitMessage = `fix(vault): self-improve auto-fix — ${descriptions}`
 
-  // Stage only registry files
-  await execFileAsync('git', ['add', 'src/kb/registry/'], { cwd: PROJECT_ROOT })
+  // Stage only vault files
+  await execFileAsync('git', ['add', 'vault/'], { cwd: PROJECT_ROOT })
 
   // Check if there are staged changes
   const { stdout: diffOutput } = await execFileAsync(

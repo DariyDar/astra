@@ -4,6 +4,7 @@ import type * as schema from '../db/schema.js'
 import { callGemini } from '../llm/gemini.js'
 import { callClaude } from '../llm/client.js'
 import { logger } from '../logging/logger.js'
+import { loadPromptCached } from './vault-loader.js'
 import {
   findUnprocessedChunks,
   countUnprocessedChunks,
@@ -35,6 +36,9 @@ const MAX_CHUNK_TEXT_LENGTH = 1200
 export type LlmProvider = 'gemini' | 'claude'
 
 const SYSTEM_INSTRUCTION = 'You are a JSON-only knowledge extraction tool. Output valid JSON only.'
+
+// Moved to vault/prompts/knowledge-extractor.md
+const getExtractionPrompt = (): string => loadPromptCached('prompts/knowledge-extractor.md')
 
 async function callLlm(provider: LlmProvider, prompt: string): Promise<string> {
   if (provider === 'claude') {
@@ -89,55 +93,7 @@ export interface BatchStats {
   stoppedReason: 'complete' | 'budget_time' | 'budget_batches' | 'error'
 }
 
-const EXTRACTION_PROMPT = `You are a knowledge extraction system for a project management knowledge base.
-Analyze the provided text chunks and extract 4 types of information:
-
-1. **Entities** — people, projects, channels, clients, companies, processes
-   - name (canonical), type, aliases (alternate names/spellings), company (hg/ac/null)
-   - Transliteration aliases are OK: "Семён" and "Semyon" are the same person
-   - Channel names: preserve with prefix (e.g. "ac/general", "hg/dev-chat")
-   - CRITICAL — NEVER merge people by first name alone! "Сергей" could be Сергей Клепицкий, Сергей Гуменюк, or someone else
-   - If only a first name appears (e.g. "Сергей", "Анастасия", "Марина") WITHOUT a last name or unique context, do NOT create a new entity and do NOT link to an existing one — skip it
-   - Only merge/reference a person if you have BOTH first+last name, or the name is globally unique in the company (e.g. "Дарий" — there is only one)
-   - When matching against EXISTING ENTITIES, only match if the name+context clearly identifies the same person. "Marina" alone does NOT match "Марина Ляндина" — there are multiple Marinas
-
-2. **Relations** — connections between entities
-   - works_on, manages, owns, member_of, client_of
-   - Include role when mentioned (e.g. "developer", "QA lead")
-
-3. **Facts** — time-stamped events, decisions, statuses, milestones
-   - Tied to an entity by name
-   - Include date when mentioned (ISO format YYYY-MM-DD)
-   - Types: event, decision, status, milestone, release, deadline
-   - CRITICAL: Each fact MUST be self-contained and understandable without the source text
-   - Always include the project/context in the fact text (e.g. "for SpongeBob", "on Star Trek 12.1.0")
-   - Include specific numbers, ETAs, versions, deadlines when mentioned
-   - BAD: "will discuss on Board Meeting" — no context about WHAT will be discussed
-   - GOOD: "will discuss SpongeBob Events fix funding and old game releases (Block Puzzle, Clash of God, Pong) on Board Meeting"
-   - BAD: "suggested delivering as planned" — no context about WHAT is being delivered
-   - GOOD: "suggested delivering Saves and Consents for SpongeBob as planned, with Семён focusing on Events fix bug instead"
-
-4. **Documents** — Notion/Drive documents linked to entities
-   - Only when a URL is explicitly mentioned
-   - Include title, url, source (notion/drive), type (spec/wiki/report/meeting_notes/design/other)
-
-Return JSON:
-{
-  "entities": [{ "name": "Семён", "type": "person", "aliases": ["Semyon"], "company": "hg" }],
-  "relations": [{ "from": "Семён", "to": "Oregon Trail", "relation": "works_on", "role": "developer" }],
-  "facts": [{ "entity": "Oregon Trail", "date": "2026-02-28", "type": "milestone", "text": "Released v2.0" }],
-  "documents": [{ "entity": "Oregon Trail", "title": "OT Spec", "url": "https://notion.so/ot-spec", "source": "notion", "type": "spec" }]
-}
-
-Rules:
-- Only extract what is clearly mentioned in the text
-- Do not invent relations or facts not supported by the text
-- Prefer Russian names as canonical when available (full name: "Семён Чиненов", not just "Семён")
-- Skip generic terms (e.g. "project", "team" without specific names)
-- NEVER create or reference a person entity from first name alone — require last name or unique identifier
-- Dates: use ISO format. If only month mentioned, use first day (e.g. "2026-03-01")
-- Facts: be SELF-CONTAINED. Reader must understand the fact without seeing the source. Include project name, what specifically happened, and any numbers/dates/versions. "Dariy предложил доставить Saves and Consents для SpongeBob по плану, Семёну сфокусироваться на баге Events fix" is good. "предложил доставить по плану" is useless.
-- If no facts/documents found, return empty arrays`
+// Moved to vault/prompts/knowledge-extractor.md — loaded via getExtractionPrompt()
 
 /** Build metadata header for a chunk to help the LLM contextualize it. */
 export function buildChunkHeader(chunk: {
@@ -243,7 +199,7 @@ export async function extractKnowledge(
     return `--- Chunk ${i + 1} ${header} ---\n${c.text.slice(0, MAX_CHUNK_TEXT_LENGTH)}`
   }).join('\n\n')
 
-  let prompt = EXTRACTION_PROMPT
+  let prompt = getExtractionPrompt()
   if (entityContext) {
     prompt += `\n\nEXISTING ENTITIES (use these canonical names when referencing known entities):\n${entityContext}`
   }

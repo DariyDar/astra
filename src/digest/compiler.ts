@@ -21,8 +21,7 @@ import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
 import { buildNameMap, resolveDisplayName, type NameMap } from './name-resolver.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
 import { getAllStatuses, type ProjectStatus } from '../kb/vault-reader.js'
-// Discovery report disabled — vault replaces YAML registry
-// import { loadDiscoveryReport } from '../kb/registry/entity-discovery.js'
+// Discovery report removed — YAML registry replaced by Obsidian vault
 
 type Company = 'astrocat' | 'highground'
 

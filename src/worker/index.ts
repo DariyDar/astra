@@ -17,10 +17,7 @@ import { createNotionAdapter } from '../kb/ingestion/notion.js'
 import { extractKnowledgeBatch, markLowValueChunks } from '../kb/knowledge-extractor.js'
 import type { SourceAdapter } from '../kb/ingestion/types.js'
 import { deliverDailyDigest } from '../digest/scheduler.js'
-import { generateProjectStatuses } from '../kb/registry/status-generator.js'
 import { refreshKnowledgeMap } from '../kb/vault-reader.js'
-import { runEntityDiscovery } from '../kb/registry/entity-discovery.js'
-import { syncSlackChannels } from '../kb/registry/channel-sync.js'
 import { runSelfImprovement } from '../self-improve/runner.js'
 import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
 
@@ -123,34 +120,12 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
     }, qdrantClient)
     logger.info(extractionStats, 'KB nightly knowledge extraction complete')
 
-    // Generate per-project statuses from fresh data
+    // Refresh knowledge map from vault after ingestion
     try {
-      await generateProjectStatuses()
       refreshKnowledgeMap()
+      logger.info('Knowledge map refreshed from vault')
     } catch (error) {
-      logger.error({ error }, 'Project status generation failed (non-blocking)')
-    }
-
-    // Sync Slack channels — add new channels from API to registry
-    try {
-      const newChannels = await syncSlackChannels()
-      if (newChannels > 0) {
-        logger.info({ newChannels }, 'Slack channel sync: new channels added to registry')
-      }
-    } catch (error) {
-      logger.error({ error }, 'Slack channel sync failed (non-blocking)')
-    }
-
-    // Run entity discovery — detect new people/projects/channels not in YAML
-    try {
-      const report = await runEntityDiscovery()
-      const gaps = report.unknown_slack_users.length + report.unknown_channels.length +
-        report.unknown_clickup_lists.length + report.stale_projects.length
-      if (gaps > 0) {
-        logger.warn({ gaps, file: '_discovery-report.yaml' }, 'Entity discovery found registry gaps')
-      }
-    } catch (error) {
-      logger.error({ error }, 'Entity discovery failed (non-blocking)')
+      logger.error({ error }, 'Knowledge map refresh failed (non-blocking)')
     }
   } catch (error) {
     logger.error({ error }, 'KB nightly ingestion failed')

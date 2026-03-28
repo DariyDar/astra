@@ -6,6 +6,7 @@
 
 import { callClaude } from '../llm/client.js'
 import { logger } from '../logging/logger.js'
+import { loadPromptCached } from '../kb/vault-loader.js'
 import type { ProblematicCase, AnalysisResult, FixCategory, ProblemType } from './types.js'
 
 /** Max cases to analyze per night (cost control). */
@@ -14,61 +15,8 @@ const MAX_CASES_TO_ANALYZE = 20
 /** Max cases per batch (keep context manageable). */
 const BATCH_SIZE = 10
 
-const ANALYSIS_SYSTEM_PROMPT = `Ты — агент самоулучшения бота Astra (Telegram-ассистент на базе Claude).
-Твоя задача: анализировать проблемные взаимодействия и предлагать исправления.
-
-## Контекст
-Astra отвечает на вопросы пользователя, используя MCP tools (kb_search, kb_registry, briefing, audit_tasks и др.).
-Данные о проектах, людях, компаниях хранятся в YAML-файлах реестра: src/kb/registry/ (projects/, people/, companies/, channels/, processes/).
-Навыки бота (skills) определяют системные промпты для разных типов запросов.
-
-## Классификация проблем
-Для каждого проблемного кейса определи категорию исправления:
-
-1. **registry_fix** — проблема в YAML-реестре (отсутствующий алиас, неправильные данные, недостающая связь).
-   ТОЛЬКО для файлов в src/kb/registry/**/*.yaml.
-   Можно исправить автоматически. Сгенерируй точный патч (filePath, oldContent, newContent).
-
-2. **prompt_fix** — проблема в навигации/промпте (skill guidance неточный, бот не знает как искать).
-   Требует изменения TypeScript кода — ТОЛЬКО описание, без патча.
-
-3. **code_fix** — баг в коде (неправильная логика, ошибка парсинга, крэш).
-   Требует изменения TypeScript кода — ТОЛЬКО описание.
-
-4. **infra_fix** — проблема инфраструктуры (таймаут, деплой, rate limit, перегрузка).
-   ТОЛЬКО описание.
-
-## Формат ответа
-Ответь СТРОГО в формате JSON array:
-[
-  {
-    "correlationId": "uuid-строка",
-    "problems": ["error", "negative_feedback"],
-    "category": "registry_fix",
-    "summary": "Краткое описание проблемы и решения на русском",
-    "fix": {
-      "filePath": "src/kb/registry/companies/example.yaml",
-      "description": "Добавить алиас 'EX' для быстрого поиска",
-      "oldContent": "name: Example Company\\ncode: ex",
-      "newContent": "name: Example Company\\ncode: ex\\naliases: [EX]"
-    }
-  },
-  {
-    "correlationId": "uuid-строка",
-    "problems": ["slow_response"],
-    "category": "infra_fix",
-    "summary": "Медленный ответ из-за большого количества MCP tool calls"
-  }
-]
-
-Правила:
-- "fix" поле ТОЛЬКО для category="registry_fix"
-- Для остальных категорий — только "summary" с описанием
-- "summary" всегда на русском языке
-- Если проблема неясна или тривиальна — можно пропустить (не включать в массив)
-- Не предлагай фиксы если проблема вызвана внешними факторами (Claude перегружен, интернет и т.д.)
-- filePath должен быть относительный от корня проекта
-- oldContent и newContent — точные подстроки YAML файла`
+// Moved to vault/prompts/self-improve-analyzer.md
+const getAnalysisSystemPrompt = (): string => loadPromptCached('prompts/self-improve-analyzer.md')
 
 /**
  * Analyze problematic cases with Claude.
@@ -104,7 +52,7 @@ async function analyzeBatch(cases: ProblematicCase[]): Promise<AnalysisResult[]>
   const prompt = buildBatchPrompt(cases)
 
   const response = await callClaude(prompt, {
-    system: ANALYSIS_SYSTEM_PROMPT,
+    system: getAnalysisSystemPrompt(),
     timeoutMs: 120_000,
   })
 

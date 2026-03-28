@@ -23,64 +23,18 @@ import type { ClickUpTask } from './my-tasks.js'
 import type { ProjectStatus } from '../kb/vault-reader.js'
 import { loadPrompt } from '../kb/vault-loader.js'
 
-// ─── Sub-agent system prompts ────────────────────────────────────────────────
+// ─── Sub-agent system prompts (moved to vault/prompts/) ─────────────────────
 
-const SLACK_AGENT_SYSTEM = `Ты аналитик Slack-данных. Получаешь сырые сообщения из Slack за вчера.
-Задача: сжать в ультракомпактный текст для последующей компиляции. Максимум 3000 символов в ответе.
+// Moved to vault/prompts/digest-slack-agent.md
+const getSlackAgentSystem = (): string => loadPrompt('prompts/digest-slack-agent.md')
 
-ВЫХОД: plain text, одна секция на проект. Формат:
-[ИМЯ ПРОЕКТА]
-• факт (автор, url)
-(пустая строка между проектами)
+// Moved to vault/prompts/digest-email-cal-agent.md
+const getEmailCalAgentSystem = (): string => loadPrompt('prompts/digest-email-cal-agent.md')
 
-ПРАВИЛА СЖАТИЯ:
-• 1-2 буллета на проект, не больше. Если нет важных данных — пропусти проект.
-• Один буллет = одна фраза из 10-15 слов + ссылка. Никаких деталей.
-• Несколько сообщений по одной теме = один буллет.
-• Стендапы: только блокеры и завершения. Рутинные апдейты — пропустить.
-• Имена: только фамилия или короткое имя (Настя, Сергей).
-• Ссылку включай только если сообщение важное. Формат: (url)
-• НЕ пиши вводных фраз, заголовков, пояснений. Только секции [ПРОЕКТ] + буллеты.`
-
-const EMAIL_CAL_AGENT_SYSTEM = `Ты аналитик email и календаря. Получаешь письма и события за вчера.
-Задача: извлечь ключевую информацию и сгруппировать по проектам.
-
-ВЫХОД: plain text, одна секция на проект + секция [ПРОЧЕЕ] для непроектного. Формат:
-[ИМЯ ПРОЕКТА]
-• факт 1 (ссылка если есть)
-• факт 2
-
-[ПРОЧЕЕ]
-• общие встречи, HR, admin
-
-ПРАВИЛА:
-• Только факты: решения, результаты встреч, темы писем. Никаких оценок.
-• QA-отчёты: кол-во багов (P1/P2), критичные проблемы, ссылка.
-• Системные письма (ClickUp нотификации, CI, App Store): суммировать "N системных писем".
-• Человеческие письма: отправитель + тема + 1 строка сути.
-• Встречи: кто участвовал, о чём, результат.
-• Отменённые встречи — отметить (ОТМЕНЕНО).
-• 2-3 буллета на проект максимум. Если нет данных — не включай проект.
-• Имена: короткие русские.
-• НЕ используй таблицы.`
-
-const CLICKUP_KB_AGENT_SYSTEM = `Ты аналитик задач и базы знаний. Получаешь активность ClickUp за вчера и факты из KB.
-Задача: извлечь ключевые изменения задач и дополнить контекстом из KB.
-
-ВЫХОД: plain text, одна секция на проект. Формат:
-[ИМЯ ПРОЕКТА]
-• задача/изменение (статус, исполнитель, ссылка)
-• KB-контекст: ETA майлстона, текущий фокус (только если добавляет смысл к вчерашней активности)
-
-ПРАВИЛА:
-• Только значимые изменения: смена статуса, завершение, новые задачи. Не перечисляй все.
-• KB-факты — только если они обогащают вчерашние данные (ETA, приближающийся дедлайн).
-• 2-3 буллета на проект. Если нет активности — не включай проект.
-• Имена: короткие русские.
-• НЕ используй таблицы.`
+// Moved to vault/prompts/digest-clickup-kb-agent.md
+const getClickupKbAgentSystem = (): string => loadPrompt('prompts/digest-clickup-kb-agent.md')
 
 // Moved to vault/prompts/digest-compiler.md
-// const ORCHESTRATOR_SYSTEM = `Ты редактор ежедневного дайджеста для Дария ...`
 const getOrchestratorSystem = (): string => loadPrompt('prompts/digest-compiler.md')
 
 // ─── Prompt builders ─────────────────────────────────────────────────────────
@@ -314,18 +268,19 @@ async function compileSlackSection(
     // Single batch — one call
     const result = await callClaude(
       buildSlackAgentPrompt(company, date, allProjects, batches[0]),
-      { system: SLACK_AGENT_SYSTEM, timeoutMs: 120_000 },
+      { system: getSlackAgentSystem(), timeoutMs: 120_000 },
     )
     return result.text
   }
 
   // Multiple batches — run in parallel, concatenate results
   logger.info({ company, batches: batches.length, channels: channels.length }, 'Digest: splitting Slack into batches')
+  const slackSystem = getSlackAgentSystem()
   const results = await Promise.allSettled(
     batches.map((batch, i) =>
       callClaude(
         buildSlackAgentPrompt(company, date, allProjects, batch),
-        { system: SLACK_AGENT_SYSTEM, timeoutMs: 120_000 },
+        { system: slackSystem, timeoutMs: 120_000 },
       ).then((r) => ({ batch: i, text: r.text })),
     ),
   )
@@ -358,11 +313,11 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
     compileSlackSection(company, date, allProjects, params.slackChannels),
     callClaude(
       buildEmailCalAgentPrompt(company, date, allProjects, params.gmailData, params.calendarData),
-      { system: EMAIL_CAL_AGENT_SYSTEM, timeoutMs: 120_000 },
+      { system: getEmailCalAgentSystem(), timeoutMs: 120_000 },
     ).then((r) => r.text),
     callClaude(
       buildClickUpKBAgentPrompt(company, date, allProjects, params.clickupData, params.kbContext),
-      { system: CLICKUP_KB_AGENT_SYSTEM, timeoutMs: 120_000 },
+      { system: getClickupKbAgentSystem(), timeoutMs: 120_000 },
     ).then((r) => r.text),
   ])
 

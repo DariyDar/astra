@@ -8,6 +8,7 @@ import type { Skill } from './types.js'
 import { compilePreMeetingReport } from '../digest/pre-meeting-report.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
 import { logger } from '../logging/logger.js'
+import { loadPromptCached } from '../kb/vault-loader.js'
 
 const preMeetingSkill: Skill = {
   name: 'pre-meeting',
@@ -28,16 +29,10 @@ const preMeetingSkill: Skill = {
   async preProcess(ctx) {
     // This skill handles the full response itself (compile + send)
     // Return a prompt that tells Claude to wait while we compile
+    // Moved to vault/prompts/skill-pre-meeting.md
     return {
       prompt: ctx.message.text,
-      systemPromptExtra: `## Pre-meeting Report Mode
-
-The user is requesting a pre-meeting project report for AstroCat.
-This report is being compiled automatically from all data sources (Slack, Gmail, Calendar, ClickUp, KB).
-
-IMPORTANT: Do NOT try to compile this report yourself using tools.
-Simply respond: "Компилирую отчёт по проектам AstroCat... ⏳"
-The report will be delivered separately as a Telegram message.`,
+      systemPromptExtra: loadPromptCached('prompts/skill-pre-meeting.md'),
     }
   },
 

@@ -12,6 +12,7 @@ import { callClaude } from '../llm/client.js'
 import type { ClaudeResponse, UsageMetrics } from '../llm/client.js'
 import { writeAuditEntry } from '../logging/audit.js'
 import { logger } from '../logging/logger.js'
+import { loadPromptCached } from '../kb/vault-loader.js'
 
 const SUBAGENT_TIMEOUT_MS = 120_000
 const SYNTHESIZER_TIMEOUT_MS = 60_000
@@ -157,20 +158,9 @@ async function synthesize(
     sections.push(`## External sources (web search)\n${results.web}`)
   }
 
-  const synthSystem = `You are a synthesis specialist. Your job is to combine research findings from multiple sources into a clear, structured answer.
-
-Rules:
-- Respond in ${langLabel}
-- Merge duplicate information — don't repeat the same fact from different sources
-- Prioritize internal data (Slack, KB) over external web results
-- If sources contradict each other, note the discrepancy
-- Use structured format: sections, bullet points, bold for key facts
-- Include timestamps and source references where available
-- End with actionable recommendations if appropriate
-- Keep formatting compatible with Telegram (Markdown bold, italic, lists)
-- Do NOT use # headers — use **bold text** for section labels
-- NEVER use tables (| --- | format) — unreadable in Telegram. Use bullet lists instead.
-- Links: always use clean inline format [текст](url). Example: [тред в #stt-dev](https://...), [QA отчёт](https://...)`
+  // Moved to vault/prompts/investigation-synthesizer.md
+  const synthSystem = loadPromptCached('prompts/investigation-synthesizer.md')
+    .replace(/\{\{languageLabel\}\}/g, langLabel)
 
   const synthPrompt = `Original question: ${query}
 
@@ -197,76 +187,22 @@ Synthesize these into a single comprehensive answer.`
 
 // ─── Subagent Prompt Builders ───
 
+// Moved to vault/prompts/investigation-slack-agent.md
 function buildSlackAgentPrompt(query: string, knowledgeMap: string): { system: string; prompt: string } {
-  return {
-    system: `You are a Slack research specialist. Your ONLY job is to search live Slack channels for relevant information.
-
-${knowledgeMap}
-
-Tools available:
-- **briefing(sources=["slack"], query_type="search", query="...", slack_channels=[...])** — search live Slack messages
-- **get_slack_thread(channel_name, thread_ts)** — drill into a specific thread for details
-
-Strategy:
-1. Identify relevant channels from the Project Quick Reference above
-2. Search with briefing() using the most relevant channels
-3. Try both Russian AND English keywords if first search is sparse
-4. If you find a thread reference, use get_slack_thread() to get full context
-5. Max 4 tool calls
-
-Output format:
-- List each finding with: channel name, who said it, when, what they said
-- Include thread timestamps for drill-down
-- Do NOT synthesize or give recommendations — just report raw findings`,
-    prompt: `Search Slack for: ${query}`,
-  }
+  const system = loadPromptCached('prompts/investigation-slack-agent.md')
+    .replace(/\{\{knowledgeMap\}\}/g, knowledgeMap)
+  return { system, prompt: `Search Slack for: ${query}` }
 }
 
+// Moved to vault/prompts/investigation-kb-agent.md
 function buildKBAgentPrompt(query: string, knowledgeMap: string): { system: string; prompt: string } {
-  return {
-    system: `You are a knowledge base research specialist. Your ONLY job is to search historical indexed data.
-
-${knowledgeMap}
-
-Tools available:
-- **kb_search(query, source?, person?, project?, period?, limit?)** — semantic + keyword search across indexed Slack, Gmail, Drive, Notion data
-- **kb_entities(name?, type?)** — entity graph lookup (people, projects, relations)
-- **kb_registry(project?, section?)** — org registry with team, channels, docs, status. Returns full project card: team, milestones, current focus, channels, ClickUp lists.
-
-Important context:
-- Wiki has task management rules: "Ведение задач от А до Я" / "Task Management from A to Z" in Notion. If the query is about tasks or task compliance, search for these rules via kb_search(query="ведение задач правила", source="notion").
-- kb_registry(project=X) returns current milestones, team, and project focus — use this to understand which tasks are relevant NOW vs outdated.
-
-Strategy:
-1. If query mentions a project → kb_registry(project=X) first to get context (milestones, focus, team)
-2. Search kb_search() with relevant keywords
-3. Try variations: different keywords, English AND Russian terms
-4. If a specific person or project is mentioned, filter by them
-5. Max 4 tool calls
-
-Output format:
-- List each finding with: source (Slack/Gmail/Drive/Notion), date, content summary
-- Include document URLs where available
-- Include project context (current milestone, focus) if relevant
-- Do NOT synthesize or give recommendations — just report raw findings`,
-    prompt: `Search knowledge base for: ${query}`,
-  }
+  const system = loadPromptCached('prompts/investigation-kb-agent.md')
+    .replace(/\{\{knowledgeMap\}\}/g, knowledgeMap)
+  return { system, prompt: `Search knowledge base for: ${query}` }
 }
 
+// Moved to vault/prompts/investigation-web-agent.md
 function buildWebAgentPrompt(query: string): { system: string; prompt: string } {
-  return {
-    system: `You are an external research specialist. Your ONLY job is to find relevant public information about the topic.
-
-Strategy:
-1. Search for the specific topic: bug reports, user reviews, community discussions, documentation
-2. Try both the product/game name and specific issue keywords
-3. Check: forums, Reddit, Fandom wikis, app store reviews, community sites
-4. Max 3 searches
-
-Output format:
-- List each finding with: source URL, date (if available), key information
-- Distinguish between confirmed bugs, user complaints, and general discussions
-- Do NOT synthesize or give recommendations — just report raw findings`,
-    prompt: `Search the web for: ${query}`,
-  }
+  const system = loadPromptCached('prompts/investigation-web-agent.md')
+  return { system, prompt: `Search the web for: ${query}` }
 }

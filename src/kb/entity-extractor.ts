@@ -3,6 +3,7 @@ import type { QdrantClient } from '@qdrant/js-client-rest'
 import type * as schema from '../db/schema.js'
 import { callClaude } from '../llm/client.js'
 import { logger } from '../logging/logger.js'
+import { loadPromptCached } from './vault-loader.js'
 import {
   findUnprocessedChunks,
   countUnprocessedChunks,
@@ -71,38 +72,8 @@ export interface BatchStats {
   stoppedReason: 'complete' | 'budget_time' | 'budget_cost' | 'budget_batches' | 'error'
 }
 
-const EXTRACTION_PROMPT = `You are an entity extraction system for a project management knowledge base.
-Analyze the provided text chunks and extract:
-
-1. **Entities** — people, projects, channels, clients, companies, processes
-   - For each entity: name (canonical), type, aliases (alternate names/spellings), company (hg/ac/null)
-   - Normalize names: "\u0421\u0435\u043c\u0451\u043d" and "Semyon" are the same person
-   - Channel names: preserve with prefix (e.g. "ac/general", "hg/dev-chat")
-
-2. **Relations** — connections between entities
-   - works_on: person \u2192 project
-   - manages: person \u2192 project/team
-   - owns: person \u2192 project/process
-   - member_of: person \u2192 company/channel
-   - client_of: company/person \u2192 project
-
-Return ONLY valid JSON (no markdown, no explanation):
-{
-  "entities": [
-    { "name": "\u0421\u0435\u043c\u0451\u043d", "type": "person", "aliases": ["Semyon", "Semen"], "company": "hg" }
-  ],
-  "relations": [
-    { "from": "\u0421\u0435\u043c\u0451\u043d", "to": "Oregon Trail", "relation": "works_on", "role": "developer" }
-  ]
-}
-
-Rules:
-- Only extract entities clearly mentioned in the text
-- Do not invent relations not supported by the text
-- Prefer Russian names as canonical when available
-- Skip generic terms (e.g. "project", "team" without specific names)
-- Entity types: person, project, channel, client, company, process
-- Relation types: works_on, manages, owns, member_of, client_of`
+// Moved to vault/prompts/entity-extractor.md
+const getExtractionPrompt = (): string => loadPromptCached('prompts/entity-extractor.md')
 
 /** Build entity context string, truncating at comma boundary. */
 function buildEntityContext(entities: Array<{ name: string; type: string }>, maxChars: number = 3000): string {
@@ -138,7 +109,7 @@ export async function extractEntities(
     `--- Chunk ${i + 1} [source=${c.source}, id=${c.sourceId}] ---\n${c.text.slice(0, 800)}`,
   ).join('\n\n')
 
-  let prompt = EXTRACTION_PROMPT
+  let prompt = getExtractionPrompt()
   if (entityContext) {
     prompt += `\n\nEXISTING ENTITIES (use these canonical names when referencing known entities):\n${entityContext}`
   }

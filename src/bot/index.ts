@@ -317,11 +317,11 @@ async function startup(): Promise<void> {
   // 4b. Load skill modules (auto-discovers from src/skills/)
   await skillRegistry.loadSkills()
 
-  // 4c. Initialize knowledge map from YAML registry (for system prompt injection)
+  // 4c. Initialize knowledge map from Obsidian vault (for system prompt injection)
   try {
-    const { buildKnowledgeMap } = await import('../kb/registry/knowledge-map-builder.js')
-    buildKnowledgeMap()
-    logger.info('Knowledge map initialized from registry')
+    const { refreshKnowledgeMap } = await import('../kb/vault-reader.js')
+    refreshKnowledgeMap()
+    logger.info('Knowledge map initialized from vault')
   } catch (error) {
     logger.warn({ error: error instanceof Error ? error.message : String(error) }, 'Knowledge map init failed (non-blocking)')
   }

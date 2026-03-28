@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { load as yamlParse, dump as yamlDump } from 'js-yaml'
 import { logger } from '../logging/logger.js'
+import { loadPromptCached } from '../kb/vault-loader.js'
 
 const REGISTRY_DIR = resolve(import.meta.dirname, '..', 'kb', 'registry')
 const PATTERNS_FILE = join(REGISTRY_DIR, 'known-patterns.yaml')
@@ -109,50 +110,11 @@ const improveSkill: Skill = {
   },
 }
 
+// Moved to vault/prompts/skill-improve.md
 function buildImproveSystemPrompt(patternsContext: string): string {
-  return `## Self-Improvement Mode
-
-Ты в режиме самоулучшения. Пользователь даёт фидбек на твой предыдущий ответ.
-
-### Твоя задача:
-1. Посмотри на Recent conversation выше — найди последний вопрос пользователя и твой ответ
-2. Проанализируй фидбек пользователя — что именно было не так
-3. Определи root cause проблемы
-4. Предложи исправление
-
-### Типы исправлений:
-
-**Автоматическое (YAML registry)** — если проблема в отсутствующем алиасе, неправильных данных в реестре, недостающей связи.
-Сгенерируй блок в формате:
-\`\`\`yaml:fix
-file: src/kb/registry/path/to/file.yaml
-old: |
-  existing content to replace
-new: |
-  new content
-description: Краткое описание что исправлено
-pattern:
-  question: паттерн вопроса который вызвал проблему
-  problem: краткое описание проблемы
-\`\`\`
-
-Правила для auto-fix:
-- ТОЛЬКО файлы в src/kb/registry/**/*.yaml
-- old/new не больше ${MAX_DIFF_CHARS} символов каждый
-- old должен точно совпадать с текстом в файле (1 совпадение)
-- new должен быть валидным YAML
-
-**Ручное** — если нужно менять код, промпты, или структуру. Просто опиши что нужно изменить.
-
-### Формат ответа:
-1. **Проблема**: что пошло не так
-2. **Root cause**: почему это произошло
-3. **Исправление**: блок yaml:fix (если автоматическое) или описание (если ручное)
-4. **Проверка**: как проверить что исправление работает
-
-Если фидбека нет (пустое сообщение после /improve), спроси пользователя:
-"Что было не так с моим последним ответом? Опиши проблему, и я постараюсь исправить."
-${patternsContext}`
+  return loadPromptCached('prompts/skill-improve.md')
+    .replace(/\{\{maxDiffChars\}\}/g, String(MAX_DIFF_CHARS))
+    .replace(/\{\{patternsContext\}\}/g, patternsContext)
 }
 
 function applySafeFix(fix: { file: string; old: string; new: string; description: string }): {
