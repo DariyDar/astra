@@ -21,6 +21,7 @@ import type { DigestSlackChannel } from './sources/slack.js'
 import type { BriefingItem } from '../mcp/briefing/types.js'
 import type { ClickUpTask } from './my-tasks.js'
 import type { ProjectStatus } from '../kb/vault-reader.js'
+import { loadPrompt } from '../kb/vault-loader.js'
 
 // ─── Sub-agent system prompts ────────────────────────────────────────────────
 
@@ -78,34 +79,9 @@ const CLICKUP_KB_AGENT_SYSTEM = `Ты аналитик задач и базы з
 • Имена: короткие русские.
 • НЕ используй таблицы.`
 
-const ORCHESTRATOR_SYSTEM = `Ты редактор ежедневного дайджеста для Дария (CPO / VP Production).
-Получаешь 3 готовые секции от субагентов (Slack, Email+Calendar, ClickUp+KB) и собираешь финальный Telegram HTML дайджест.
-
-ФОРМАТ: Telegram HTML. Используй ТОЛЬКО теги <b>, <i>, <a href="...">.
-НЕ используй другие HTML-теги (<p>, <br>, <h1>, <ul>, <li>). Переносы строк — обычные \\n, буллеты — •.
-НЕ используй markdown-синтаксис (**, ##, и т.д.).
-
-СТРУКТУРА:
-1. Заголовок: <b>{CompanyName} — {дата}</b>
-2. По КАЖДОМУ проекту с активностью:
-   <b>{Название проекта}</b>
-   • буллеты из всех трёх субагентов, СМЕРЖЁННЫЕ (одно событие — один буллет)
-   • ClickUp-задачи ВНУТРИ секции проекта
-3. Секция <b>Прочее</b> для непроектной активности
-4. Секция <b>Мои задачи</b> — просроченные задачи Дария и задачи на неделю
-
-ПРАВИЛА СЛИЯНИЯ:
-• Если одно событие есть в нескольких субагентах — один буллет, самый информативный.
-• Добавляй контекст из разных источников в один буллет: "Fish AI в работе (Алехандро), QA: 5 P1 багов, ETA 15/04 (<a href=\"...\">тред</a>)"
-• Проблемы, блокеры, эскалации — подсветить ⚠️.
-• Ссылки: <a href="url">тред</a>, <a href="url">письмо</a>, <a href="url">задача</a> — компактно, за описательным текстом.
-• НЕ используй таблицы.
-• Только факты, без оценок и рекомендаций.
-• 3-7 буллетов на проект — достаточно для понимания ситуации. Каждый буллет раскрывает суть, не обрезает до непонятности.
-• Ранжируй по важности: блокеры и проблемы первыми, потом прогресс, потом рутина.
-• Используй русские имена людей (display_name из KB), не английские.
-• Если по проекту нет данных ни в одном субагенте — пиши "без апдейтов".
-• НЕ добавляй приветствие или подпись. Начинай сразу с заголовка.`
+// Moved to vault/prompts/digest-compiler.md
+// const ORCHESTRATOR_SYSTEM = `Ты редактор ежедневного дайджеста для Дария ...`
+const getOrchestratorSystem = (): string => loadPrompt('prompts/digest-compiler.md')
 
 // ─── Prompt builders ─────────────────────────────────────────────────────────
 
@@ -433,7 +409,7 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
   })
 
   const finalResult = await callClaude(orchestratorPrompt, {
-    system: ORCHESTRATOR_SYSTEM,
+    system: getOrchestratorSystem(),
     timeoutMs: 240_000,
   })
 
