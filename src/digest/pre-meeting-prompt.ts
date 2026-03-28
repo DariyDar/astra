@@ -7,7 +7,7 @@
 import type { DigestSlackChannel } from './sources/slack.js'
 import type { BriefingItem } from '../mcp/briefing/types.js'
 import type { ClickUpTask } from './my-tasks.js'
-import type { ProjectStatus } from '../kb/registry/reader.js'
+import type { ProjectStatus } from '../kb/vault-reader.js'
 
 export const PRE_MEETING_SYSTEM_PROMPT = `Ты готовишь отчёт-подготовку к синку по проектам AstroCat для Дария (CPO / VP Production).
 Этот отчёт приходит ЗА ЧАС до созвона, чтобы Дарий был в курсе текущего состояния всех проектов.

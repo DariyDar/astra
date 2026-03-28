@@ -20,7 +20,7 @@ import { logger } from '../logging/logger.js'
 import type { DigestSlackChannel } from './sources/slack.js'
 import type { BriefingItem } from '../mcp/briefing/types.js'
 import type { ClickUpTask } from './my-tasks.js'
-import type { ProjectStatus } from '../kb/registry/reader.js'
+import type { ProjectStatus } from '../kb/vault-reader.js'
 
 // ─── Sub-agent system prompts ────────────────────────────────────────────────
 

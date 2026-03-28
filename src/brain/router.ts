@@ -18,7 +18,7 @@ import type { SkillRegistry } from '../skills/registry.js'
 import { buildRecentContext } from './context-builder.js'
 import { detectLanguage } from './language.js'
 import { buildSystemPrompt } from './system-prompt.js'
-import { getKnowledgeMap } from '../kb/registry/knowledge-map-builder.js'
+import { getKnowledgeMap } from '../kb/vault-reader.js'
 import { runInvestigation } from './investigation.js'
 
 /** Regex to match <preference_update>...</preference_update> tags in Claude responses */

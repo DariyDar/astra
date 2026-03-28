@@ -19,7 +19,7 @@ import { extractKnowledgeBatch, markLowValueChunks } from '../kb/knowledge-extra
 import type { SourceAdapter } from '../kb/ingestion/types.js'
 import { deliverDailyDigest } from '../digest/scheduler.js'
 import { generateProjectStatuses } from '../kb/registry/status-generator.js'
-import { refreshKnowledgeMap } from '../kb/registry/knowledge-map-builder.js'
+import { refreshKnowledgeMap } from '../kb/vault-reader.js'
 import { runEntityDiscovery } from '../kb/registry/entity-discovery.js'
 import { syncSlackChannels } from '../kb/registry/channel-sync.js'
 import { runSelfImprovement } from '../self-improve/runner.js'

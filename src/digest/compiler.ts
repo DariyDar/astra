@@ -15,12 +15,12 @@ import { fetchGmail } from '../mcp/briefing/gmail.js'
 import { fetchCalendar } from '../mcp/briefing/calendar.js'
 import { fetchClickUp } from '../mcp/briefing/clickup.js'
 import { parsePeriod } from '../mcp/briefing/period.js'
-import { findEntitiesByType, getFactsForEntity, getAliasesForEntityIds } from '../kb/kb-facade.js'
+import { findEntitiesByType, getAliasesForEntityIds, loadProjectCard } from '../kb/vault-reader.js'
 import { fetchDigestSlack, type DigestSlackChannel } from './sources/slack.js'
 import { fetchMyTasks, type ClickUpTask } from './my-tasks.js'
 import { buildNameMap, resolveDisplayName, type NameMap } from './name-resolver.js'
 import type { BriefingRequest, BriefingItem } from '../mcp/briefing/types.js'
-import { getAllStatuses, type ProjectStatus } from '../kb/registry/reader.js'
+import { getAllStatuses, type ProjectStatus } from '../kb/vault-reader.js'
 import { loadDiscoveryReport } from '../kb/registry/entity-discovery.js'
 
 type Company = 'astrocat' | 'highground'
@@ -66,7 +66,7 @@ interface SourceResult<T> {
 
 /** Project info from KB for matching and context. */
 interface ProjectInfo {
-  id: number
+  id: string
   name: string
   company: string
   aliases: string[]
@@ -79,14 +79,14 @@ interface ProjectInfo {
  */
 async function buildProjectMap(): Promise<Map<string, ProjectInfo[]>> {
   const projects = await findEntitiesByType('project')
-  const projectIds = projects.map((p) => p.id as number)
+  const projectIds = projects.map((p) => p.id)
 
   // Fetch all aliases for all projects via facade
   const aliases = await getAliasesForEntityIds(projectIds)
 
-  const aliasMap = new Map<number, string[]>()
+  const aliasMap = new Map<string, string[]>()
   for (const a of aliases) {
-    const eid = a.entityId as number
+    const eid = a.entityId
     const list = aliasMap.get(eid) ?? []
     list.push(a.alias)
     aliasMap.set(eid, list)
@@ -97,11 +97,11 @@ async function buildProjectMap(): Promise<Map<string, ProjectInfo[]>> {
   for (const p of projects) {
     if (!p.company) continue
     const company = p.company.toLowerCase()
-    const projectAliases = aliasMap.get(p.id as number) ?? []
+    const projectAliases = aliasMap.get(p.id) ?? []
     const searchTerms = [p.name, ...projectAliases].map((t) => t.toLowerCase())
 
     const info: ProjectInfo = {
-      id: p.id as number,
+      id: p.id,
       name: p.name,
       company,
       aliases: projectAliases,
@@ -238,7 +238,7 @@ export async function compileDigest(company: Company): Promise<string> {
   if (nameMapResult.status === 'rejected') {
     logger.warn({ error: nameMapResult.reason instanceof Error ? nameMapResult.reason.message : String(nameMapResult.reason) }, 'Digest: buildNameMap failed, using empty name map')
   }
-  const projectMap = projectMapResult.status === 'fulfilled' ? projectMapResult.value : new Map()
+  const projectMap = projectMapResult.status === 'fulfilled' ? projectMapResult.value : new Map<string, ProjectInfo[]>()
   const nameMap = nameMapResult.status === 'fulfilled' ? nameMapResult.value : new Map()
   const companyProjects = projectMap.get(wsLabel) ?? []
   const otherWs = wsLabel === 'ac' ? 'hg' : 'ac'
@@ -369,26 +369,27 @@ function getProjectStatusesForCompany(companyCode: string): ProjectStatus[] {
   }
 }
 
-/** Fetch KB facts for projects belonging to a company. */
+/** Fetch KB context for projects belonging to a company (from vault statuses). */
 async function fetchKBContext(companyCode: string): Promise<Array<{ project: string; facts: string[] }>> {
-  const projects = await findEntitiesByType('project')
+  const projects = findEntitiesByType('project')
   const companyProjects = projects.filter((p) => {
     if (!p.company) return false
     return p.company.toLowerCase() === companyCode.toLowerCase()
   })
 
-  const results = await Promise.all(
-    companyProjects.slice(0, MAX_KB_PROJECTS).map(async (project) => {
-      const facts = await getFactsForEntity(project.id, {
-        limit: MAX_FACTS_PER_PROJECT,
-      })
-      return facts.length > 0
-        ? { project: project.name, facts: facts.map((f) => f.text) }
-        : null
-    }),
-  )
+  const results: Array<{ project: string; facts: string[] }> = []
+  for (const project of companyProjects.slice(0, MAX_KB_PROJECTS)) {
+    const card = loadProjectCard(project.name)
+    if (!card?.current_status) continue
+    const facts: string[] = []
+    if (card.current_status.current_focus) facts.push(card.current_status.current_focus)
+    for (const m of card.current_status.milestones.slice(0, MAX_FACTS_PER_PROJECT)) {
+      facts.push(m)
+    }
+    if (facts.length > 0) results.push({ project: project.name, facts })
+  }
 
-  return results.filter((r): r is NonNullable<typeof r> => r !== null)
+  return results
 }
 
 /** Build a minimal BriefingRequest for the fetchers. */

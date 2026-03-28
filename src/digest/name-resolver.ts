@@ -3,7 +3,7 @@
  * Built once per digest run, maps all known aliases → display_name.
  */
 
-import { findEntitiesByType, getAliasesForEntityIds } from '../kb/kb-facade.js'
+import { findEntitiesByType, getAliasesForEntityIds } from '../kb/vault-reader.js'
 import { logger } from '../logging/logger.js'
 
 export type NameMap = Map<string, string>
@@ -15,13 +15,13 @@ export type NameMap = Map<string, string>
  */
 export async function buildNameMap(): Promise<NameMap> {
   const people = await findEntitiesByType('person')
-  const personIds = people.map((p) => p.id as number)
+  const personIds = people.map((p) => p.id)
 
   const aliases = await getAliasesForEntityIds(personIds)
 
-  const aliasMap = new Map<number, string[]>()
+  const aliasMap = new Map<string, string[]>()
   for (const a of aliases) {
-    const eid = a.entityId as number
+    const eid = a.entityId
     const list = aliasMap.get(eid) ?? []
     list.push(a.alias)
     aliasMap.set(eid, list)
@@ -38,7 +38,7 @@ export async function buildNameMap(): Promise<NameMap> {
     setWithCollisionCheck(nameMap, person.name.toLowerCase(), displayName)
 
     // Map all aliases
-    const personAliases = aliasMap.get(person.id as number) ?? []
+    const personAliases = aliasMap.get(person.id) ?? []
     for (const alias of personAliases) {
       setWithCollisionCheck(nameMap, alias.toLowerCase(), displayName)
     }

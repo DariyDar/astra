@@ -5,8 +5,11 @@ import {
   getRelationsFor,
 } from './kb-facade.js'
 import type { EntityType, ChunkSource } from './types.js'
-import { loadProjectCard, loadSection, formatProjectCard, findCompanyProjects } from './registry/reader.js'
-import { getKnowledgeMap } from './registry/knowledge-map-builder.js'
+import {
+  loadProjectCard, loadSection, formatProjectCard, findCompanyProjects, getKnowledgeMap,
+  updateProjectStatus, markPersonLeft, addTeamMember, removeTeamMember, addProjectToPerson,
+  type VaultUpdateResult,
+} from './vault-reader.js'
 import { loadDiscoveryReport } from './registry/entity-discovery.js'
 
 // ── Tool definitions ──
@@ -291,4 +294,87 @@ function formatHealthReport(): string {
   }
 
   return lines.join('\n')
+}
+
+// ── vault_update tool ──
+
+export const vaultUpdateTool = {
+  name: 'vault_update',
+  description: `Update the Knowledge Base vault — modify project statuses, team composition, and people records.
+
+Actions:
+- update_status: Update a project's current focus and milestones
+- mark_left: Mark a person as fired/quit — removes from all projects, sets status: left
+- add_member: Add a person to a project team (updates both project and person cards)
+- remove_member: Remove a person from a project team
+
+Use this when the user says information is outdated, someone was fired, team changed, or project status needs updating.
+After updating, confirm what was changed.`,
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      action: {
+        type: 'string' as const,
+        enum: ['update_status', 'mark_left', 'add_member', 'remove_member'],
+        description: 'Action to perform',
+      },
+      project: {
+        type: 'string' as const,
+        description: 'Project name or alias (for update_status, add_member, remove_member)',
+      },
+      person: {
+        type: 'string' as const,
+        description: 'Person display_name — must match vault filename (for mark_left, add_member, remove_member)',
+      },
+      role: {
+        type: 'string' as const,
+        description: 'Role on the project (for add_member)',
+      },
+      focus: {
+        type: 'string' as const,
+        description: 'Current focus text in Russian (for update_status)',
+      },
+      milestones: {
+        type: 'array' as const,
+        items: { type: 'string' as const },
+        description: 'Recent milestones as "YYYY-MM-DD: description" strings (for update_status)',
+      },
+    },
+    required: ['action'],
+  },
+}
+
+export function handleVaultUpdate(args: Record<string, unknown>): string {
+  const action = args.action as string
+  let result: VaultUpdateResult
+
+  switch (action) {
+    case 'update_status': {
+      if (!args.project || !args.focus) return JSON.stringify({ error: 'project and focus are required for update_status' })
+      result = updateProjectStatus(args.project as string, args.focus as string, args.milestones as string[] | undefined)
+      break
+    }
+    case 'mark_left': {
+      if (!args.person) return JSON.stringify({ error: 'person is required for mark_left' })
+      result = markPersonLeft(args.person as string)
+      break
+    }
+    case 'add_member': {
+      if (!args.project || !args.person || !args.role) return JSON.stringify({ error: 'project, person, and role are required for add_member' })
+      result = addTeamMember(args.project as string, args.person as string, args.role as string)
+      // Also add project to person's card
+      const personResult = addProjectToPerson(args.person as string, args.project as string, args.role as string)
+      result.changes.push(...personResult.changes.map(c => `Person card: ${c}`))
+      break
+    }
+    case 'remove_member': {
+      if (!args.project || !args.person) return JSON.stringify({ error: 'project and person are required for remove_member' })
+      result = removeTeamMember(args.project as string, args.person as string)
+      break
+    }
+    default:
+      return JSON.stringify({ error: `Unknown action: ${action}` })
+  }
+
+  return JSON.stringify(result, null, 2)
 }

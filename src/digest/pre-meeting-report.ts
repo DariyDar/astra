@@ -18,7 +18,7 @@ import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
 import { fetchGmail } from '../mcp/briefing/gmail.js'
 import { fetchCalendar } from '../mcp/briefing/calendar.js'
 import { fetchClickUp } from '../mcp/briefing/clickup.js'
-import { findEntitiesByType, getFactsForEntity, getAliasesForEntityIds } from '../kb/kb-facade.js'
+import { findEntitiesByType, getAliasesForEntityIds, loadProjectCard } from '../kb/vault-reader.js'
 import { fetchDigestSlack } from './sources/slack.js'
 import { fetchMyTasks } from './my-tasks.js'
 import { PRE_MEETING_SYSTEM_PROMPT, buildPreMeetingUserPrompt } from './pre-meeting-prompt.js'
@@ -26,7 +26,7 @@ import { buildNameMap, resolveDisplayName } from './name-resolver.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
 import type { BriefingItem, BriefingRequest } from '../mcp/briefing/types.js'
 import type { DigestSlackChannel } from './sources/slack.js'
-import { getAllStatuses, type ProjectStatus } from '../kb/registry/reader.js'
+import { getAllStatuses, type ProjectStatus } from '../kb/vault-reader.js'
 
 /** Max projects to include KB context for. */
 const MAX_KB_PROJECTS = 15
@@ -52,7 +52,7 @@ function escapeRegex(s: string): string {
 }
 
 interface ProjectInfo {
-  id: number
+  id: string
   name: string
   aliases: string[]
   searchTerms: string[]
@@ -62,21 +62,21 @@ interface ProjectInfo {
 async function buildACProjectList(): Promise<ProjectInfo[]> {
   const projects = await findEntitiesByType('project')
   const acProjects = projects.filter((p) => p.company?.toLowerCase() === 'ac')
-  const projectIds = acProjects.map((p) => p.id as number)
+  const projectIds = acProjects.map((p) => p.id)
 
   const aliases = await getAliasesForEntityIds(projectIds)
-  const aliasMap = new Map<number, string[]>()
+  const aliasMap = new Map<string, string[]>()
   for (const a of aliases) {
-    const eid = a.entityId as number
+    const eid = a.entityId
     const list = aliasMap.get(eid) ?? []
     list.push(a.alias)
     aliasMap.set(eid, list)
   }
 
   return acProjects.map((p) => {
-    const projectAliases = aliasMap.get(p.id as number) ?? []
+    const projectAliases = aliasMap.get(p.id) ?? []
     return {
-      id: p.id as number,
+      id: p.id,
       name: p.name,
       aliases: projectAliases,
       searchTerms: [p.name, ...projectAliases].map((t) => t.toLowerCase()),
@@ -126,17 +126,20 @@ function filterGmailForAC(items: BriefingItem[], acProjects: ProjectInfo[]): Bri
   })
 }
 
-/** Fetch KB facts for AC projects. */
+/** Fetch KB context for AC projects (from vault statuses). */
 async function fetchACKBContext(acProjects: ProjectInfo[]): Promise<Array<{ project: string; facts: string[] }>> {
-  const results = await Promise.all(
-    acProjects.slice(0, MAX_KB_PROJECTS).map(async (project) => {
-      const facts = await getFactsForEntity(project.id, { limit: MAX_FACTS_PER_PROJECT })
-      return facts.length > 0
-        ? { project: project.name, facts: facts.map((f) => f.text) }
-        : null
-    }),
-  )
-  return results.filter((r): r is NonNullable<typeof r> => r !== null)
+  const results: Array<{ project: string; facts: string[] }> = []
+  for (const project of acProjects.slice(0, MAX_KB_PROJECTS)) {
+    const card = loadProjectCard(project.name)
+    if (!card?.current_status) continue
+    const facts: string[] = []
+    if (card.current_status.current_focus) facts.push(card.current_status.current_focus)
+    for (const m of card.current_status.milestones.slice(0, MAX_FACTS_PER_PROJECT)) {
+      facts.push(m)
+    }
+    if (facts.length > 0) results.push({ project: project.name, facts })
+  }
+  return results
 }
 
 /** Build minimal BriefingRequest. */

@@ -8,7 +8,7 @@
 import type { DigestSlackChannel } from './sources/slack.js'
 import type { BriefingItem } from '../mcp/briefing/types.js'
 import type { ClickUpTask } from './my-tasks.js'
-import type { ProjectStatus } from '../kb/registry/reader.js'
+import type { ProjectStatus } from '../kb/vault-reader.js'
 
 export const DIGEST_SYSTEM_PROMPT = `Ты компилируешь ежедневный дайджест ("Краткое содержание предыдущих серий") для Дария (CPO / VP Production).
 Дайджест покрывает ТОЛЬКО вчерашний день. Никаких планов на сегодня или будущее.
