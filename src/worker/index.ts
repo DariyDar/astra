@@ -112,7 +112,7 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
       logger.info({ marked }, 'KB: marked low-value chunks as processed')
     }
 
-    // Run multi-batch knowledge extraction via Gemini (free, fast)
+    // Run multi-batch knowledge extraction via Claude (free, fast)
     logger.info('KB: starting nightly knowledge extraction')
     const extractionStats = await extractKnowledgeBatch(db, {
       maxBatches: 100,
@@ -167,7 +167,7 @@ const selfImproveJob = cron.schedule('30 23 * * *', async () => {
 
 /**
  * Vault synthesizer: hourly during work hours (09:00-21:00 Bali = 01:00-13:00 UTC).
- * Fetches recent Slack messages, synthesizes status updates via Gemini, writes to vault.
+ * Fetches recent Slack messages, synthesizes status updates via Claude, writes to vault.
  */
 const vaultSynthJob = cron.schedule('0 1-13 * * 1-5', async () => {
   if (env.VAULT_SYNTH_ENABLED === 'false') return

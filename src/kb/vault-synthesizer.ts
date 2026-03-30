@@ -1,14 +1,14 @@
 /**
  * Vault Synthesizer — periodically updates vault project statuses
- * from fresh Slack data via Gemini LLM synthesis.
+ * from fresh Slack data via Claude LLM synthesis.
  *
  * Flow: getAllProjects → for each active project with Slack channels:
- *   fetchRecentMessages → callGemini (synthesize) → updateProjectStatus
+ *   fetchRecentMessages → callClaude (synthesize) → updateProjectStatus
  *   → notify via Telegram if significant changes detected
  */
 
 import { logger } from '../logging/logger.js'
-import { callGemini } from '../llm/gemini.js'
+import { callClaude } from '../llm/client.js'
 import { loadPromptCached } from './vault-loader.js'
 import { fetchRecentMessages, type ChannelMessages } from './vault-slack-fetcher.js'
 import {
@@ -87,17 +87,14 @@ async function synthesizeProject(
   ].join('\n')
 
   try {
-    const response = await callGemini(userPrompt, {
-      systemInstruction: systemPrompt,
-      jsonMode: true,
-      thinkingBudget: 0,
-      timeoutMs: 30_000,
-      maxOutputTokens: 1024,
-    })
+    const response = await callClaude(
+      `${userPrompt}\n\nОтветь ТОЛЬКО JSON, без markdown и пояснений.`,
+      { system: systemPrompt, timeoutMs: 60_000 },
+    )
 
     return parseSynthResult(response.text)
   } catch (error) {
-    logger.warn({ project: card.name, error }, 'Vault synth: Gemini call failed')
+    logger.warn({ project: card.name, error }, 'Vault synth: Claude call failed')
     return null
   }
 }
@@ -121,7 +118,7 @@ function parseSynthResult(text: string): SynthResult | null {
         return parseSynthResult(match[0])
       } catch { /* give up */ }
     }
-    logger.warn({ text: text.slice(0, 200) }, 'Vault synth: failed to parse Gemini response')
+    logger.warn({ text: text.slice(0, 200) }, 'Vault synth: failed to parse Claude response')
     return null
   }
 }

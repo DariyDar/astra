@@ -1,7 +1,6 @@
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { QdrantClient } from '@qdrant/js-client-rest'
 import type * as schema from '../db/schema.js'
-import { callGemini } from '../llm/gemini.js'
 import { callClaude } from '../llm/client.js'
 import { logger } from '../logging/logger.js'
 import { loadPromptCached } from './vault-loader.js'
@@ -33,26 +32,17 @@ const VALID_DOC_SOURCES = new Set<string>(['notion', 'drive'])
 const VALID_DOC_TYPES = new Set<string>(['spec', 'wiki', 'report', 'meeting_notes', 'design', 'other'])
 const MAX_CHUNK_TEXT_LENGTH = 1200
 
-export type LlmProvider = 'gemini' | 'claude'
+export type LlmProvider = 'claude'
 
 const SYSTEM_INSTRUCTION = 'You are a JSON-only knowledge extraction tool. Output valid JSON only.'
 
 // Moved to vault/prompts/knowledge-extractor.md
 const getExtractionPrompt = (): string => loadPromptCached('prompts/knowledge-extractor.md')
 
-async function callLlm(provider: LlmProvider, prompt: string): Promise<string> {
-  if (provider === 'claude') {
-    const response = await callClaude(prompt, {
-      system: SYSTEM_INSTRUCTION,
-      timeoutMs: 300_000,
-    })
-    return response.text
-  }
-  const response = await callGemini(prompt, {
-    systemInstruction: SYSTEM_INSTRUCTION,
-    jsonMode: true,
-    timeoutMs: 120_000,
-    thinkingBudget: 0,
+async function callLlm(_provider: LlmProvider, prompt: string): Promise<string> {
+  const response = await callClaude(prompt, {
+    system: SYSTEM_INSTRUCTION,
+    timeoutMs: 300_000,
   })
   return response.text
 }
@@ -76,7 +66,7 @@ export interface BatchBudget {
   chunkBatchSize: number
   /** Seconds to wait between batches (avoids rate limits). Default 0. */
   interBatchDelaySec: number
-  /** LLM provider: 'gemini' (default) or 'claude'. */
+  /** LLM provider: 'claude' (default) or 'claude'. */
   provider: LlmProvider
   /** Only process chunks from these sources (e.g. ['slack','clickup']). All if empty. */
   sources?: string[]
@@ -168,14 +158,14 @@ export function parseKnowledgeExtraction(text: string): KnowledgeExtractionResul
 }
 
 /**
- * Extract knowledge from one batch of unprocessed chunks using Gemini.
+ * Extract knowledge from one batch of unprocessed chunks using Claude.
  */
 export async function extractKnowledge(
   db: DB,
   entityContext?: string,
   qdrantClient?: QdrantClient,
   batchSize: number = DEFAULT_BATCH_SIZE,
-  provider: LlmProvider = 'gemini',
+  provider: LlmProvider = 'claude',
   sources?: string[],
 ): Promise<ExtractionBatchResult> {
   const stats: ExtractionBatchResult = {
@@ -347,12 +337,12 @@ const DEFAULT_BUDGET: BatchBudget = {
   maxTimeMinutes: 60,
   chunkBatchSize: DEFAULT_BATCH_SIZE,
   interBatchDelaySec: 0,
-  provider: 'gemini',
+  provider: 'claude',
 }
 
 /**
  * Run knowledge extraction in a multi-batch loop with budget controls.
- * No cost budget needed — Gemini free tier.
+ * No cost budget needed — Claude free tier.
  */
 export async function extractKnowledgeBatch(
   db: DB,

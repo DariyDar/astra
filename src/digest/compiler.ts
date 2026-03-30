@@ -216,7 +216,7 @@ function filterGmailByAccount(
 /**
  * Compile a daily digest for a specific company.
  * Fetches YESTERDAY's data with retry, validates completeness, sends to LLM.
- * Data is filtered PER COMPANY in code before sending to Gemini.
+ * Data is filtered PER COMPANY in code before sending to Claude.
  */
 export async function compileDigest(company: Company): Promise<string> {
   const now = new Date()
