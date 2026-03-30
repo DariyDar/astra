@@ -180,8 +180,8 @@ const searchEverywhereTool = {
 export async function main(): Promise<void> {
   log('\n--- astra-briefing starting ---')
 
-  // KB tools now use the facade (kb-facade.ts) which manages its own connections
-  log('KB: using facade (legacy backend)')
+  // KB tools are handled directly in mcp-tools.ts (imports from repository.ts + search.ts)
+  log('KB: using mcp-tools (legacy backend)')
 
   const server = new Server(
     { name: 'Astra Briefing Server', version: '1.0.0' },

@@ -1,0 +1,10 @@
+Итог по трём ящикам:
+
+- **dariy@astrocat.co** — писем от Кости нет
+- **dimshats@gmail.com** и **dshatskikh@highground.games** — нужна авторизация
+
+Чтобы подключить остальные аккаунты, авторизуй их по ссылкам:
+- [Авторизовать dimshats@gmail.com](https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=307511122661-b61g5l38aajrc3n67nhu0kt07cj47tpb.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Foauth2callback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.readonly+openid&state=56ab63b6e2da1269da4f5815b59938df&access_type=offline&prompt=consent)
+- [Авторизовать dshatskikh@highground.games](https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=307511122661-b61g5l38aajrc3n67nhu0kt07cj47tpb.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A8000%2Foauth2callback&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fgmail.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.readonly+openid&state=c47fa6a91153324278f50438ba7efd81&access_type=offline&prompt=consent)
+
+После авторизации повтори запрос — перепроверю.

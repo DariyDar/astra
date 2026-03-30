@@ -1,0 +1,39 @@
+Вот что обсуждалось в **#stt-team** на этой неделе (23–26 фев):
+
+---
+
+**🚀 Деплой update_02.24.2026** *(24 фев, Rustam Kurbanov)*
+Деплой прошёл, есть 1 тред с деталями.
+
+---
+
+**📋 Статус server update 02/24/2026** *(24 фев, Danil Koryakin — 15 реплаев)*
+Закрыты:
+- ST-18959 — Paxan Entity Troi's Uniform's Equipment Art Is Missing
+- ST-18934 — U.S.S. Exeter pixel shadows (pushed to next)
+
+---
+
+**📦 QA-запрос данных** *(24 фев, Danil Koryakin)*
+Нет данных/арта по:
+- [ST-18948] Women of All Stripes / Happy Women's Day
+- [ST-18891] Ah'len (New Theme Pack Crew)
+
+---
+
+**🎨 Иконка — откат на старую** *(24 фев, Anastasia Voronova — 3 реплая)*
+Джо предлагает вернуть иконку к предыдущей версии.
+
+---
+
+**🐛 Баг с отображением ресурсов** *(25 фев, Rustam Kurbanov — 4 реплая)*
+[ST-18986] — Баг может существовать с самых ранних версий. Обсуждают, что с этим делать.
+
+---
+
+**⏱️ [UI] Seasonal Event Shop — Add Timer** *(26 фев, Anastasia Voronova — 2 реплая)*
+[ST-19004] — Обсуждали UX таймера. Предложение: разместить под токенами.
+
+---
+
+Хочешь раскрыть какой-то из тредов подробнее?

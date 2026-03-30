@@ -1,0 +1,35 @@
+Вот сводка по всем фронтам на сегодня, 27 февраля:
+
+---
+
+**📅 Календарь — 6 встреч сегодня**
+- 17:00 — Art Planning *(Marina Nazarova отклонила — смотри почту)*
+- 18:15 — STT Sprint Planning
+- 21:00 — English Club
+- 22:30 — Ohbibi Weekly Report + Biweekly Board Meeting *(одновременно — конфликт!)*
+- 23:30 — STT Stand-ups
+
+---
+
+**📧 Gmail — 8 непрочитанных**
+- ✉️ **Marina Nazarova** — отклонила Art Planning (17:00)
+- 📱 **TestFlight** — ASMR Aquarium сборки 86 и 87 готовы к тестированию
+- 📊 **Indium** — дейли репорты по SpongeBob и OregonTrail за 26/02
+- 📊 **STT End-of-Day Report** 27/02 от Andrianne Gamulo
+- ⚠️ **Google Cloud** — Legacy SQL в BigQuery отключат 1 июня 2026
+- 🗑️ HeyGen (реклама)
+
+---
+
+**💬 Slack — активность**
+- **#ohbibi-mwcf-internal** — Yang спрашивает: есть ли у вас доступ к Adjust verification для MWCF аккаунта (OBB платная подписка)? *Требует ответа*
+- **#stt-team** — Рустам добавил описание в задачу, Катя Дочкина проверяет
+- **#ac-team** — ты писал про план на первую неделю весны 🌸, коллеги обсуждают документы
+
+---
+
+**⚠️ ClickUp** — не загрузился (ошибка авторизации), задачи недоступны.
+
+---
+
+**Главное на сейчас:** конфликт в 22:30 (Board Meeting vs Ohbibi Report) и вопрос от Yang в Slack по Adjust/MWCF. Хочешь разобраться с чем-то подробнее?

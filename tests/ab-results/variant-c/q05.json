@@ -1,0 +1,14 @@
+{
+  "variant": "c",
+  "question_index": 5,
+  "question": "\u0427\u0442\u043e \u0443 \u043c\u0435\u043d\u044f \u0441\u0435\u0433\u043e\u0434\u043d\u044f \u043f\u043e \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u044e?",
+  "input_tokens": 4,
+  "output_tokens": 689,
+  "cache_read_tokens": 61044,
+  "cost_usd": 0.07477324999999999,
+  "num_turns": 3,
+  "elapsed_seconds": 19,
+  "subtype": "success",
+  "is_error": False,
+  "response_length": 411
+}

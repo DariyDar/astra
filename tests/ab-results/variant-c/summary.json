@@ -1,0 +1,11 @@
+{
+  "variant": "c",
+  "questions_count": 10,
+  "total_input_tokens": 166,
+  "total_output_tokens": 15543,
+  "total_cache_read_tokens": 1069050,
+  "total_cost_usd": 1.6322,
+  "total_turns": 61,
+  "avg_cost_per_question": 0.1632,
+  "avg_turns_per_question": 6.1
+}

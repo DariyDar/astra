@@ -1,0 +1,14 @@
+{
+  "variant": "b",
+  "question_index": 1,
+  "question": "\u0427\u0442\u043e \u043d\u043e\u0432\u043e\u0433\u043e \u0432 \u043a\u0430\u043d\u0430\u043b\u0435 ohbibi-mwcf-project?",
+  "input_tokens": 4,
+  "output_tokens": 975,
+  "cache_read_tokens": 58782,
+  "cost_usd": 0.14895475,
+  "num_turns": 3,
+  "elapsed_seconds": 32,
+  "subtype": "success",
+  "is_error": False,
+  "response_length": 980
+}

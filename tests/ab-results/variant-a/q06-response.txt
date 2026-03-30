@@ -1,0 +1,30 @@
+Вот картина дня, Дарий 👇
+
+---
+
+**📅 Встречи сегодня**
+- 17:00 — Art Planning *(Marina Nazarova отклонила — она не придёт)*
+- 18:15 — STT || Sprint Planning
+- 21:00 — English Club
+- 22:30 — **⚠️ Конфликт:** Ohbibi Weekly Report + Biweekly Board Meeting одновременно
+- 23:30 — STT Stand-ups
+
+---
+
+**📧 Непрочитанных писем: 7**
+- 📊 **STT EOD Report 02/27** — от Andrianne Gamulo (сегодня)
+- 📊 **SpongeBob + OregonTrail** — Daily Status от Indium за 02/26
+- 🧪 **TestFlight**: Drift ASMR Aquarium 1.0 (build 87) доступен для тестирования
+- ⚠️ **Google Cloud**: Legacy SQL в BigQuery перестанет работать с **1 июня 2026**
+- 🗓️ Уведомление об отклонении Art Planning от Марины
+- 🚫 Спам от HeyGen — можно игнорировать
+
+---
+
+**📋 ClickUp** — недоступен (ошибка авторизации 401)
+
+---
+
+**Флаги:** конфликт встреч в 22:30 требует решения, и нужно проверить доступ к ClickUp.
+
+Хочешь подробнее по какому-то из пунктов — открыть письмо, разобраться с конфликтом встреч?

@@ -1,10 +1,76 @@
+import { db } from '../db/index.js'
 import {
-  hybridSearch,
-  findEntityByName,
-  findEntitiesByType,
-  getRelationsFor,
-} from './kb-facade.js'
+  findEntityByName as repoFindEntityByName,
+  findEntitiesByType as repoFindEntitiesByType,
+  getRelationsFor as repoGetRelationsFor,
+} from './repository.js'
 import type { EntityType, ChunkSource } from './types.js'
+
+// ── Lazy-initialized vector store ──
+
+let _vectorStore: InstanceType<typeof import('./vector-store.js').KBVectorStore> | null = null
+async function getVectorStore() {
+  if (_vectorStore) return _vectorStore
+  const { QdrantClient } = await import('@qdrant/js-client-rest')
+  const { KBVectorStore } = await import('./vector-store.js')
+  const client = new QdrantClient({ url: process.env.QDRANT_URL ?? 'http://localhost:6333' })
+  _vectorStore = new KBVectorStore(client)
+  await _vectorStore.ensureCollection()
+  return _vectorStore
+}
+
+// ── Inlined facade functions ──
+
+async function hybridSearch(
+  query: string,
+  options: {
+    source?: ChunkSource
+    person?: string
+    project?: string
+    after?: Date
+    before?: Date
+    limit?: number
+  } = {},
+) {
+  const { hybridSearch: legacySearch } = await import('./search.js')
+  const vectorStore = await getVectorStore()
+  return legacySearch(db, vectorStore, query, options)
+}
+
+async function findEntityByName(name: string) {
+  const entity = await repoFindEntityByName(db, name)
+  if (!entity) return null
+  return {
+    id: entity.id,
+    type: entity.type,
+    name: entity.name,
+    company: entity.company,
+  }
+}
+
+async function findEntitiesByType(type: EntityType) {
+  const entities = await repoFindEntitiesByType(db, type)
+  return entities.map((e) => ({
+    id: e.id,
+    type,
+    name: e.name,
+    company: e.company,
+    metadata: e.metadata as Record<string, unknown> | null,
+  }))
+}
+
+async function getRelationsFor(entityId: number | string) {
+  const relations = await repoGetRelationsFor(db, entityId as number)
+  return relations.map((r) => ({
+    relation: r.relation,
+    role: r.role,
+    status: r.status,
+    fromName: r.fromName,
+    toName: r.toName,
+    fromType: r.fromType,
+    toType: r.toType,
+  }))
+}
 import {
   loadProjectCard, loadSection, formatProjectCard, findCompanyProjects, getKnowledgeMap,
   updateProjectStatus, markPersonLeft, addTeamMember, removeTeamMember, addProjectToPerson,

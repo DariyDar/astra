@@ -1,0 +1,10 @@
+Вот твоё расписание на сегодня, **27 февраля**:
+
+- **17:00–18:00** — Art Planning
+- **18:15–19:00** — STT | Sprint Planning
+- **21:00–22:00** — English Club
+- **22:30–23:00** — Ohbibi | Weekly Report
+- **22:30–23:30** — Biweekly | Board Meeting ⚠️ *конфликт*
+- **23:30–23:55** — STT Stand-ups
+
+⚠️ **Конфликт в 22:30** — одновременно идут *Ohbibi Weekly Report* и *Board Meeting*. Нужно разрулить?

@@ -1,0 +1,35 @@
+Вот твой дейли-бриф на **27 февраля** 👇
+
+---
+
+**📅 Расписание сегодня**
+- 17:00 — Art Planning *(Marina Nazarova отказалась)*
+- 18:15 — STT || Sprint Planning
+- 21:00 — English Club
+- 22:30 — Ohbibi || Weekly Report + Biweekly Board Meeting *(конфликт!)*
+- 23:30 — STT Stand-ups
+
+⚠️ В 22:30 у тебя два события одновременно — **Ohbibi Weekly Report** и **Biweekly Board Meeting**. Стоит разрулить.
+
+---
+
+**📬 Gmail — 7 непрочитанных**
+- **STT End-of-Day Report 02/27** — от Andrianne Gamulo (Tilting Point), широкая рассылка команде
+- **TestFlight** — Drift: ASMR Aquarium 1.0 (87) для iOS готов к тестированию
+- **Google Cloud** — Legacy SQL в BigQuery отключат после 1 июня 2026
+- Marina Nazarova отклонила Art Planning на сегодня
+- Маркетинговое от HeyGen (можно игнорировать)
+
+---
+
+**💬 Slack — активность с вчера**
+- **#ohbibi-mwcf-internal** — Yang спрашивает про Adjust paying purchase verification для MWCF аккаунта (ждёт ответа?)
+- **#stt-team** — Анастасия Воронова: Рустам добавил описание в задачу, просит Катю проверить плизы
+- **#ac-team** — Сергей и Катя разбирались с подписью документов, всё решили
+- **#standups** — Амгалан: вчера баги, сегодня оптимизация
+
+---
+
+**⚡ ClickUp** — недоступен (ошибка авторизации 401), задачи не загрузились.
+
+Что-то копнуть поглубже?

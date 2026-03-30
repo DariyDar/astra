@@ -1,0 +1,21 @@
+Да, **10 непрочитанных** в dariy@astrocat.co. Вот разбивка:
+
+**📅 Календарь**
+- Marina Nazarova **отклонила** Art Planning (сегодня 17:00–18:00)
+- Обновлённое приглашение: **PR final interim** → Пн, 2 марта, 19:30–20:30
+
+**📊 Daily-репорты**
+- STT End-of-Day Report — 27.02 (Tilting Point)
+- [SpongeBob] Indium Daily Status — 26.02
+- [OregonTrail] Indium Daily Status — 26.02
+
+**📱 TestFlight-билды**
+- Drift: ASMR Aquarium 1.0 (87) — iOS *(сегодня)*
+- Drift: ASMR Aquarium 1.0 (86) — iOS
+- Tough Guy Tap 0.9.1 (73) — iOS
+
+**🔔 Прочее**
+- Google Cloud: Legacy SQL в BigQuery выключат после 1 июня 2026
+- Реклама от HeyGen (можно игнорить)
+
+Хочешь прочитать какое-то конкретное письмо или разобраться с репортами?

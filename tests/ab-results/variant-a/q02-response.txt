@@ -1,0 +1,28 @@
+Вот что происходило в **#stt-team** на этой неделе (23–27 февраля):
+
+---
+
+**Понедельник, 23.02**
+- Запустили ежедневный хаддл (судя по всему, стандартный синк)
+
+**Вторник, 24.02**
+- **Danil Koryakin** опубликовал статус сервер-апдейта `02/24/2026` — две задачи закрыты:
+  - ST-18959 — *Paxan Entity Troi's Uniform's Equipment Art Is Missing* (Marina Lyandina)
+  - ST-18934 — *U.S.S. Exeter: pixel shadows* (Nailya Kurbangalieva) — перенесена на следующий апдейт
+- **Danil** также запросил у **Anna Butkeeva** данные от QA по двум задачам без арта/данных:
+  - ST-18948 — *Women of All Stripes / Happy Women's Day*
+  - ST-18891 — *Ah'len (New Theme Pack Crew)*
+- **Anastasia Voronova** передала Rustam'у: Joe предлагает вернуть иконку к старой версии
+
+**Среда, 25.02**
+- **Rustam Kurbanov** задеплоил `update_02.24.2026`
+- **Rustam** поднял вопрос к Marina Nazarova и Ekaterina Dochkina по тикету ST-18986 — баг с отображением ресурсов, возможно существует с самого начала. Что делать?
+
+**Четверг, 26.02**
+- **Anastasia Voronova** открыла тред по задаче **ST-19004** *[UI] Seasonal Event Shop. Add Timer* — обсуждали, куда поставить таймер. Предложение: разместить под токенами. Тегнула Ilia Bocharov и Rustam Kurbanov для input'а к Ekaterina Dochkina.
+
+---
+
+Хаддлы проходили каждый день (~16:00 CST).
+
+Хочешь открыть тред по какой-то задаче подробнее?
