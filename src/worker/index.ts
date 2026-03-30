@@ -170,12 +170,24 @@ const selfImproveJob = cron.schedule('30 23 * * *', async () => {
  * Vault synthesizer: hourly during work hours (09:00-21:00 Bali = 01:00-13:00 UTC).
  * Fetches recent Slack messages, synthesizes status updates via Claude, writes to vault.
  */
-// Hourly during Bali work hours (09:00-21:00 WITA, Mon-Fri). Server TZ = Asia/Makassar.
-const vaultSynthJob = cron.schedule('0 9-21 * * 1-5', async () => {
+// Vault synth: hourly 15:00-23:59 Bali (work hours), Mon-Fri. Server TZ = Asia/Makassar.
+const vaultSynthHourlyJob = cron.schedule('0 15-23 * * 1-5', async () => {
   if (env.VAULT_SYNTH_ENABLED === 'false') return
-  logger.info('Starting vault synthesizer')
+  logger.info('Starting vault synthesizer (hourly)')
   try {
     const stats = await runVaultSynthesizer(env.VAULT_SYNTH_LOOKBACK_HOURS)
+    logger.info(stats, 'Vault synthesizer complete')
+  } catch (error) {
+    logger.error({ error }, 'Vault synthesizer failed')
+  }
+})
+
+// Vault synth: every 8h during off-hours (00:00, 08:00 Bali), Mon-Fri.
+const vaultSynthOffhoursJob = cron.schedule('0 0,8 * * 1-5', async () => {
+  if (env.VAULT_SYNTH_ENABLED === 'false') return
+  logger.info('Starting vault synthesizer (off-hours)')
+  try {
+    const stats = await runVaultSynthesizer(8) // 8h lookback for off-hours
     logger.info(stats, 'Vault synthesizer complete')
   } catch (error) {
     logger.error({ error }, 'Vault synthesizer failed')
@@ -194,7 +206,8 @@ function shutdown(signal: string) {
   kbIngestionJob.stop()
   preMeetingJob.stop()
   selfImproveJob.stop()
-  vaultSynthJob.stop()
+  vaultSynthHourlyJob.stop()
+  vaultSynthOffhoursJob.stop()
   closeDb()
     .then(() => {
       logger.info('Database connection closed')
