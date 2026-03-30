@@ -17,6 +17,10 @@ export interface ChannelMessages {
 const RATE_LIMIT_MS = 1100
 const MAX_MESSAGES_PER_CHANNEL = 50
 
+/** Module-level cache for Slack channel lists, keyed by workspace teamId. TTL = 60 min. */
+const channelListCache = new Map<string, { channels: Array<{ id: string; name: string }>; cachedAt: number }>()
+const CHANNEL_CACHE_TTL = 60 * 60 * 1000
+
 /** Sleep helper */
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
@@ -37,13 +41,19 @@ export async function fetchRecentMessages(
   for (const ws of SLACK_WORKSPACES) {
     const headers = { Authorization: `Bearer ${ws.token}` }
 
-    // Fetch channel list for this workspace (cached per run)
+    // Fetch channel list for this workspace (cached with 60-min TTL)
     let allChannels: Array<{ id: string; name: string }>
-    try {
-      allChannels = await fetchSlackChannels(headers, ws.teamId)
-    } catch (error) {
-      logger.warn({ workspace: ws.label, error }, 'Vault synth: failed to fetch channel list')
-      continue
+    const cached = channelListCache.get(ws.teamId)
+    if (cached && Date.now() - cached.cachedAt < CHANNEL_CACHE_TTL) {
+      allChannels = cached.channels
+    } else {
+      try {
+        allChannels = await fetchSlackChannels(headers, ws.teamId)
+        channelListCache.set(ws.teamId, { channels: allChannels, cachedAt: Date.now() })
+      } catch (error) {
+        logger.warn({ workspace: ws.label, error }, 'Vault synth: failed to fetch channel list')
+        continue
+      }
     }
 
     // Match requested channel names to IDs

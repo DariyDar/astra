@@ -213,21 +213,24 @@ function filterGmailByAccount(
   return result
 }
 
-/**
- * Compile a daily digest for a specific company.
- * Fetches YESTERDAY's data with retry, validates completeness, sends to LLM.
- * Data is filtered PER COMPANY in code before sending to Claude.
- */
-export async function compileDigest(company: Company): Promise<string> {
-  const now = new Date()
-  const dateStr = formatDateRu(now)
-  const companyLabel = COMPANY_LABELS[company]
-  const wsLabel = SLACK_WORKSPACE_MAP[company]
+/** Pre-fetched shared data that can be reused across multiple compileDigest calls. */
+export interface SharedDigestData {
+  projectMap: Map<string, ProjectInfo[]>
+  nameMap: NameMap
+  gmail: BriefingItem[]
+  calendar: BriefingItem[]
+  clickup: BriefingItem[]
+  myTasks: ClickUpTask[]
+}
 
+/**
+ * Fetch shared data (Gmail, Calendar, ClickUp, KB maps) ONCE for both companies.
+ * Returns pre-fetched data to pass into compileDigest.
+ */
+export async function fetchSharedDigestData(): Promise<SharedDigestData> {
   const yesterdayPeriod = parsePeriod('yesterday')
 
-  // Build project map for company-based filtering + name map for display names
-  // KB may be unavailable (e.g. Graphiti key expired) — use empty maps as fallback
+  // Build project map + name map
   const [projectMapResult, nameMapResult] = await Promise.allSettled([
     buildProjectMap(),
     buildNameMap(),
@@ -239,36 +242,119 @@ export async function compileDigest(company: Company): Promise<string> {
     logger.warn({ error: nameMapResult.reason instanceof Error ? nameMapResult.reason.message : String(nameMapResult.reason) }, 'Digest: buildNameMap failed, using empty name map')
   }
   const projectMap = projectMapResult.status === 'fulfilled' ? projectMapResult.value : new Map<string, ProjectInfo[]>()
-  const nameMap = nameMapResult.status === 'fulfilled' ? nameMapResult.value : new Map()
-  const companyProjects = projectMap.get(wsLabel) ?? []
-  const otherWs = wsLabel === 'ac' ? 'hg' : 'ac'
-  const otherProjects = projectMap.get(otherWs) ?? []
+  const nameMap: NameMap = nameMapResult.status === 'fulfilled' ? nameMapResult.value : new Map()
 
-  // Pre-resolve Google tokens (retry-wrapped — needed by gmail + calendar)
+  // Pre-resolve Google tokens (needed by gmail + calendar)
   const googleTokens = await fetchWithRetry('google-auth', () => resolveGoogleTokens())
 
-  // Fetch all sources in parallel — each with its own retry logic
-  const [slackResult, gmailResult, calResult, clickupResult, myTasksResult, kbResult] =
-    await Promise.allSettled([
-      fetchWithRetry('slack', () => fetchDigestSlack(wsLabel, yesterdayPeriod)),
+  // Fetch shared sources in parallel
+  const [gmailResult, calResult, clickupResult, myTasksResult] = await Promise.allSettled([
+    fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
+    fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
+    fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq('yesterday', 100), yesterdayPeriod)),
+    fetchWithRetry('my-tasks', () => fetchMyTasks()),
+  ])
+
+  // Validate critical shared sources
+  const sharedResults: SourceResult<unknown>[] = [
+    { name: 'gmail', ...settledToResult(gmailResult) },
+    { name: 'calendar', ...settledToResult(calResult) },
+    { name: 'clickup', ...settledToResult(clickupResult) },
+  ]
+  const failedCritical = sharedResults.filter(
+    (r) => r.error !== null && (CRITICAL_SOURCES as readonly string[]).includes(r.name),
+  )
+  if (failedCritical.length > 0) {
+    const names = failedCritical.map((r) => `${r.name}: ${r.error}`).join('; ')
+    throw new Error(`Critical shared sources failed: ${names}`)
+  }
+
+  return {
+    projectMap,
+    nameMap,
+    gmail: (gmailResult.status === 'fulfilled' ? gmailResult.value : []) as BriefingItem[],
+    calendar: (calResult.status === 'fulfilled' ? calResult.value : []) as BriefingItem[],
+    clickup: (clickupResult.status === 'fulfilled' ? clickupResult.value : []) as BriefingItem[],
+    myTasks: (myTasksResult.status === 'fulfilled' ? myTasksResult.value : []) as ClickUpTask[],
+  }
+}
+
+/**
+ * Compile a daily digest for a specific company.
+ * Fetches YESTERDAY's data with retry, validates completeness, sends to LLM.
+ * Data is filtered PER COMPANY in code before sending to Claude.
+ *
+ * If `shared` is provided, uses pre-fetched Gmail/Calendar/ClickUp/maps instead of fetching again.
+ */
+export async function compileDigest(company: Company, shared?: SharedDigestData): Promise<string> {
+  const now = new Date()
+  const dateStr = formatDateRu(now)
+  const companyLabel = COMPANY_LABELS[company]
+  const wsLabel = SLACK_WORKSPACE_MAP[company]
+
+  const yesterdayPeriod = parsePeriod('yesterday')
+
+  // Use shared data if provided, otherwise fetch independently (backward compat)
+  let projectMap: Map<string, ProjectInfo[]>
+  let nameMap: NameMap
+  let allGmail: BriefingItem[]
+  let allCalendar: BriefingItem[]
+  let allClickup: BriefingItem[]
+  let myTasks: ClickUpTask[]
+
+  if (shared) {
+    projectMap = shared.projectMap
+    nameMap = shared.nameMap
+    allGmail = shared.gmail
+    allCalendar = shared.calendar
+    allClickup = shared.clickup
+    myTasks = shared.myTasks
+  } else {
+    // Legacy path: fetch everything independently
+    const [projectMapResult, nameMapResult] = await Promise.allSettled([
+      buildProjectMap(),
+      buildNameMap(),
+    ])
+    if (projectMapResult.status === 'rejected') {
+      logger.warn({ error: projectMapResult.reason instanceof Error ? projectMapResult.reason.message : String(projectMapResult.reason) }, 'Digest: buildProjectMap failed, using empty project map (KB unavailable)')
+    }
+    if (nameMapResult.status === 'rejected') {
+      logger.warn({ error: nameMapResult.reason instanceof Error ? nameMapResult.reason.message : String(nameMapResult.reason) }, 'Digest: buildNameMap failed, using empty name map')
+    }
+    projectMap = projectMapResult.status === 'fulfilled' ? projectMapResult.value : new Map<string, ProjectInfo[]>()
+    nameMap = nameMapResult.status === 'fulfilled' ? nameMapResult.value : new Map()
+
+    const googleTokens = await fetchWithRetry('google-auth', () => resolveGoogleTokens())
+    const [gmailResult, calResult, clickupResult, myTasksResult] = await Promise.allSettled([
       fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
       fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
       fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq('yesterday', 100), yesterdayPeriod)),
       fetchWithRetry('my-tasks', () => fetchMyTasks()),
+    ])
+    allGmail = (gmailResult.status === 'fulfilled' ? gmailResult.value : []) as BriefingItem[]
+    allCalendar = (calResult.status === 'fulfilled' ? calResult.value : []) as BriefingItem[]
+    allClickup = (clickupResult.status === 'fulfilled' ? clickupResult.value : []) as BriefingItem[]
+    myTasks = (myTasksResult.status === 'fulfilled' ? myTasksResult.value : []) as ClickUpTask[]
+  }
+
+  const companyProjects = projectMap.get(wsLabel) ?? []
+  const otherWs = wsLabel === 'ac' ? 'hg' : 'ac'
+  const otherProjects = projectMap.get(otherWs) ?? []
+
+  // Fetch Slack per-company (always separate — workspace-specific)
+  const [slackResult, kbResult] =
+    await Promise.allSettled([
+      fetchWithRetry('slack', () => fetchDigestSlack(wsLabel, yesterdayPeriod)),
       fetchWithRetry('kb', () => fetchKBContext(wsLabel)),
     ])
 
-  // Collect results and check for critical failures
+  // Collect results and check for critical failures (Slack + KB are per-company)
   const results: SourceResult<unknown>[] = [
     { name: 'slack', ...settledToResult(slackResult) },
-    { name: 'gmail', ...settledToResult(gmailResult) },
-    { name: 'calendar', ...settledToResult(calResult) },
-    { name: 'clickup', ...settledToResult(clickupResult) },
-    { name: 'my-tasks', ...settledToResult(myTasksResult) },
     { name: 'kb', ...settledToResult(kbResult) },
   ]
 
-  // Validate completeness — all critical sources must succeed
+  // Validate Slack (the only per-company critical source)
   const failedCritical = results.filter(
     (r) => r.error !== null && (CRITICAL_SOURCES as readonly string[]).includes(r.name),
   )
@@ -281,23 +367,19 @@ export async function compileDigest(company: Company): Promise<string> {
   const slackChannels = (slackResult.status === 'fulfilled' ? slackResult.value : []) as DigestSlackChannel[]
 
   // Gmail — filter by account + project matching
-  const allGmail = (gmailResult.status === 'fulfilled' ? gmailResult.value : []) as BriefingItem[]
   const companyGmail = filterGmailByAccount(allGmail, wsLabel, companyProjects, otherProjects)
 
   // Calendar — filter by project matching, shared goes to both
-  const allCalendar = (calResult.status === 'fulfilled' ? calResult.value : []) as BriefingItem[]
   const { matched: projectCalendar, shared: sharedCalendar } = filterItemsForCompany(
     allCalendar, companyProjects, otherProjects,
   )
   const companyCalendar = [...projectCalendar, ...sharedCalendar]
 
   // ClickUp — filter by list name matching projects (NO shared — unmatched tasks are noise)
-  const allClickup = (clickupResult.status === 'fulfilled' ? clickupResult.value : []) as BriefingItem[]
   const { matched: companyClickup } = filterItemsForCompany(
     allClickup, companyProjects, otherProjects,
   )
 
-  const myTasks = (myTasksResult.status === 'fulfilled' ? myTasksResult.value : []) as ClickUpTask[]
   const kbContext = (kbResult.status === 'fulfilled' ? kbResult.value : []) as Array<{ project: string; facts: string[] }>
 
   // Resolve display names: Slack author → short Russian name

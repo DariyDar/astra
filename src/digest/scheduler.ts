@@ -16,7 +16,7 @@ import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
 import { QdrantClient } from '@qdrant/js-client-rest'
 import { logger } from '../logging/logger.js'
-import { compileDigest } from './compiler.js'
+import { compileDigest, fetchSharedDigestData } from './compiler.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
 import { embed } from '../memory/embedder.js'
 import { env } from '../config/env.js'
@@ -27,13 +27,17 @@ const COMPILATION_RETRY_DELAY_MS = 5 * 60_000 // 5 minutes between full retries
 
 /**
  * Compile a single company digest with full-compilation retry.
+ * Accepts optional shared data to avoid re-fetching Gmail/Calendar/ClickUp.
  * Returns the compiled text or null if all attempts exhausted.
  */
-async function compileWithRetry(company: 'astrocat' | 'highground'): Promise<{ text: string | null; lastError: string | null }> {
+async function compileWithRetry(
+  company: 'astrocat' | 'highground',
+  shared?: Awaited<ReturnType<typeof fetchSharedDigestData>>,
+): Promise<{ text: string | null; lastError: string | null }> {
   let lastError: string | null = null
   for (let attempt = 1; attempt <= COMPILATION_MAX_RETRIES; attempt++) {
     try {
-      const text = await compileDigest(company)
+      const text = await compileDigest(company, shared)
       return { text, lastError: null }
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error)
@@ -62,9 +66,19 @@ export async function deliverDailyDigest(): Promise<void> {
 
   logger.info('Starting daily digest compilation (with retry)')
 
+  // Fetch shared data ONCE (Gmail, Calendar, ClickUp, project/name maps)
+  let shared: Awaited<ReturnType<typeof fetchSharedDigestData>> | undefined
+  try {
+    shared = await fetchSharedDigestData()
+    logger.info('Shared digest data fetched successfully')
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.warn({ error: msg }, 'Failed to fetch shared digest data, each company will fetch independently')
+  }
+
   const [acResult, hgResult] = await Promise.allSettled([
-    compileWithRetry('astrocat'),
-    compileWithRetry('highground'),
+    compileWithRetry('astrocat', shared),
+    compileWithRetry('highground', shared),
   ])
 
   const { text: acText, lastError: acError } = acResult.status === 'fulfilled' ? acResult.value : { text: null, lastError: String(acResult.reason) }

@@ -20,7 +20,9 @@ import { deliverDailyDigest } from '../digest/scheduler.js'
 import { refreshKnowledgeMap } from '../kb/vault-reader.js'
 import { runSelfImprovement } from '../self-improve/runner.js'
 import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
+import { compileMeetingReport } from '../digest/meeting-report.js'
 import { runVaultSynthesizer } from '../kb/vault-synthesizer.js'
+import { runHealthCheck } from '../health/source-monitor.js'
 
 const AUDIT_RETENTION_DAYS = 30
 
@@ -135,18 +137,36 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
 })
 
 /**
- * Pre-meeting report: 1 hour before the weekly AC sync ("Lisbon").
- * Sync is at 16:00 Bali = 08:00 UTC every Tuesday.
- * Report runs at 07:00 UTC (15:00 Bali) — 1 hour before.
- * Cron: "0 7 * * 2" = every Tuesday at 07:00 UTC.
+ * Lisbon Talks prep: Tuesday 17:00 Bali (2h before 19:00 meeting).
+ * Compiles a weekly AC project status report via meeting-report compiler,
+ * then falls back to the legacy pre-meeting report if the new one fails.
  */
-const preMeetingJob = cron.schedule('0 17 * * 2', async () => { // 17:00 Bali Tue (2h before Lisbon 19:00)
-  logger.info('Starting pre-meeting report')
+const lisbonPrepJob = cron.schedule('0 17 * * 2', async () => { // 17:00 Bali Tue
+  logger.info('Starting Lisbon Talks report compilation')
   try {
-    await deliverPreMeetingReport()
-    logger.info('Pre-meeting report delivered')
+    await compileMeetingReport('lisbon')
   } catch (error) {
-    logger.error({ error }, 'Pre-meeting report failed')
+    logger.error({ error }, 'Lisbon Talks report failed, falling back to legacy pre-meeting')
+    try {
+      await deliverPreMeetingReport()
+    } catch (fallbackError) {
+      logger.error({ error: fallbackError }, 'Legacy pre-meeting report also failed')
+    }
+  }
+})
+
+/**
+ * Board Meeting prep: every other Friday 20:30 Bali (2h before 22:30 meeting).
+ * Biweekly = check if ISO week number is even.
+ */
+const boardPrepJob = cron.schedule('30 20 * * 5', async () => { // 20:30 Bali Fri
+  const weekNum = Math.ceil((Date.now() - new Date(2026, 0, 1).getTime()) / (7 * 86400_000))
+  if (weekNum % 2 !== 0) return // skip odd weeks
+  logger.info('Starting Board Meeting report compilation')
+  try {
+    await compileMeetingReport('board')
+  } catch (error) {
+    logger.error({ error }, 'Board Meeting report failed')
   }
 })
 
@@ -194,6 +214,18 @@ const vaultSynthOffhoursJob = cron.schedule('0 0,8 * * 1-5', async () => {
   }
 })
 
+/**
+ * External service health check: every 30 minutes, all days.
+ * Checks Slack, ClickUp, Qdrant connectivity. Alerts via Telegram on failures.
+ */
+const healthCheckJob = cron.schedule('*/30 * * * *', async () => {
+  try {
+    await runHealthCheck()
+  } catch (error) {
+    logger.error({ error }, 'Health check failed')
+  }
+})
+
 logger.info('Worker started')
 
 /**
@@ -204,10 +236,12 @@ function shutdown(signal: string) {
   auditCleanupJob.stop()
   digestJob.stop()
   kbIngestionJob.stop()
-  preMeetingJob.stop()
+  lisbonPrepJob.stop()
+  boardPrepJob.stop()
   selfImproveJob.stop()
   vaultSynthHourlyJob.stop()
   vaultSynthOffhoursJob.stop()
+  healthCheckJob.stop()
   closeDb()
     .then(() => {
       logger.info('Database connection closed')
