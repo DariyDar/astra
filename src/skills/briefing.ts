@@ -71,11 +71,11 @@ const briefingSkill: Skill = {
 
   async preProcess(ctx) {
     const investigation = isInvestigationQuery(ctx.message.text)
-    // Moved to vault/prompts/briefing-skill.md
+    // Moved to vault/instructions-for-llm/skill-briefing.md
     return {
       prompt: ctx.message.text,
       investigation,
-      systemPromptExtra: loadPromptCached('prompts/briefing-skill.md'),
+      systemPromptExtra: loadPromptCached('instructions-for-llm/skill-briefing.md'),
     }
   },
 }

@@ -158,8 +158,8 @@ async function synthesize(
     sections.push(`## External sources (web search)\n${results.web}`)
   }
 
-  // Moved to vault/prompts/investigation-synthesizer.md
-  const synthSystem = loadPromptCached('prompts/investigation-synthesizer.md')
+  // Moved to vault/instructions-for-llm/agent-investigation-synthesizer.md
+  const synthSystem = loadPromptCached('instructions-for-llm/agent-investigation-synthesizer.md')
     .replace(/\{\{languageLabel\}\}/g, langLabel)
 
   const synthPrompt = `Original question: ${query}
@@ -187,22 +187,22 @@ Synthesize these into a single comprehensive answer.`
 
 // ─── Subagent Prompt Builders ───
 
-// Moved to vault/prompts/investigation-slack-agent.md
+// Moved to vault/instructions-for-llm/agent-investigation-slack.md
 function buildSlackAgentPrompt(query: string, knowledgeMap: string): { system: string; prompt: string } {
-  const system = loadPromptCached('prompts/investigation-slack-agent.md')
+  const system = loadPromptCached('instructions-for-llm/agent-investigation-slack.md')
     .replace(/\{\{knowledgeMap\}\}/g, knowledgeMap)
   return { system, prompt: `Search Slack for: ${query}` }
 }
 
-// Moved to vault/prompts/investigation-kb-agent.md
+// Moved to vault/instructions-for-llm/agent-investigation-kb.md
 function buildKBAgentPrompt(query: string, knowledgeMap: string): { system: string; prompt: string } {
-  const system = loadPromptCached('prompts/investigation-kb-agent.md')
+  const system = loadPromptCached('instructions-for-llm/agent-investigation-kb.md')
     .replace(/\{\{knowledgeMap\}\}/g, knowledgeMap)
   return { system, prompt: `Search knowledge base for: ${query}` }
 }
 
-// Moved to vault/prompts/investigation-web-agent.md
+// Moved to vault/instructions-for-llm/agent-investigation-web.md
 function buildWebAgentPrompt(query: string): { system: string; prompt: string } {
-  const system = loadPromptCached('prompts/investigation-web-agent.md')
+  const system = loadPromptCached('instructions-for-llm/agent-investigation-web.md')
   return { system, prompt: `Search the web for: ${query}` }
 }

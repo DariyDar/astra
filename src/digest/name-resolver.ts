@@ -57,8 +57,19 @@ function setWithCollisionCheck(map: NameMap, key: string, value: string): void {
 
 /**
  * Resolve a Slack author name to its short Russian display name.
- * Falls back to original name if not found.
+ * Tries: full name → first name only → original.
+ * This handles cases like "Danil Koryakin" when aliases have "Danil" but not the full English name.
  */
 export function resolveDisplayName(name: string, nameMap: NameMap): string {
-  return nameMap.get(name.toLowerCase()) ?? name
+  const lower = name.toLowerCase()
+  // Try full name first
+  const full = nameMap.get(lower)
+  if (full) return full
+  // Try first name only (handles "Danil Koryakin" → match "danil" → "Данил")
+  const firstName = lower.split(/\s+/)[0]
+  if (firstName && firstName !== lower) {
+    const first = nameMap.get(firstName)
+    if (first) return first
+  }
+  return name
 }

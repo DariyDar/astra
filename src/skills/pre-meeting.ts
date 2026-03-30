@@ -29,10 +29,10 @@ const preMeetingSkill: Skill = {
   async preProcess(ctx) {
     // This skill handles the full response itself (compile + send)
     // Return a prompt that tells Claude to wait while we compile
-    // Moved to vault/prompts/skill-pre-meeting.md
+    // Moved to vault/instructions-for-llm/skill-pre-meeting-trigger.md
     return {
       prompt: ctx.message.text,
-      systemPromptExtra: loadPromptCached('prompts/skill-pre-meeting.md'),
+      systemPromptExtra: loadPromptCached('instructions-for-llm/skill-pre-meeting-trigger.md'),
     }
   },
 

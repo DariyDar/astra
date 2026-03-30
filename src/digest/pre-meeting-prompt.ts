@@ -10,9 +10,8 @@ import type { ClickUpTask } from './my-tasks.js'
 import type { ProjectStatus } from '../kb/vault-reader.js'
 import { loadPrompt } from '../kb/vault-loader.js'
 
-// Moved to vault/prompts/pre-meeting.md
-// export const PRE_MEETING_SYSTEM_PROMPT = `Ты готовишь отчёт-подготовку к синку ...`
-export const PRE_MEETING_SYSTEM_PROMPT = loadPrompt('prompts/pre-meeting.md')
+// Moved to vault/instructions-for-llm/agent-lisbon-talks-compiler.md
+export const PRE_MEETING_SYSTEM_PROMPT = loadPrompt('instructions-for-llm/agent-lisbon-talks-compiler.md')
 
 /** Build user prompt for pre-meeting report with AC-filtered data. */
 export function buildPreMeetingUserPrompt(params: {

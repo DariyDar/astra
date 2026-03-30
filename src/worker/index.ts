@@ -28,7 +28,8 @@ const AUDIT_RETENTION_DAYS = 30
  * Schedule audit trail cleanup: daily at 3 AM.
  * Deletes entries older than 30 days.
  */
-const auditCleanupJob = cron.schedule('0 3 * * *', async () => {
+// All cron times in Bali (WITA, UTC+8) — server TZ = Asia/Makassar
+const auditCleanupJob = cron.schedule('0 3 * * *', async () => { // 03:00 Bali
   logger.info('Starting audit trail cleanup')
   try {
     const deleted = await cleanupOldEntries(AUDIT_RETENTION_DAYS)
@@ -48,7 +49,7 @@ const auditCleanupJob = cron.schedule('0 3 * * *', async () => {
  * plus 3 full-compilation retries with 5-min intervals.
  * Worst-case delivery by ~09:30 Bali time.
  */
-const digestJob = cron.schedule('0 1 * * *', async () => {
+const digestJob = cron.schedule('0 9 * * *', async () => { // 09:00 Bali
   logger.info('Starting daily digest')
   try {
     await deliverDailyDigest()
@@ -139,7 +140,7 @@ const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
  * Report runs at 07:00 UTC (15:00 Bali) — 1 hour before.
  * Cron: "0 7 * * 2" = every Tuesday at 07:00 UTC.
  */
-const preMeetingJob = cron.schedule('0 7 * * 2', async () => {
+const preMeetingJob = cron.schedule('0 17 * * 2', async () => { // 17:00 Bali Tue (2h before Lisbon 19:00)
   logger.info('Starting pre-meeting report')
   try {
     await deliverPreMeetingReport()
@@ -169,8 +170,8 @@ const selfImproveJob = cron.schedule('30 23 * * *', async () => {
  * Vault synthesizer: hourly during work hours (09:00-21:00 Bali = 01:00-13:00 UTC).
  * Fetches recent Slack messages, synthesizes status updates via Claude, writes to vault.
  */
-// Hourly during Bali work hours (09:00-21:00 WITA = 01:00-13:00 UTC, Mon-Fri). Server TZ = UTC.
-const vaultSynthJob = cron.schedule('0 1-13 * * 1-5', async () => {
+// Hourly during Bali work hours (09:00-21:00 WITA, Mon-Fri). Server TZ = Asia/Makassar.
+const vaultSynthJob = cron.schedule('0 9-21 * * 1-5', async () => {
   if (env.VAULT_SYNTH_ENABLED === 'false') return
   logger.info('Starting vault synthesizer')
   try {

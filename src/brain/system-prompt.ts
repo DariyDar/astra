@@ -46,8 +46,8 @@ export function buildSystemPrompt(language: Language, channelId: string, knowled
     ? `\n\n${knowledgeMap}`
     : ''
 
-  // Moved to vault/prompts/system-prompt.md
-  const template = loadPromptCached('prompts/system-prompt.md')
+  // Moved to vault/instructions-for-llm/agent-system-prompt.md
+  const template = loadPromptCached('instructions-for-llm/agent-system-prompt.md')
   return template
     .replace(/\{\{languageLabel\}\}/g, langLabel)
     .replace(/\{\{language\}\}/g, language)

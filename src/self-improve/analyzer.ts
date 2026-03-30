@@ -15,8 +15,8 @@ const MAX_CASES_TO_ANALYZE = 20
 /** Max cases per batch (keep context manageable). */
 const BATCH_SIZE = 10
 
-// Moved to vault/prompts/self-improve-analyzer.md
-const getAnalysisSystemPrompt = (): string => loadPromptCached('prompts/self-improve-analyzer.md')
+// Moved to vault/instructions-for-llm/agent-self-improve.md
+const getAnalysisSystemPrompt = (): string => loadPromptCached('instructions-for-llm/agent-self-improve.md')
 
 /**
  * Analyze problematic cases with Claude.

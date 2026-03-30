@@ -11,8 +11,8 @@ import type { ClickUpTask } from './my-tasks.js'
 import type { ProjectStatus } from '../kb/vault-reader.js'
 import { loadPrompt } from '../kb/vault-loader.js'
 
-// Moved to vault/prompts/digest-single-call.md
-export const DIGEST_SYSTEM_PROMPT = loadPrompt('prompts/digest-single-call.md')
+// Moved to vault/instructions-for-llm/agent-digest-single-call.md
+export const DIGEST_SYSTEM_PROMPT = loadPrompt('instructions-for-llm/agent-digest-single-call.md')
 
 /** Build the user prompt with structured, company-filtered data. */
 export function buildDigestUserPrompt(params: {

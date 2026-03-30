@@ -295,7 +295,7 @@ async function synthesizeBatch(batch: ProjectSlackData[]): Promise<Map<string, S
   // Single-project batch: use simpler single-project format for reliability
   if (batch.length === 1) {
     const data = batch[0]
-    const systemPrompt = loadPromptCached('prompts/vault-synthesizer.md')
+    const systemPrompt = loadPromptCached('instructions-for-llm/agent-vault-synthesizer.md')
     const userPrompt = `${data.formattedPrompt}\n\nОтветь ТОЛЬКО JSON, без markdown и пояснений.`
 
     try {
@@ -309,7 +309,7 @@ async function synthesizeBatch(batch: ProjectSlackData[]): Promise<Map<string, S
   }
 
   // Multi-project batch
-  const systemPrompt = loadPromptCached('prompts/vault-synthesizer.md')
+  const systemPrompt = loadPromptCached('instructions-for-llm/agent-vault-synthesizer.md')
   const projectNames = batch.map(p => p.name)
   const combinedPrompt = [
     ...batch.map(p => p.formattedPrompt),

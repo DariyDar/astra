@@ -36,8 +36,8 @@ export type LlmProvider = 'claude'
 
 const SYSTEM_INSTRUCTION = 'You are a JSON-only knowledge extraction tool. Output valid JSON only.'
 
-// Moved to vault/prompts/knowledge-extractor.md
-const getExtractionPrompt = (): string => loadPromptCached('prompts/knowledge-extractor.md')
+// Moved to vault/instructions-for-llm/agent-knowledge-extractor.md
+const getExtractionPrompt = (): string => loadPromptCached('instructions-for-llm/agent-knowledge-extractor.md')
 
 async function callLlm(_provider: LlmProvider, prompt: string): Promise<string> {
   const response = await callClaude(prompt, {
@@ -83,7 +83,7 @@ export interface BatchStats {
   stoppedReason: 'complete' | 'budget_time' | 'budget_batches' | 'error'
 }
 
-// Moved to vault/prompts/knowledge-extractor.md — loaded via getExtractionPrompt()
+// Moved to vault/instructions-for-llm/agent-knowledge-extractor.md — loaded via getExtractionPrompt()
 
 /** Build metadata header for a chunk to help the LLM contextualize it. */
 export function buildChunkHeader(chunk: {

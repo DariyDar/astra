@@ -72,8 +72,8 @@ export interface BatchStats {
   stoppedReason: 'complete' | 'budget_time' | 'budget_cost' | 'budget_batches' | 'error'
 }
 
-// Moved to vault/prompts/entity-extractor.md
-const getExtractionPrompt = (): string => loadPromptCached('prompts/entity-extractor.md')
+// Moved to vault/instructions-for-llm/agent-entity-extractor.md
+const getExtractionPrompt = (): string => loadPromptCached('instructions-for-llm/agent-entity-extractor.md')
 
 /** Build entity context string, truncating at comma boundary. */
 function buildEntityContext(entities: Array<{ name: string; type: string }>, maxChars: number = 3000): string {

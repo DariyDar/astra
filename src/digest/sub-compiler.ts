@@ -23,19 +23,19 @@ import type { ClickUpTask } from './my-tasks.js'
 import type { ProjectStatus } from '../kb/vault-reader.js'
 import { loadPrompt } from '../kb/vault-loader.js'
 
-// ─── Sub-agent system prompts (moved to vault/prompts/) ─────────────────────
+// ─── Sub-agent system prompts (moved to vault/instructions-for-llm/) ────────
 
-// Moved to vault/prompts/digest-slack-agent.md
-const getSlackAgentSystem = (): string => loadPrompt('prompts/digest-slack-agent.md')
+// Moved to vault/instructions-for-llm/agent-digest-slack.md
+const getSlackAgentSystem = (): string => loadPrompt('instructions-for-llm/agent-digest-slack.md')
 
-// Moved to vault/prompts/digest-email-cal-agent.md
-const getEmailCalAgentSystem = (): string => loadPrompt('prompts/digest-email-cal-agent.md')
+// Moved to vault/instructions-for-llm/agent-digest-email-cal.md
+const getEmailCalAgentSystem = (): string => loadPrompt('instructions-for-llm/agent-digest-email-cal.md')
 
-// Moved to vault/prompts/digest-clickup-kb-agent.md
-const getClickupKbAgentSystem = (): string => loadPrompt('prompts/digest-clickup-kb-agent.md')
+// Moved to vault/instructions-for-llm/agent-digest-clickup-kb.md
+const getClickupKbAgentSystem = (): string => loadPrompt('instructions-for-llm/agent-digest-clickup-kb.md')
 
-// Moved to vault/prompts/digest-compiler.md
-const getOrchestratorSystem = (): string => loadPrompt('prompts/digest-compiler.md')
+// Moved to vault/instructions-for-llm/agent-digest-compiler.md
+const getOrchestratorSystem = (): string => loadPrompt('instructions-for-llm/agent-digest-compiler.md')
 
 // ─── Prompt builders ─────────────────────────────────────────────────────────
 

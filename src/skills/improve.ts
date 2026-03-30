@@ -110,9 +110,9 @@ const improveSkill: Skill = {
   },
 }
 
-// Moved to vault/prompts/skill-improve.md
+// Moved to vault/instructions-for-llm/skill-improve.md
 function buildImproveSystemPrompt(patternsContext: string): string {
-  return loadPromptCached('prompts/skill-improve.md')
+  return loadPromptCached('instructions-for-llm/skill-improve.md')
     .replace(/\{\{maxDiffChars\}\}/g, String(MAX_DIFF_CHARS))
     .replace(/\{\{patternsContext\}\}/g, patternsContext)
 }

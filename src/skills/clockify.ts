@@ -13,10 +13,10 @@ const clockifySkill: Skill = {
   ],
 
   async preProcess(ctx) {
-    // Moved to vault/prompts/skill-clockify.md
+    // Moved to vault/instructions-for-llm/skill-clockify.md
     return {
       prompt: ctx.message.text,
-      systemPromptExtra: loadPromptCached('prompts/skill-clockify.md'),
+      systemPromptExtra: loadPromptCached('instructions-for-llm/skill-clockify.md'),
     }
   },
 }
