@@ -20,6 +20,7 @@ import { deliverDailyDigest } from '../digest/scheduler.js'
 import { refreshKnowledgeMap } from '../kb/vault-reader.js'
 import { runSelfImprovement } from '../self-improve/runner.js'
 import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
+import { runVaultSynthesizer } from '../kb/vault-synthesizer.js'
 
 const AUDIT_RETENTION_DAYS = 30
 
@@ -164,6 +165,21 @@ const selfImproveJob = cron.schedule('30 23 * * *', async () => {
   }
 })
 
+/**
+ * Vault synthesizer: hourly during work hours (09:00-21:00 Bali = 01:00-13:00 UTC).
+ * Fetches recent Slack messages, synthesizes status updates via Gemini, writes to vault.
+ */
+const vaultSynthJob = cron.schedule('0 1-13 * * 1-5', async () => {
+  if (env.VAULT_SYNTH_ENABLED === 'false') return
+  logger.info('Starting vault synthesizer')
+  try {
+    const stats = await runVaultSynthesizer(env.VAULT_SYNTH_LOOKBACK_HOURS)
+    logger.info(stats, 'Vault synthesizer complete')
+  } catch (error) {
+    logger.error({ error }, 'Vault synthesizer failed')
+  }
+})
+
 logger.info('Worker started')
 
 /**
@@ -176,6 +192,7 @@ function shutdown(signal: string) {
   kbIngestionJob.stop()
   preMeetingJob.stop()
   selfImproveJob.stop()
+  vaultSynthJob.stop()
   closeDb()
     .then(() => {
       logger.info('Database connection closed')
