@@ -184,36 +184,46 @@ export async function runVaultSynthesizer(lookbackHours = 4): Promise<Synthesize
     const projects = getAllProjects().filter(p => p.status === 'active')
     logger.info({ total: projects.length, lookbackHours }, 'Vault synthesizer starting')
 
+    // Filter to projects with Slack channels
+    const projectsWithChannels: Array<{ name: string; card: ProjectCard }> = []
     for (const project of projects) {
-      try {
-        const card = loadProjectCard(project.name)
-        if (!card) { stats.projectsSkipped++; continue }
+      const card = loadProjectCard(project.name)
+      if (!card || extractChannelNames(card).length === 0) {
+        stats.projectsSkipped++
+        continue
+      }
+      projectsWithChannels.push({ name: project.name, card })
+    }
 
-        const channelNames = extractChannelNames(card)
-        if (channelNames.length === 0) { stats.projectsSkipped++; continue }
+    // Process in parallel batches of 5
+    const BATCH_SIZE = 5
+    for (let i = 0; i < projectsWithChannels.length; i += BATCH_SIZE) {
+      const batch = projectsWithChannels.slice(i, i + BATCH_SIZE)
+      const batchResults = await Promise.allSettled(
+        batch.map(async ({ name, card }) => {
+          stats.projectsProcessed++
+          const result = await synthesizeProject(card, lookbackHours)
+          if (!result || result.significance === 'none') return
 
-        stats.projectsProcessed++
-        const result = await synthesizeProject(card, lookbackHours)
+          const { updated } = applyUpdates(name, result)
+          if (updated) stats.projectsUpdated++
 
-        if (!result || result.significance === 'none') continue
+          if (result.significance === 'high') {
+            stats.highSignificance++
+            significantResults.set(name, result)
+          }
 
-        const { updated } = applyUpdates(project.name, result)
-        if (updated) stats.projectsUpdated++
+          logger.debug({
+            project: name,
+            significance: result.significance,
+            updated,
+            focus: result.current_focus?.slice(0, 50),
+          }, 'Vault synth: project processed')
+        }),
+      )
 
-        if (result.significance === 'high') {
-          stats.highSignificance++
-          significantResults.set(project.name, result)
-        }
-
-        logger.debug({
-          project: project.name,
-          significance: result.significance,
-          updated,
-          focus: result.current_focus?.slice(0, 50),
-        }, 'Vault synth: project processed')
-      } catch (error) {
-        stats.errors++
-        logger.warn({ project: project.name, error }, 'Vault synth: project failed')
+      for (const r of batchResults) {
+        if (r.status === 'rejected') stats.errors++
       }
     }
 

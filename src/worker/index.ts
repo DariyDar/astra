@@ -169,6 +169,7 @@ const selfImproveJob = cron.schedule('30 23 * * *', async () => {
  * Vault synthesizer: hourly during work hours (09:00-21:00 Bali = 01:00-13:00 UTC).
  * Fetches recent Slack messages, synthesizes status updates via Claude, writes to vault.
  */
+// Hourly during Bali work hours (09:00-21:00 WITA = 01:00-13:00 UTC, Mon-Fri). Server TZ = UTC.
 const vaultSynthJob = cron.schedule('0 1-13 * * 1-5', async () => {
   if (env.VAULT_SYNTH_ENABLED === 'false') return
   logger.info('Starting vault synthesizer')
