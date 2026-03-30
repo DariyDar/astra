@@ -169,9 +169,19 @@ function loadAll(): void {
 // ── Status parser ──
 
 function parseStatusSection(body: string, projectName: string): ProjectStatus | null {
+  // Try reading from separate status file first
+  const statusFile = join(VAULT_DIR, 'projects', `${projectName} — Статусы.md`)
+  if (existsSync(statusFile)) {
+    return parseStatusFile(statusFile, projectName)
+  }
+
+  // Fallback: inline ## Статус section
   const match = body.match(/## Статус\s*\n([\s\S]*?)(?=\n## |\n$|$)/)
   if (!match) return null
   const section = match[1]
+
+  // Check if it's a link to status file (→ [[...]])
+  if (section.includes('→ [[')) return null
 
   const updated = section.match(/Последнее обновление:\s*(.+)/)?.[1]?.trim() ?? ''
   const focus = section.match(/Текущий фокус:\s*([\s\S]*?)(?=\nПоследние вехи:|$)/)?.[1]?.trim() ?? ''
@@ -184,6 +194,29 @@ function parseStatusSection(body: string, projectName: string): ProjectStatus | 
 
   if (!updated && !focus) return null
   return { project: projectName, status: 'active', current_focus: focus, updated_at: updated, milestones }
+}
+
+function parseStatusFile(filePath: string, projectName: string): ProjectStatus | null {
+  const raw = readFileSync(filePath, 'utf-8')
+  const focus = raw.match(/## Текущий фокус\n([\s\S]*?)(?=\n## |\n$)/)?.[1]?.trim() ?? ''
+
+  const milestones: string[] = []
+  // Parse updates: ### YYYY-MM-DD + bullet lines
+  const updateRe = /### (\d{4}-\d{2}-\d{2})\n([\s\S]*?)(?=\n### \d{4}|\n$|$)/g
+  let m
+  while ((m = updateRe.exec(raw)) !== null) {
+    const date = m[1]
+    const bullets = m[2].trim().split('\n').filter(l => l.startsWith('- '))
+    for (const b of bullets.slice(0, 2)) { // first 2 per date for milestones view
+      milestones.push(`${date}: ${b.slice(2).trim()}`)
+    }
+  }
+
+  const dateMatch = raw.match(/### (\d{4}-\d{2}-\d{2})/)
+  const updated = dateMatch?.[1] ?? ''
+
+  if (!focus && milestones.length === 0) return null
+  return { project: projectName, status: 'active', current_focus: focus, updated_at: updated, milestones: milestones.slice(0, 10) }
 }
 
 // ── Section parsers ──
@@ -619,24 +652,38 @@ export function markPersonLeft(personName: string): VaultUpdateResult {
 }
 
 /**
- * Update project status section.
+ * Update project status — writes to separate status file.
  */
 export function updateProjectStatus(projectName: string, focus: string, milestones?: string[]): VaultUpdateResult {
   ensureLoaded()
   const ref = aliasIndex!.get(projectName.toLowerCase())
   if (!ref || ref.type !== 'project') return { success: false, file: '', changes: ['Project not found'] }
 
-  const filePath = join(VAULT_DIR, 'projects', ref.key + '.md')
+  const statusPath = join(VAULT_DIR, 'projects', `${ref.key} — Статусы.md`)
   const today = new Date().toISOString().slice(0, 10)
-  const lines = [`Последнее обновление: ${today}`, '', `Текущий фокус: ${focus}`]
-  if (milestones?.length) {
-    lines.push('', 'Последние вехи:')
-    for (const m of milestones) lines.push(`- ${m}`)
+
+  if (existsSync(statusPath)) {
+    // Update existing status file — replace focus, add milestones as updates
+    const raw = readFileSync(statusPath, 'utf-8')
+    let updated = raw.replace(/## Текущий фокус\n[\s\S]*?(?=\n## )/, `## Текущий фокус\n${focus}\n`)
+    if (milestones?.length) {
+      const newUpdates = `\n### ${today}\n${milestones.map(m => `- ${m}`).join('\n')}\n`
+      updated = updated.replace('## Апдейты\n', `## Апдейты\n${newUpdates}`)
+    }
+    writeFileSync(statusPath, updated, 'utf-8')
+  } else {
+    // Fallback: try inline section in project file
+    const filePath = join(VAULT_DIR, 'projects', ref.key + '.md')
+    const lines = [`Последнее обновление: ${today}`, '', `Текущий фокус: ${focus}`]
+    if (milestones?.length) {
+      lines.push('', 'Последние вехи:')
+      for (const m of milestones) lines.push(`- ${m}`)
+    }
+    updateSection(filePath, 'Статус', lines.join('\n'))
   }
 
-  const success = updateSection(filePath, 'Статус', lines.join('\n'))
   refresh()
-  return { success, file: ref.key, changes: success ? ['Status updated'] : ['Failed to update status section'] }
+  return { success: true, file: ref.key, changes: ['Status updated'] }
 }
 
 /**
