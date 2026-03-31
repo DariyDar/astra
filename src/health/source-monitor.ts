@@ -68,13 +68,19 @@ async function checkQdrant(): Promise<HealthResult> {
 async function checkGoogle(): Promise<HealthResult[]> {
   const results: HealthResult[] = []
   try {
-    const { resolveGoogleTokens } = await import('../mcp/briefing/google-auth.js')
-    const tokens = await resolveGoogleTokens()
-    if (tokens.size === 0) {
-      results.push({ service: 'Google OAuth', ok: false, error: 'No accounts configured', fix: 'Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_ACCOUNTS in .env, then run OAuth flow' })
+    const { resolveGoogleTokens, GOOGLE_ACCOUNTS } = await import('../mcp/briefing/google-auth.js')
+    if (GOOGLE_ACCOUNTS.length === 0) {
+      results.push({ service: 'Google OAuth', ok: false, error: 'No accounts configured', fix: 'Set GOOGLE_ACCOUNTS in .env' })
       return results
     }
-    for (const [account, token] of tokens) {
+    const tokens = await resolveGoogleTokens()
+    // Check EVERY configured account — not just those with valid tokens
+    for (const account of GOOGLE_ACCOUNTS) {
+      const token = tokens.get(account)
+      if (!token) {
+        results.push({ service: `Gmail (${account})`, ok: false, error: 'Token missing or expired — needs re-authorization', fix: 'SSH tunnel: ssh -L 8000:localhost:8000 clawdbot@server, then ask Astra to re-authorize' })
+        continue
+      }
       try {
         const resp = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
           headers: { Authorization: `Bearer ${token}` },
