@@ -66,11 +66,26 @@ async function checkGoogle(): Promise<HealthResult[]> {
   try {
     const { resolveGoogleTokens } = await import('../mcp/briefing/google-auth.js')
     const tokens = await resolveGoogleTokens()
-    for (const [account, token] of tokens) {
-      results.push({ service: `Google (${account})`, ok: !!token })
-    }
     if (tokens.size === 0) {
       results.push({ service: 'Google OAuth', ok: false, error: 'No accounts configured' })
+      return results
+    }
+    // Actually test each token with a real Gmail API call
+    for (const [account, token] of tokens) {
+      try {
+        const resp = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(10_000),
+        })
+        if (resp.ok) {
+          results.push({ service: `Gmail (${account})`, ok: true })
+        } else {
+          const body = await resp.text().catch(() => '')
+          results.push({ service: `Gmail (${account})`, ok: false, error: `HTTP ${resp.status}: ${body.slice(0, 100)}` })
+        }
+      } catch (error) {
+        results.push({ service: `Gmail (${account})`, ok: false, error: String(error) })
+      }
     }
   } catch (error) {
     results.push({ service: 'Google OAuth', ok: false, error: String(error) })
