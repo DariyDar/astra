@@ -78,12 +78,42 @@ async function checkGoogle(): Promise<HealthResult[]> {
   return results
 }
 
+async function checkNotion(): Promise<HealthResult> {
+  try {
+    const token = process.env.NOTION_TOKEN
+    if (!token) return { service: 'Notion', ok: true } // optional service, no token = skip
+    const resp = await fetch('https://api.notion.com/v1/users/me', {
+      headers: { Authorization: `Bearer ${token}`, 'Notion-Version': '2022-06-28' },
+      signal: AbortSignal.timeout(10_000),
+    })
+    return { service: 'Notion', ok: resp.ok }
+  } catch (error) {
+    return { service: 'Notion', ok: false, error: String(error) }
+  }
+}
+
+async function checkClockify(): Promise<HealthResult> {
+  try {
+    const key = process.env.CLOCKIFY_API_KEY
+    if (!key) return { service: 'Clockify', ok: true } // optional
+    const resp = await fetch('https://api.clockify.me/api/v1/user', {
+      headers: { 'X-Api-Key': key },
+      signal: AbortSignal.timeout(10_000),
+    })
+    return { service: 'Clockify', ok: resp.ok }
+  } catch (error) {
+    return { service: 'Clockify', ok: false, error: String(error) }
+  }
+}
+
 export async function runHealthCheck(): Promise<void> {
   const results: HealthResult[] = [
     ...(await checkSlack()),
     await checkClickUp(),
     await checkQdrant(),
     ...(await checkGoogle()),
+    await checkNotion(),
+    await checkClockify(),
   ]
 
   const failed = results.filter((r) => !r.ok)

@@ -14,6 +14,8 @@
 
 import 'dotenv/config'
 import { randomUUID } from 'node:crypto'
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { QdrantClient } from '@qdrant/js-client-rest'
 import { logger } from '../logging/logger.js'
 import { compileDigest, fetchSharedDigestData } from './compiler.js'
@@ -87,7 +89,8 @@ export async function deliverDailyDigest(): Promise<void> {
   if (acText) {
     await sendTelegramMessage(acText)
     await saveDigestToKB('AstroCat', acText)
-    logger.info({ len: acText.length }, 'AstroCat digest sent + saved to KB')
+    saveDigestToVault('astrocat', acText)
+    logger.info({ len: acText.length }, 'AstroCat digest sent + saved to KB + vault')
   } else {
     logger.error('AstroCat digest: all compilation attempts exhausted')
     try {
@@ -103,7 +106,8 @@ export async function deliverDailyDigest(): Promise<void> {
   if (hgText) {
     await sendTelegramMessage(hgText)
     await saveDigestToKB('Highground', hgText)
-    logger.info({ len: hgText.length }, 'Highground digest sent + saved to KB')
+    saveDigestToVault('highground', hgText)
+    logger.info({ len: hgText.length }, 'Highground digest sent + saved to KB + vault')
   } else {
     logger.error('Highground digest: all compilation attempts exhausted')
     try {
@@ -118,6 +122,22 @@ export async function deliverDailyDigest(): Promise<void> {
 
   const elapsed = Math.round((Date.now() - startTime) / 1000)
   logger.info({ elapsedSec: elapsed }, 'Daily digest delivery complete')
+}
+
+/** Save compiled digest as a markdown file in the vault. */
+function saveDigestToVault(company: string, text: string): void {
+  try {
+    const dir = join(process.cwd(), 'vault', '_digest')
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+    const date = new Date().toISOString().slice(0, 10)
+    const filename = `${date}-${company}.md`
+    const content = `---\ntype: digest\ncompany: ${company}\ndate: ${date}\n---\n\n${text}\n`
+    writeFileSync(join(dir, filename), content, 'utf-8')
+    logger.info({ company, filename }, 'Digest saved to vault')
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    logger.warn({ company, error: msg }, 'Failed to save digest to vault (non-critical)')
+  }
 }
 
 /**
