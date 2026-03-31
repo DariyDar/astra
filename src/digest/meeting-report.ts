@@ -10,11 +10,18 @@
  * - CLI: npx tsx src/digest/meeting-report.ts --lisbon | --board
  */
 
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { callClaude } from '../llm/client.js'
 import { loadPromptCached } from '../kb/vault-loader.js'
 import { getAllProjects, loadProjectCard } from '../kb/vault-reader.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
 import { logger } from '../logging/logger.js'
+
+const MCP_CONFIG_PATH = resolve(
+  fileURLToPath(import.meta.url),
+  '../../mcp/mcp-config.json',
+)
 
 export type MeetingType = 'lisbon' | 'board'
 
@@ -115,7 +122,7 @@ export async function compileMeetingReport(type: MeetingType): Promise<void> {
   try {
     const response = await callClaude(userPrompt, {
       system: systemPrompt,
-      mcpConfigPath: 'mcp.json',
+      mcpConfigPath: MCP_CONFIG_PATH,
       timeoutMs: 300_000,
     })
 
