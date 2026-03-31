@@ -369,11 +369,13 @@ export async function compileDigest(company: Company, shared?: SharedDigestData)
   // Gmail — filter by account + project matching
   const companyGmail = filterGmailByAccount(allGmail, wsLabel, companyProjects, otherProjects)
 
-  // Calendar — filter by project matching, shared goes to both
+  // Calendar — filter by project matching, shared goes to AC only (Dariy's primary)
   const { matched: projectCalendar, shared: sharedCalendar } = filterItemsForCompany(
     allCalendar, companyProjects, otherProjects,
   )
-  const companyCalendar = [...projectCalendar, ...sharedCalendar]
+  const companyCalendar = wsLabel === 'ac'
+    ? [...projectCalendar, ...sharedCalendar]
+    : projectCalendar
 
   // ClickUp — filter by list name matching projects (NO shared — unmatched tasks are noise)
   const { matched: companyClickup } = filterItemsForCompany(
@@ -381,6 +383,15 @@ export async function compileDigest(company: Company, shared?: SharedDigestData)
   )
 
   const kbContext = (kbResult.status === 'fulfilled' ? kbResult.value : []) as Array<{ project: string; facts: string[] }>
+
+  // Filter myTasks by company projects (same task list matching as ClickUp)
+  const companyMyTasks = myTasks.filter((t) => {
+    const listLower = t.list.toLowerCase()
+    if (companyProjects.some((p) => p.searchTerms.some((term) => listLower.includes(term)))) return true
+    if (otherProjects.some((p) => p.searchTerms.some((term) => listLower.includes(term)))) return false
+    // Unmatched tasks default to AC (Dariy's primary company)
+    return wsLabel === 'ac'
+  })
 
   // Resolve display names: Slack author → short Russian name
   resolveSlackDisplayNames(slackChannels, nameMap)
@@ -404,7 +415,8 @@ export async function compileDigest(company: Company, shared?: SharedDigestData)
     calendarTotal: allCalendar.length,
     clickup: companyClickup.length,
     clickupTotal: allClickup.length,
-    myTasks: myTasks.length,
+    myTasks: companyMyTasks.length,
+    myTasksTotal: myTasks.length,
     kbProjects: kbContext.length,
   }, 'Digest: data fetched and filtered for company')
 
@@ -422,7 +434,7 @@ export async function compileDigest(company: Company, shared?: SharedDigestData)
     gmailData: companyGmail,
     calendarData: companyCalendar,
     clickupData: companyClickup,
-    myTasks,
+    myTasks: companyMyTasks,
     kbContext,
     allProjects: companyProjects.map((p) => p.name),
     projectStatuses,

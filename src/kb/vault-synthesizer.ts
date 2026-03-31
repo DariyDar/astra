@@ -14,6 +14,7 @@ import { loadPromptCached } from './vault-loader.js'
 import { fetchRecentMessages, type ChannelMessages } from './vault-slack-fetcher.js'
 import { getAllProjects, loadProjectCard, refreshKnowledgeMap, type ProjectCard } from './vault-reader.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
+import { loadSynthState, saveSynthState, calculateLookback } from './synth-state.js'
 
 const VAULT_DIR = join(process.cwd(), 'vault')
 const MAX_UPDATES = 30
@@ -453,8 +454,17 @@ export async function runVaultSynthesizer(lookbackHours = 4): Promise<Synthesize
   const significantResults = new Map<string, SynthResult>()
 
   try {
+    const effectiveLookback = calculateLookback(lookbackHours)
+    if (effectiveLookback !== lookbackHours) {
+      const state = loadSynthState()
+      logger.info(
+        { defaultHours: lookbackHours, effectiveHours: effectiveLookback, lastRun: state.lastSuccessfulRun },
+        'Vault synth: catching up after missed runs',
+      )
+    }
+
     const projects = getAllProjects().filter(p => p.status === 'active')
-    logger.info({ total: projects.length, lookbackHours }, 'Vault synthesizer starting')
+    logger.info({ total: projects.length, lookbackHours: effectiveLookback }, 'Vault synthesizer starting')
 
     // Step 0: Load project cards, filter those with channels
     const projectsWithChannels: Array<{ name: string; card: ProjectCard }> = []
@@ -466,7 +476,7 @@ export async function runVaultSynthesizer(lookbackHours = 4): Promise<Synthesize
 
     // Step 1: Collect all Slack data (no LLM)
     logger.info({ count: projectsWithChannels.length }, 'Vault synth: collecting Slack data')
-    const projectData = await collectSlackData(projectsWithChannels, lookbackHours)
+    const projectData = await collectSlackData(projectsWithChannels, effectiveLookback)
     const skippedNoMessages = projectsWithChannels.length - projectData.length
     stats.projectsSkipped += skippedNoMessages
     stats.projectsProcessed = projectData.length
@@ -524,6 +534,9 @@ export async function runVaultSynthesizer(lookbackHours = 4): Promise<Synthesize
         logger.warn({ error }, 'Vault synth: Telegram notification failed')
       }
     }
+
+    // Mark successful run — next run won't need catch-up lookback
+    saveSynthState({ lastSuccessfulRun: new Date().toISOString() })
   } finally {
     isRunning = false
     stats.durationMs = Date.now() - startTime

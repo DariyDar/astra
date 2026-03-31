@@ -23,6 +23,7 @@ import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
 import { compileMeetingReport } from '../digest/meeting-report.js'
 import { runVaultSynthesizer } from '../kb/vault-synthesizer.js'
 import { runHealthCheck } from '../health/source-monitor.js'
+import { runChannelDiscovery } from '../kb/channel-discovery.js'
 
 const AUDIT_RETENTION_DAYS = 30
 
@@ -226,6 +227,19 @@ const healthCheckJob = cron.schedule('*/30 * * * *', async () => {
   }
 })
 
+/**
+ * Channel discovery: weekly on Monday 10:00 Bali.
+ * Finds Slack channels not mapped to any vault project and notifies via Telegram.
+ */
+const channelDiscoveryJob = cron.schedule('0 10 * * 1', async () => { // Mon 10:00 Bali
+  logger.info('Starting channel discovery')
+  try {
+    await runChannelDiscovery()
+  } catch (error) {
+    logger.error({ error }, 'Channel discovery failed')
+  }
+})
+
 logger.info('Worker started')
 
 /**
@@ -242,6 +256,7 @@ function shutdown(signal: string) {
   vaultSynthHourlyJob.stop()
   vaultSynthOffhoursJob.stop()
   healthCheckJob.stop()
+  channelDiscoveryJob.stop()
   closeDb()
     .then(() => {
       logger.info('Database connection closed')

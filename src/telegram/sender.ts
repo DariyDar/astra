@@ -19,7 +19,7 @@ function getBot(): InstanceType<typeof Bot> {
 }
 
 /** Telegram-supported HTML tags. Anything else gets stripped. */
-const ALLOWED_TAGS = new Set(['b', 'i', 'u', 's', 'a', 'code', 'pre'])
+const ALLOWED_TAGS = new Set(['b', 'i', 'u', 's', 'a', 'code', 'pre', 'blockquote'])
 
 /**
  * Sanitize LLM output to valid Telegram HTML.

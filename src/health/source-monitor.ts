@@ -61,11 +61,29 @@ async function checkQdrant(): Promise<HealthResult> {
   }
 }
 
+async function checkGoogle(): Promise<HealthResult[]> {
+  const results: HealthResult[] = []
+  try {
+    const { resolveGoogleTokens } = await import('../mcp/briefing/google-auth.js')
+    const tokens = await resolveGoogleTokens()
+    for (const [account, token] of tokens) {
+      results.push({ service: `Google (${account})`, ok: !!token })
+    }
+    if (tokens.size === 0) {
+      results.push({ service: 'Google OAuth', ok: false, error: 'No accounts configured' })
+    }
+  } catch (error) {
+    results.push({ service: 'Google OAuth', ok: false, error: String(error) })
+  }
+  return results
+}
+
 export async function runHealthCheck(): Promise<void> {
   const results: HealthResult[] = [
     ...(await checkSlack()),
     await checkClickUp(),
     await checkQdrant(),
+    ...(await checkGoogle()),
   ]
 
   const failed = results.filter((r) => !r.ok)
