@@ -54,17 +54,6 @@ async function checkClickUp(): Promise<HealthResult> {
   }
 }
 
-async function checkQdrant(): Promise<HealthResult> {
-  const url = process.env.QDRANT_URL ?? 'http://localhost:6333'
-  try {
-    const resp = await fetch(`${url}/healthz`, { signal: AbortSignal.timeout(5_000) })
-    if (resp.ok) return { service: 'Qdrant', ok: true }
-    return { service: 'Qdrant', ok: false, error: `HTTP ${resp.status}`, fix: `Check Qdrant container: docker ps | grep qdrant. Restart: docker restart repos-qdrant-1` }
-  } catch (error) {
-    return { service: 'Qdrant', ok: false, error: String(error), fix: `Qdrant not reachable at ${url}. Check: docker ps | grep qdrant` }
-  }
-}
-
 async function checkGoogle(): Promise<HealthResult[]> {
   const results: HealthResult[] = []
   try {
@@ -136,7 +125,6 @@ export async function runHealthCheck(): Promise<void> {
   const results: HealthResult[] = [
     ...(await checkSlack()),
     await checkClickUp(),
-    await checkQdrant(),
     ...(await checkGoogle()),
     await checkNotion(),
     await checkClockify(),

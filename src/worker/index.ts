@@ -2,22 +2,9 @@ import cron from 'node-cron'
 import '../config/env.js'
 import { logger } from '../logging/logger.js'
 import { cleanupOldEntries } from '../logging/audit.js'
-import { db, closeDb } from '../db/index.js'
-import { QdrantClient } from '@qdrant/js-client-rest'
+import { closeDb } from '../db/index.js'
 import { env } from '../config/env.js'
-import { KBVectorStore } from '../kb/vector-store.js'
-import { runIngestion } from '../kb/ingestion/runner.js'
-import { createSlackAdapters } from '../kb/ingestion/slack.js'
-import { createGmailAdapters } from '../kb/ingestion/gmail.js'
-import { createClickUpAdapter } from '../kb/ingestion/clickup.js'
-import { createCalendarAdapters } from '../kb/ingestion/calendar.js'
-import { createDriveAdapters, syncDriveChanges } from '../kb/ingestion/drive.js'
-import { resolveGoogleTokens } from '../mcp/briefing/google-auth.js'
-import { createNotionAdapter } from '../kb/ingestion/notion.js'
-import { extractKnowledgeBatch, markLowValueChunks } from '../kb/knowledge-extractor.js'
-import type { SourceAdapter } from '../kb/ingestion/types.js'
 import { deliverDailyDigest } from '../digest/scheduler.js'
-import { refreshKnowledgeMap } from '../kb/vault-reader.js'
 import { runSelfImprovement } from '../self-improve/runner.js'
 import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
 import { compileMeetingReport } from '../digest/meeting-report.js'
@@ -59,81 +46,6 @@ const digestJob = cron.schedule('0 9 * * *', async () => { // 09:00 Bali
     logger.info('Daily digest delivered')
   } catch (error) {
     logger.error({ error }, 'Daily digest failed')
-  }
-})
-
-/**
- * KB ingestion + entity extraction: daily at 22:00 UTC = 06:00 WITA (Bali time).
- * Runs 3 hours before digest (01:00 UTC) to ensure fresh data.
- * 1. Fetch new data from all sources incl. Slack threads (REST, no LLM)
- * 2. Mark low-value chunks as processed (no LLM)
- * 3. Extract entities from remaining chunks (multi-batch LLM loop, budget-controlled)
- */
-const qdrantClient = new QdrantClient({ url: env.QDRANT_URL })
-const kbVectorStore = new KBVectorStore(qdrantClient)
-
-const kbIngestionJob = cron.schedule('0 22 * * *', async () => {
-  logger.info('Starting KB nightly ingestion')
-  try {
-    // Build adapters from all configured sources
-    const adapters: SourceAdapter[] = []
-    adapters.push(...createSlackAdapters())
-    adapters.push(...await createGmailAdapters())
-    adapters.push(...await createCalendarAdapters())
-    adapters.push(...await createDriveAdapters())
-    const clickup = createClickUpAdapter()
-    if (clickup) adapters.push(clickup)
-    const notion = createNotionAdapter()
-    if (notion) adapters.push(notion)
-
-    if (adapters.length === 0) {
-      logger.warn('KB ingestion: no adapters configured, skipping')
-      return
-    }
-
-    // Legacy pipeline: fetch → chunk → embed → Qdrant + PG extraction
-    await kbVectorStore.ensureCollection()
-
-    const ingestionStats = await runIngestion(db, kbVectorStore, adapters)
-    const totalCreated = ingestionStats.reduce((sum, s) => sum + s.chunksCreated, 0)
-    logger.info({ totalCreated }, 'KB ingestion complete')
-
-    // Drive incremental sync — poll Changes API for modified files
-    try {
-      const tokens = await resolveGoogleTokens()
-      for (const account of tokens.keys()) {
-        const result = await syncDriveChanges(db, account, qdrantClient)
-        logger.info({ account, ...result }, 'Drive incremental sync complete')
-      }
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error)
-      logger.error({ error: errMsg }, 'Drive incremental sync failed (non-blocking)')
-    }
-
-    // Mark any new low-value chunks as processed
-    const marked = await markLowValueChunks(db)
-    if (marked > 0) {
-      logger.info({ marked }, 'KB: marked low-value chunks as processed')
-    }
-
-    // Run multi-batch knowledge extraction via Claude (free, fast)
-    logger.info('KB: starting nightly knowledge extraction')
-    const extractionStats = await extractKnowledgeBatch(db, {
-      maxBatches: 100,
-      maxTimeMinutes: 60,
-      chunkBatchSize: 100,
-    }, qdrantClient)
-    logger.info(extractionStats, 'KB nightly knowledge extraction complete')
-
-    // Refresh knowledge map from vault after ingestion
-    try {
-      refreshKnowledgeMap()
-      logger.info('Knowledge map refreshed from vault')
-    } catch (error) {
-      logger.error({ error }, 'Knowledge map refresh failed (non-blocking)')
-    }
-  } catch (error) {
-    logger.error({ error }, 'KB nightly ingestion failed')
   }
 })
 
@@ -249,7 +161,6 @@ function shutdown(signal: string) {
   logger.info({ signal }, 'Shutting down worker')
   auditCleanupJob.stop()
   digestJob.stop()
-  kbIngestionJob.stop()
   lisbonPrepJob.stop()
   boardPrepJob.stop()
   selfImproveJob.stop()

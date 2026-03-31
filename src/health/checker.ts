@@ -1,4 +1,3 @@
-import { QdrantClient } from '@qdrant/js-client-rest'
 import { Redis } from 'ioredis'
 import pg from 'pg'
 import { logger } from '../logging/logger.js'
@@ -29,7 +28,6 @@ export class HealthChecker {
     const checks = [
       this.checkPostgres(),
       this.checkRedis(),
-      this.checkQdrant(),
     ]
 
     const settled = await Promise.allSettled(checks)
@@ -144,28 +142,6 @@ export class HealthChecker {
       }
     } finally {
       redis.disconnect()
-    }
-  }
-
-  private async checkQdrant(): Promise<HealthResult> {
-    const start = Date.now()
-    const client = new QdrantClient({ url: process.env.QDRANT_URL ?? 'http://localhost:6333' })
-
-    try {
-      // Lightweight operation: list collections (no data transfer)
-      await client.getCollections()
-      return {
-        service: 'Qdrant',
-        healthy: true,
-        latencyMs: Date.now() - start,
-      }
-    } catch (error) {
-      return {
-        service: 'Qdrant',
-        healthy: false,
-        latencyMs: Date.now() - start,
-        error: error instanceof Error ? error.message : String(error),
-      }
     }
   }
 

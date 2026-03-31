@@ -3,7 +3,6 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Bot } from 'grammy'
 import { Redis } from 'ioredis'
-import { QdrantClient } from '@qdrant/js-client-rest'
 import cron from 'node-cron'
 import { env } from '../config/env.js'
 import { logger } from '../logging/logger.js'
@@ -16,7 +15,6 @@ import { SlackAdapter } from '../channels/slack/adapter.js'
 import type { ChannelAdapter } from '../channels/types.js'
 import { ShortTermMemory } from '../memory/short-term.js'
 import { MediumTermMemory } from '../memory/medium-term.js'
-import { LongTermMemory } from '../memory/long-term.js'
 import { initEmbedder } from '../memory/embedder.js'
 import { MessageRouter } from '../brain/router.js'
 import { NotificationPreferences } from '../notifications/preferences.js'
@@ -26,7 +24,6 @@ import { startMcpServer } from '../mcp/server.js'
 import { generateMcpConfig } from '../mcp/config-generator.js'
 import { SkillRegistry } from '../skills/registry.js'
 import { ClickUpDeadlineMonitor } from '../integrations/monitors/clickup-deadlines.js'
-import { KBVectorStore } from '../kb/vector-store.js'
 
 // --- Create core instances ---
 const bot = new Bot(env.TELEGRAM_BOT_TOKEN)
@@ -39,8 +36,6 @@ const redis = new Redis(env.REDIS_URL, {
 })
 const shortTermMemory = new ShortTermMemory(redis)
 const mediumTermMemory = new MediumTermMemory(db)
-const qdrantClient = new QdrantClient({ url: env.QDRANT_URL })
-const longTermMemory = new LongTermMemory(qdrantClient)
 
 // --- Notification system ---
 const notificationPreferences = new NotificationPreferences(db)
@@ -125,7 +120,6 @@ const skillRegistry = new SkillRegistry()
 const messageRouter = new MessageRouter({
   shortTerm: shortTermMemory,
   mediumTerm: mediumTermMemory,
-  longTerm: longTermMemory,
   adapters,
   preferences: notificationPreferences,
   mcpEnabled: true,
@@ -296,17 +290,7 @@ async function startup(): Promise<void> {
     logger.warn({ error: errMsg }, 'Embedder initialization failed, long-term memory degraded')
   }
 
-  // 3. Ensure Qdrant collections exist (memory + knowledge base)
-  try {
-    await longTermMemory.ensureCollection()
-    const kbVectorStore = new KBVectorStore(qdrantClient)
-    await kbVectorStore.ensureCollection()
-    logger.info('Qdrant collections ready (astra_messages + astra_knowledge)')
-  } catch (error) {
-    logger.warn({ error }, 'Qdrant collection setup failed, long-term memory degraded')
-  }
-
-  // 4. Start MCP memory server (sidecar for Claude memory tools)
+  // 3. Start MCP memory server (sidecar for Claude memory tools)
   try {
     mcpServer = await startMcpServer()
   } catch (error) {

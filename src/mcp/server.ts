@@ -6,22 +6,13 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js'
 import { z } from 'zod'
-import { env } from '../config/env.js'
 import { db } from '../db/index.js'
-import { embed, initEmbedder } from '../memory/embedder.js'
 import { MediumTermMemory } from '../memory/medium-term.js'
-import { LongTermMemory } from '../memory/long-term.js'
-import { QdrantClient } from '@qdrant/js-client-rest'
 import { logger } from '../logging/logger.js'
 
 const MCP_PORT = 3100
 
 // --- Tool input schemas ---
-const MemorySearchArgs = z.object({
-  query: z.string().min(1),
-  limit: z.number().int().min(1).max(20).default(5),
-})
-
 const GetUserProfileArgs = z.object({
   limit: z.number().int().min(1).max(20).default(10),
 })
@@ -33,13 +24,11 @@ const GetRecentMessagesArgs = z.object({
 })
 
 /**
- * Create a fresh MCP Server instance with all memory tool handlers registered.
+ * Create a fresh MCP Server instance with memory tool handlers registered.
  * A new instance must be created per HTTP request (stateless pattern).
- * The MCP SDK's Server throws if you call connect() on an already-connected instance.
  */
 function createMcpServer(
   mediumTerm: MediumTermMemory,
-  longTerm: LongTermMemory,
 ): Server {
   const server = new Server(
     { name: 'astra-memory', version: '1.0.0' },
@@ -49,19 +38,6 @@ function createMcpServer(
   // --- List tools ---
   server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: [
-      {
-        name: 'memory_search',
-        description:
-          'Semantic search across all past conversations (Telegram + Slack). Use when the user references something from the past, asks "do you remember", or needs facts about themselves.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            query: { type: 'string', description: 'Search query text' },
-            limit: { type: 'number', description: 'Max results (1-20)', default: 5 },
-          },
-          required: ['query'],
-        },
-      },
       {
         name: 'get_user_profile',
         description:
@@ -95,25 +71,6 @@ function createMcpServer(
     const { name, arguments: args } = request.params
 
     try {
-      if (name === 'memory_search') {
-        const { query, limit } = MemorySearchArgs.parse(args ?? {})
-        const vector = await embed(query)
-        const results = await longTerm.searchByVector(vector, limit)
-
-        const text = results
-          .map((r) => {
-            const date = r.message.timestamp.toISOString().split('T')[0]
-            const channel = r.message.channelType
-            const score = ` (relevance: ${r.score.toFixed(2)})`
-            return `[${date}] [${channel}] [${r.message.role}]: ${r.message.text}${score}`
-          })
-          .join('\n')
-
-        return {
-          content: [{ type: 'text', text: text || 'No matching memories found.' }],
-        }
-      }
-
       if (name === 'get_user_profile') {
         const { limit } = GetUserProfileArgs.parse(args ?? {})
         const messages = await mediumTerm.getUserProfileMessages(limit)
@@ -166,8 +123,7 @@ function createMcpServer(
  * Create and start the MCP memory server.
  * Returns the HTTP server instance so the caller can close it on shutdown.
  *
- * The server exposes three memory tools to Claude:
- * - memory_search: semantic search across all stored messages (Qdrant)
+ * The server exposes two memory tools to Claude:
  * - get_user_profile: retrieve self-introduction messages (PostgreSQL keyword search)
  * - get_recent_messages: retrieve recent conversation history for a channel (PostgreSQL)
  *
@@ -177,13 +133,8 @@ function createMcpServer(
 export async function startMcpServer(): Promise<http.Server> {
   logger.info({ port: MCP_PORT }, 'Initializing MCP memory server')
 
-  // Initialize embedder (may already be initialized by bot startup — idempotent)
-  await initEmbedder()
-
-  // Shared memory layer instances (reused across requests, stateless)
+  // Shared memory layer instance (reused across requests, stateless)
   const mediumTerm = new MediumTermMemory(db)
-  const qdrantClient = new QdrantClient({ url: env.QDRANT_URL })
-  const longTerm = new LongTermMemory(qdrantClient)
 
   // --- HTTP server ---
   const httpServer = http.createServer(async (req, res) => {
@@ -209,7 +160,7 @@ export async function startMcpServer(): Promise<http.Server> {
 
     try {
       // Create a fresh MCP server per request (stateless pattern required by SDK)
-      const mcpServer = createMcpServer(mediumTerm, longTerm)
+      const mcpServer = createMcpServer(mediumTerm)
 
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined, // stateless

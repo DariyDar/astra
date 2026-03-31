@@ -5,8 +5,6 @@ import { callClaude } from '../llm/client.js'
 import { createRequestLogger } from '../logging/correlation.js'
 import { writeAuditEntry } from '../logging/audit.js'
 import { logger } from '../logging/logger.js'
-import { embed } from '../memory/embedder.js'
-import type { LongTermMemory } from '../memory/long-term.js'
 import type { MediumTermMemory } from '../memory/medium-term.js'
 import type { ShortTermMemory } from '../memory/short-term.js'
 import type { StoredMessage } from '../memory/types.js'
@@ -41,7 +39,6 @@ interface PreferenceUpdateAction {
 interface MessageRouterConfig {
   shortTerm: ShortTermMemory
   mediumTerm: MediumTermMemory
-  longTerm: LongTermMemory
   adapters: ChannelAdapter[]
   preferences?: NotificationPreferences
   /** Whether to enable MCP memory tools for Claude (requires MCP server running on port 3100) */
@@ -61,7 +58,6 @@ interface MessageRouterConfig {
 export class MessageRouter {
   private readonly shortTerm: ShortTermMemory
   private readonly mediumTerm: MediumTermMemory
-  private readonly longTerm: LongTermMemory
   private readonly adapters: ChannelAdapter[]
   private readonly preferences?: NotificationPreferences
   private readonly mcpEnabled: boolean
@@ -72,7 +68,6 @@ export class MessageRouter {
   constructor(config: MessageRouterConfig) {
     this.shortTerm = config.shortTerm
     this.mediumTerm = config.mediumTerm
-    this.longTerm = config.longTerm
     this.adapters = config.adapters
     this.preferences = config.preferences
     this.mcpEnabled = config.mcpEnabled ?? false
@@ -435,28 +430,5 @@ export class MessageRouter {
       )
     }
 
-    // Long-term (Qdrant) - fire-and-forget
-    this.storeLongTerm(message, requestLogger).catch((error) => {
-      requestLogger.warn(
-        { error, role: message.role },
-        'Failed to store message in long-term memory',
-      )
-    })
-  }
-
-  /**
-   * Embed and store a message in long-term (Qdrant) memory.
-   * Separated for fire-and-forget error handling.
-   */
-  private async storeLongTerm(
-    message: StoredMessage,
-    requestLogger: ReturnType<typeof createRequestLogger>,
-  ): Promise<void> {
-    const vector = await embed(message.text)
-    await this.longTerm.store(message, vector)
-    requestLogger.debug(
-      { role: message.role },
-      'Message stored in long-term memory',
-    )
   }
 }

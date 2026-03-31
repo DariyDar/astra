@@ -146,9 +146,8 @@ export function generateMcpConfig(outputPath: string): void {
   if (env.CLOCKIFY_WORKSPACE_ID) {
     briefingEnv.CLOCKIFY_WORKSPACE_ID = env.CLOCKIFY_WORKSPACE_ID
   }
-  // KB tools need database and Qdrant access
+  // KB registry tools need database access
   briefingEnv.DATABASE_URL = env.DATABASE_URL
-  briefingEnv.QDRANT_URL = env.QDRANT_URL
   servers['astra-briefing'] = {
     type: 'stdio',
     command: tsxPath,
