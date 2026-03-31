@@ -528,11 +528,8 @@ export async function runVaultSynthesizer(lookbackHours = 4): Promise<Synthesize
 
     if (stats.projectsUpdated > 0) refreshKnowledgeMap()
 
-    const notification = buildNotification(significantResults)
-    if (notification) {
-      try { await sendTelegramMessage(notification) } catch (error) {
-        logger.warn({ error }, 'Vault synth: Telegram notification failed')
-      }
+    if (significantResults.size > 0) {
+      logger.info({ count: significantResults.size, projects: [...significantResults.keys()] }, 'Vault synth: high-significance updates detected')
     }
 
     // Mark successful run — next run won't need catch-up lookback
