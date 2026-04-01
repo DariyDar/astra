@@ -129,7 +129,7 @@ const vaultSynthOffhoursJob = cron.schedule('0 0,8 * * 1-5', async () => {
 
 /**
  * External service health check: every 30 minutes, all days.
- * Checks Slack, ClickUp, Qdrant connectivity. Alerts via Telegram on failures.
+ * Checks Slack, ClickUp, Google, Notion connectivity. Alerts via Telegram on failures.
  */
 const healthCheckJob = cron.schedule('*/30 * * * *', async () => {
   try {
@@ -152,6 +152,21 @@ const channelDiscoveryJob = cron.schedule('0 10 * * 1', async () => { // Mon 10:
   }
 })
 
+/**
+ * Google Drive tree collector: Mon/Wed/Fri at 06:00 Bali.
+ * Saves folder/file tree to vault/_drive-tree.md for Astra context.
+ */
+const driveTreeJob = cron.schedule('0 6 * * 1,3,5', async () => { // Mon/Wed/Fri 06:00 Bali
+  logger.info('Starting Drive tree collection')
+  try {
+    const { collectDriveTree } = await import('../integrations/drive-tree-collector.js')
+    const stats = await collectDriveTree()
+    logger.info(stats, 'Drive tree collected')
+  } catch (error) {
+    logger.error({ error }, 'Drive tree collection failed')
+  }
+})
+
 logger.info('Worker started')
 
 /**
@@ -168,6 +183,7 @@ function shutdown(signal: string) {
   vaultSynthOffhoursJob.stop()
   healthCheckJob.stop()
   channelDiscoveryJob.stop()
+  driveTreeJob.stop()
   closeDb()
     .then(() => {
       logger.info('Database connection closed')
