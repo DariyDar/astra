@@ -22,6 +22,7 @@ import type { BriefingItem } from '../mcp/briefing/types.js'
 import type { ClickUpTask } from './my-tasks.js'
 import type { ProjectStatus } from '../kb/vault-reader.js'
 import { loadPrompt } from '../kb/vault-loader.js'
+import { fetchProductionMilestones, formatMilestonesForDigest } from './sources/production-updates.js'
 
 // ─── Sub-agent system prompts (moved to vault/instructions-for-llm/) ────────
 
@@ -166,6 +167,7 @@ function buildOrchestratorPrompt(params: {
   slackSection: string
   emailCalSection: string
   clickupKbSection: string
+  milestonesSection: string
   myTasks: ClickUpTask[]
   projectStatuses: ProjectStatus[]
   registryGaps?: { staleProjects: number; unknownUsers: number; unknownChannels: number }
@@ -193,6 +195,12 @@ function buildOrchestratorPrompt(params: {
     '=== СЕКЦИЯ ОТ CLICKUP+KB-АГЕНТА ===',
     params.clickupKbSection || 'Нет данных',
   )
+
+  // Production milestones
+  if (params.milestonesSection) {
+    lines.push('')
+    lines.push(params.milestonesSection)
+  }
 
   // My tasks (upcoming only, no overdue)
   const upcoming = params.myTasks.filter((t) => !t.is_overdue)
@@ -356,6 +364,15 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
     'Digest subagents: phase 1 complete, starting orchestrator',
   )
 
+  // Fetch production milestones (non-blocking)
+  let milestonesSection = ''
+  try {
+    const milestones = await fetchProductionMilestones()
+    milestonesSection = formatMilestonesForDigest(milestones)
+  } catch (err) {
+    logger.warn({ error: (err as Error)?.message }, 'Digest: production milestones fetch failed (non-blocking)')
+  }
+
   // Phase 2: orchestrator merges sections into final HTML
   const orchestratorPrompt = buildOrchestratorPrompt({
     company,
@@ -365,6 +382,7 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
     slackSection,
     emailCalSection,
     clickupKbSection,
+    milestonesSection,
     myTasks: params.myTasks,
     projectStatuses: params.projectStatuses,
     registryGaps: params.registryGaps,
