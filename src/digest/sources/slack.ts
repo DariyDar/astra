@@ -19,9 +19,16 @@ const WORKSPACE_DOMAINS: Record<string, string> = {
   hg: 'highground-games',
 }
 
+/** Channels that are general/team-wide (not project-specific). Shown as "Общие новости" in digest. */
+const GENERAL_CHANNELS: Record<string, Set<string>> = {
+  ac: new Set(['announcements', 'leads', 'cofounders-speakeasy', 'ac-team', 'ac-production-updates', 'absence', 'random']),
+  hg: new Set(['general', 'random']),
+}
+
 export interface DigestSlackChannel {
   workspace: string
   channelName: string
+  isGeneral: boolean
   messages: DigestSlackMessage[]
 }
 
@@ -211,9 +218,11 @@ export async function fetchDigestSlack(
       }
 
       if (messages.length > 0) {
+        const generalSet = GENERAL_CHANNELS[workspace] ?? new Set()
         result.push({
           workspace,
           channelName: ch.name,
+          isGeneral: generalSet.has(ch.name),
           messages,
         })
         totalMessages += messages.length

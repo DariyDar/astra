@@ -162,6 +162,7 @@ function buildOrchestratorPrompt(params: {
   company: string
   date: string
   allProjects: string[]
+  generalSection: string
   slackSection: string
   emailCalSection: string
   clickupKbSection: string
@@ -172,8 +173,18 @@ function buildOrchestratorPrompt(params: {
   const lines: string[] = [
     `Компания: ${params.company} | Дата: ${params.date}`,
     `Все проекты: ${params.allProjects.join(', ')}`,
+  ]
+
+  // General/team news section — goes FIRST in digest
+  if (params.generalSection) {
+    lines.push('')
+    lines.push('=== ОБЩИЕ НОВОСТИ (из каналов announcements, leads, ac-team, absence и т.д.) ===')
+    lines.push(params.generalSection)
+  }
+
+  lines.push(
     '',
-    '=== СЕКЦИЯ ОТ SLACK-АГЕНТА ===',
+    '=== СЕКЦИЯ ОТ SLACK-АГЕНТА (проектные каналы) ===',
     params.slackSection || 'Нет данных',
     '',
     '=== СЕКЦИЯ ОТ EMAIL+CALENDAR-АГЕНТА ===',
@@ -181,7 +192,7 @@ function buildOrchestratorPrompt(params: {
     '',
     '=== СЕКЦИЯ ОТ CLICKUP+KB-АГЕНТА ===',
     params.clickupKbSection || 'Нет данных',
-  ]
+  )
 
   // My tasks (upcoming only, no overdue)
   const upcoming = params.myTasks.filter((t) => !t.is_overdue)
@@ -295,9 +306,16 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
     'Digest subagents: starting phase 1 (parallel extraction)',
   )
 
+  // Split Slack channels: general (team-wide) vs project-specific
+  const generalChannels = params.slackChannels.filter((ch) => ch.isGeneral)
+  const projectChannels = params.slackChannels.filter((ch) => !ch.isGeneral)
+
   // Phase 1: all extraction in parallel (Slack internally batched if > 10 channels)
-  const [slackResult, emailCalResult, clickupKbResult] = await Promise.allSettled([
-    compileSlackSection(company, date, allProjects, params.slackChannels),
+  const [slackResult, generalResult, emailCalResult, clickupKbResult] = await Promise.allSettled([
+    compileSlackSection(company, date, allProjects, projectChannels),
+    generalChannels.length > 0
+      ? compileSlackSection(company, date, allProjects, generalChannels)
+      : Promise.resolve(''),
     callClaude(
       buildEmailCalAgentPrompt(company, date, allProjects, params.gmailData, params.calendarData),
       { system: getEmailCalAgentSystem(), timeoutMs: 120_000 },
@@ -309,6 +327,7 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
   ])
 
   const slackSection = slackResult.status === 'fulfilled' ? slackResult.value : ''
+  const generalSection = generalResult.status === 'fulfilled' ? generalResult.value : ''
   const emailCalSection = emailCalResult.status === 'fulfilled' ? emailCalResult.value : ''
   const clickupKbSection = clickupKbResult.status === 'fulfilled' ? clickupKbResult.value : ''
 
@@ -342,6 +361,7 @@ export async function compileDigestWithSubagents(params: SubCompilerParams): Pro
     company,
     date,
     allProjects,
+    generalSection,
     slackSection,
     emailCalSection,
     clickupKbSection,
