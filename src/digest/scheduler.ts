@@ -3,8 +3,8 @@
  * Daily digest scheduler and delivery.
  * Compiles two digest messages (AstroCat + Highground) and sends via Telegram.
  *
- * "Краткое содержание предыдущих серий" — recap of yesterday only.
- * Cron runs at 01:00 UTC = 09:00 WITA (Bali time).
+ * "Краткое содержание предыдущих серий" — recap of yesterday (or Fri-Sun on Monday).
+ * Cron runs at 09:00 Bali, Mon-Fri only. Monday covers Fri+Sat+Sun.
  * Each data source has 5 retries with exponential backoff (5s→60s).
  * If full compilation fails, retries up to 3 times with ~5-min intervals.
  * Worst-case delivery by ~09:30 Bali time.

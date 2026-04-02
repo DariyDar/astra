@@ -8,10 +8,13 @@ import { logger } from '../logging/logger.js'
 
 export type NameMap = Map<string, string>
 
+/** Keys with alias collisions — multiple people map to the same short name */
+const collisionKeys = new Set<string>()
+
 /**
  * Build a name normalization map from KB person entities.
  * Maps every known alias (lowercase) → display_name from metadata.
- * Returns a Map for O(1) lookups.
+ * On collision: marks key as ambiguous so resolveDisplayName won't use it.
  */
 export async function buildNameMap(): Promise<NameMap> {
   const people = await findEntitiesByType('person')
@@ -27,6 +30,7 @@ export async function buildNameMap(): Promise<NameMap> {
     aliasMap.set(eid, list)
   }
 
+  collisionKeys.clear()
   const nameMap: NameMap = new Map()
 
   for (const person of people) {
@@ -44,30 +48,34 @@ export async function buildNameMap(): Promise<NameMap> {
     }
   }
 
+  if (collisionKeys.size > 0) {
+    logger.info({ collisions: [...collisionKeys] }, 'NameMap: ambiguous keys detected, will skip first-name fallback for these')
+  }
+
   return nameMap
 }
 
 function setWithCollisionCheck(map: NameMap, key: string, value: string): void {
   const existing = map.get(key)
   if (existing && existing !== value) {
-    logger.warn({ alias: key, existing, new: value }, 'NameMap: alias collision, overwriting')
+    logger.warn({ alias: key, existing, new: value }, 'NameMap: alias collision, marking as ambiguous')
+    collisionKeys.add(key)
   }
   map.set(key, value)
 }
 
 /**
- * Resolve a Slack author name to its short Russian display name.
- * Tries: full name → first name only → original.
- * This handles cases like "Danil Koryakin" when aliases have "Danil" but not the full English name.
+ * Resolve a Slack author name to its display_name from vault.
+ * Tries: full name → first name (only if unambiguous) → original.
  */
 export function resolveDisplayName(name: string, nameMap: NameMap): string {
   const lower = name.toLowerCase()
   // Try full name first
   const full = nameMap.get(lower)
   if (full) return full
-  // Try first name only (handles "Danil Koryakin" → match "danil" → "Данил")
+  // Try first name only — but SKIP if it's ambiguous (e.g. "настя" maps to 2 people)
   const firstName = lower.split(/\s+/)[0]
-  if (firstName && firstName !== lower) {
+  if (firstName && firstName !== lower && !collisionKeys.has(firstName)) {
     const first = nameMap.get(firstName)
     if (first) return first
   }

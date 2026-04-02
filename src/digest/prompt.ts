@@ -105,28 +105,14 @@ export function buildDigestUserPrompt(params: {
     sections.push('Нет активности')
   }
 
-  // My Tasks — grouped by overdue vs upcoming
-  sections.push(`\n--- МОИ ЗАДАЧИ (назначены Дарию) ---`)
-  if (params.myTasks.length > 0) {
-    const overdueTasks = params.myTasks.filter((t) => t.is_overdue)
-    const upcomingTasks = params.myTasks.filter((t) => !t.is_overdue)
-
-    if (overdueTasks.length > 0) {
-      sections.push(`\n⏰ Просроченные (${overdueTasks.length}):`)
-      for (const task of overdueTasks) {
-        const due = task.due_date ? ` (до ${task.due_date})` : ''
-        sections.push(`  [${task.list}] ${task.subject} — ${task.status}${due} ${task.url}`)
-      }
+  // My Tasks — upcoming only (no overdue)
+  const upcomingTasks = params.myTasks.filter((t) => !t.is_overdue)
+  if (upcomingTasks.length > 0) {
+    sections.push(`\n--- МОИ ЗАДАЧИ (назначены Дарию, на этой неделе) ---`)
+    for (const task of upcomingTasks) {
+      const due = task.due_date ? ` (до ${task.due_date})` : ''
+      sections.push(`  [${task.list}] ${task.subject} — ${task.status}${due} ${task.url}`)
     }
-    if (upcomingTasks.length > 0) {
-      sections.push(`\nНа этой неделе (${upcomingTasks.length}):`)
-      for (const task of upcomingTasks) {
-        const due = task.due_date ? ` (до ${task.due_date})` : ''
-        sections.push(`  [${task.list}] ${task.subject} — ${task.status}${due} ${task.url}`)
-      }
-    }
-  } else {
-    sections.push('Нет задач')
   }
 
   // Project Statuses from registry
@@ -135,7 +121,7 @@ export function buildDigestUserPrompt(params: {
     if (activeStatuses.length > 0) {
       sections.push(`\n--- СТАТУСЫ ПРОЕКТОВ (текущее состояние из KB registry) ---`)
       for (const s of activeStatuses) {
-        const tasks = s.open_tasks !== undefined ? ` | ${s.open_tasks} задач, ${s.overdue_tasks ?? 0} просрочено` : ''
+        const tasks = s.open_tasks !== undefined ? ` | ${s.open_tasks} задач` : ''
         sections.push(`[${s.project}] ${s.status}${tasks}`)
         sections.push(`  Фокус: ${s.current_focus}`)
       }

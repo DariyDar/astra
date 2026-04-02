@@ -13,6 +13,12 @@ const RATE_LIMIT_MS = 600  // Slightly faster than ingestion (1100ms) — runs o
 const MESSAGES_PER_PAGE = 200
 const MAX_PAGES_PER_CHANNEL = 10  // 2000 msgs/channel max — plenty for 1 day
 
+/** Workspace subdomains for Slack permalink generation */
+const WORKSPACE_DOMAINS: Record<string, string> = {
+  ac: 'astro-cat-workspace',
+  hg: 'highground-games',
+}
+
 export interface DigestSlackChannel {
   workspace: string
   channelName: string
@@ -188,9 +194,10 @@ export async function fetchDigestSlack(
           : 'unknown'
         const resolvedText = await resolveSlackMentionsAsync(msg.text, userCache)
 
-        // Slack permalink: https://slack.com/archives/{channelId}/p{ts_no_dot}
+        // Slack permalink with workspace subdomain
+        const domain = WORKSPACE_DOMAINS[workspace] ?? 'slack'
         const slackLink = msg.ts
-          ? `https://slack.com/archives/${ch.id}/p${msg.ts.replace('.', '')}`
+          ? `https://${domain}.slack.com/archives/${ch.id}/p${msg.ts.replace('.', '')}`
           : undefined
 
         messages.push({

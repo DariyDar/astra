@@ -77,7 +77,7 @@ export async function sendTelegramMessage(text: string): Promise<void> {
   }
 }
 
-/** Split a message into chunks that fit Telegram's limit, preserving line boundaries. */
+/** Split a message into chunks that fit Telegram's limit, preferring blockquote boundaries. */
 export function splitMessage(text: string, maxLen: number): string[] {
   if (text.length <= maxLen) return [text]
 
@@ -90,8 +90,28 @@ export function splitMessage(text: string, maxLen: number): string[] {
       break
     }
 
-    let splitAt = remaining.lastIndexOf('\n', maxLen)
-    if (splitAt === -1 || splitAt < maxLen / 2) {
+    // Prefer splitting at end of a </blockquote> block (complete project section)
+    let splitAt = -1
+    const searchRange = remaining.slice(0, maxLen)
+    const bqEnd = searchRange.lastIndexOf('</blockquote>')
+    if (bqEnd !== -1) {
+      splitAt = bqEnd + '</blockquote>'.length
+    }
+
+    // Fallback: split at double newline (paragraph boundary)
+    if (splitAt === -1 || splitAt < maxLen / 3) {
+      const dblNewline = searchRange.lastIndexOf('\n\n')
+      if (dblNewline > maxLen / 3) splitAt = dblNewline
+    }
+
+    // Fallback: split at single newline
+    if (splitAt === -1 || splitAt < maxLen / 3) {
+      const newline = searchRange.lastIndexOf('\n')
+      if (newline > maxLen / 3) splitAt = newline
+    }
+
+    // Last resort: hard cut
+    if (splitAt === -1 || splitAt < maxLen / 3) {
       splitAt = maxLen
     }
 

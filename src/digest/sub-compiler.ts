@@ -183,27 +183,14 @@ function buildOrchestratorPrompt(params: {
     params.clickupKbSection || 'Нет данных',
   ]
 
-  // My tasks
-  lines.push('\n--- МОИ ЗАДАЧИ (назначены Дарию) ---')
-  if (params.myTasks.length > 0) {
-    const overdue = params.myTasks.filter((t) => t.is_overdue)
-    const upcoming = params.myTasks.filter((t) => !t.is_overdue)
-    if (overdue.length > 0) {
-      lines.push(`\n⏰ Просроченные (${overdue.length}):`)
-      for (const t of overdue) {
-        const due = t.due_date ? ` (до ${t.due_date})` : ''
-        lines.push(`  [${t.list}] ${t.subject} — ${t.status}${due} ${t.url}`)
-      }
+  // My tasks (upcoming only, no overdue)
+  const upcoming = params.myTasks.filter((t) => !t.is_overdue)
+  if (upcoming.length > 0) {
+    lines.push('\n--- МОИ ЗАДАЧИ (назначены Дарию, на этой неделе) ---')
+    for (const t of upcoming) {
+      const due = t.due_date ? ` (до ${t.due_date})` : ''
+      lines.push(`  [${t.list}] ${t.subject} — ${t.status}${due} ${t.url}`)
     }
-    if (upcoming.length > 0) {
-      lines.push(`\nНа этой неделе (${upcoming.length}):`)
-      for (const t of upcoming) {
-        const due = t.due_date ? ` (до ${t.due_date})` : ''
-        lines.push(`  [${t.list}] ${t.subject} — ${t.status}${due} ${t.url}`)
-      }
-    }
-  } else {
-    lines.push('Нет задач')
   }
 
   // Project statuses
@@ -211,7 +198,7 @@ function buildOrchestratorPrompt(params: {
   if (activeStatuses.length > 0) {
     lines.push('\n--- СТАТУСЫ ПРОЕКТОВ (контекст из KB registry) ---')
     for (const s of activeStatuses) {
-      const tasks = s.open_tasks !== undefined ? ` | ${s.open_tasks} задач, ${s.overdue_tasks ?? 0} просрочено` : ''
+      const tasks = s.open_tasks !== undefined ? ` | ${s.open_tasks} задач` : ''
       lines.push(`[${s.project}] ${s.status}${tasks} | Фокус: ${s.current_focus}`)
     }
   }

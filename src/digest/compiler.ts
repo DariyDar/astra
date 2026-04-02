@@ -228,7 +228,9 @@ export interface SharedDigestData {
  * Returns pre-fetched data to pass into compileDigest.
  */
 export async function fetchSharedDigestData(): Promise<SharedDigestData> {
-  const yesterdayPeriod = parsePeriod('yesterday')
+  const dayOfWeek = new Date().getDay()
+  const periodStr = dayOfWeek === 1 ? 'last_3_days' : 'yesterday'
+  const digestPeriod = parsePeriod(periodStr)
 
   // Build project map + name map
   const [projectMapResult, nameMapResult] = await Promise.allSettled([
@@ -249,9 +251,9 @@ export async function fetchSharedDigestData(): Promise<SharedDigestData> {
 
   // Fetch shared sources in parallel
   const [gmailResult, calResult, clickupResult, myTasksResult] = await Promise.allSettled([
-    fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
-    fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
-    fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq('yesterday', 100), yesterdayPeriod)),
+    fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq(periodStr, 100), digestPeriod, googleTokens)),
+    fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq(periodStr, 100), digestPeriod, googleTokens)),
+    fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq(periodStr, 100), digestPeriod)),
     fetchWithRetry('my-tasks', () => fetchMyTasks()),
   ])
 
@@ -292,7 +294,10 @@ export async function compileDigest(company: Company, shared?: SharedDigestData)
   const companyLabel = COMPANY_LABELS[company]
   const wsLabel = SLACK_WORKSPACE_MAP[company]
 
-  const yesterdayPeriod = parsePeriod('yesterday')
+  // Monday (day=1) → cover Fri+Sat+Sun (last_3_days), otherwise yesterday
+  const dayOfWeek = now.getDay() // 0=Sun, 1=Mon, ...
+  const periodStr = dayOfWeek === 1 ? 'last_3_days' : 'yesterday'
+  const digestPeriod = parsePeriod(periodStr)
 
   // Use shared data if provided, otherwise fetch independently (backward compat)
   let projectMap: Map<string, ProjectInfo[]>
@@ -326,9 +331,9 @@ export async function compileDigest(company: Company, shared?: SharedDigestData)
 
     const googleTokens = await fetchWithRetry('google-auth', () => resolveGoogleTokens())
     const [gmailResult, calResult, clickupResult, myTasksResult] = await Promise.allSettled([
-      fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
-      fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq('yesterday', 100), yesterdayPeriod, googleTokens)),
-      fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq('yesterday', 100), yesterdayPeriod)),
+      fetchWithRetry('gmail', () => fetchGmail(buildBriefingReq(periodStr, 100), digestPeriod, googleTokens)),
+      fetchWithRetry('calendar', () => fetchCalendar(buildBriefingReq(periodStr, 100), digestPeriod, googleTokens)),
+      fetchWithRetry('clickup', () => fetchClickUp(buildBriefingReq(periodStr, 100), digestPeriod)),
       fetchWithRetry('my-tasks', () => fetchMyTasks()),
     ])
     allGmail = (gmailResult.status === 'fulfilled' ? gmailResult.value : []) as BriefingItem[]
@@ -344,7 +349,7 @@ export async function compileDigest(company: Company, shared?: SharedDigestData)
   // Fetch Slack per-company (always separate — workspace-specific)
   const [slackResult, kbResult] =
     await Promise.allSettled([
-      fetchWithRetry('slack', () => fetchDigestSlack(wsLabel, yesterdayPeriod)),
+      fetchWithRetry('slack', () => fetchDigestSlack(wsLabel, digestPeriod)),
       fetchWithRetry('kb', () => fetchKBContext(wsLabel)),
     ])
 

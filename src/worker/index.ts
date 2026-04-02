@@ -39,7 +39,7 @@ const auditCleanupJob = cron.schedule('0 3 * * *', async () => { // 03:00 Bali
  * plus 3 full-compilation retries with 5-min intervals.
  * Worst-case delivery by ~09:30 Bali time.
  */
-const digestJob = cron.schedule('0 9 * * *', async () => { // 09:00 Bali
+const digestJob = cron.schedule('0 9 * * 1-5', async () => { // 09:00 Bali, Mon-Fri only
   logger.info('Starting daily digest')
   try {
     await deliverDailyDigest()
