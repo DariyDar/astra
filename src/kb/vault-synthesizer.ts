@@ -499,10 +499,15 @@ export async function runVaultSynthesizer(lookbackHours = 4): Promise<Synthesize
       'Vault synth: batches created',
     )
 
-    // Step 3: Execute batches in parallel
-    const batchResults = await Promise.allSettled(
-      batches.map(batch => synthesizeBatch(batch)),
-    )
+    // Step 3: Execute batches sequentially (parallel Claude CLI calls crash)
+    const batchResults: PromiseSettledResult<Map<string, SynthResult>>[] = []
+    for (const batch of batches) {
+      const result = await synthesizeBatch(batch).then(
+        value => ({ status: 'fulfilled' as const, value }),
+        reason => ({ status: 'rejected' as const, reason }),
+      )
+      batchResults.push(result)
+    }
 
     // Step 4: Apply results
     for (const batchResult of batchResults) {
