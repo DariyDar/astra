@@ -300,7 +300,7 @@ async function synthesizeBatch(batch: ProjectSlackData[]): Promise<Map<string, S
     const userPrompt = `${data.formattedPrompt}\n\nОтветь ТОЛЬКО JSON, без markdown и пояснений.`
 
     try {
-      const response = await callClaude(userPrompt, { system: systemPrompt, timeoutMs: 60_000 })
+      const response = await callClaude(userPrompt, { system: systemPrompt, timeoutMs: 180_000 })
       const parsed = parseSingleResult(response.text)
       if (parsed) results.set(data.name, parsed)
     } catch (error) {
@@ -322,7 +322,7 @@ async function synthesizeBatch(batch: ProjectSlackData[]): Promise<Map<string, S
   ].join('\n')
 
   try {
-    const response = await callClaude(combinedPrompt, { system: systemPrompt, timeoutMs: 120_000 })
+    const response = await callClaude(combinedPrompt, { system: systemPrompt, timeoutMs: 300_000 })
     const parsed = parseBatchResult(response.text, projectNames)
 
     for (const [name, result] of Object.entries(parsed)) {
