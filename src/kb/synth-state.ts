@@ -36,7 +36,7 @@ export function calculateLookback(defaultHours: number): number {
   const hoursSinceLastRun = (Date.now() - new Date(state.lastSuccessfulRun).getTime()) / (3600 * 1000)
   // If more than 2x default has passed, we missed runs — catch up
   if (hoursSinceLastRun > defaultHours * 2) {
-    return Math.min(Math.ceil(hoursSinceLastRun), 48) // cap at 48h
+    return Math.min(Math.ceil(hoursSinceLastRun), 168) // cap at 7 days
   }
   return defaultHours
 }

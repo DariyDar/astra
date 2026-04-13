@@ -5,7 +5,6 @@ import { cleanupOldEntries } from '../logging/audit.js'
 import { closeDb } from '../db/index.js'
 import { env } from '../config/env.js'
 import { deliverDailyDigest } from '../digest/scheduler.js'
-import { runSelfImprovement } from '../self-improve/runner.js'
 import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
 import { compileMeetingReport } from '../digest/meeting-report.js'
 import { runVaultSynthesizer } from '../kb/vault-synthesizer.js'
@@ -84,43 +83,15 @@ const boardPrepJob = cron.schedule('30 20 * * 5', async () => { // 20:30 Bali Fr
 })
 
 /**
- * Self-improvement agent: daily at 23:30 UTC.
- * Analyzes today's interactions, identifies problems, applies safe YAML fixes,
- * and sends a report to Telegram.
- * Runs 1.5 hours after KB ingestion (22:00 UTC) to ensure fresh registry data.
- */
-const selfImproveJob = cron.schedule('30 23 * * *', async () => {
-  logger.info('Starting self-improvement analysis')
-  try {
-    await runSelfImprovement()
-    logger.info('Self-improvement analysis complete')
-  } catch (error) {
-    logger.error({ error }, 'Self-improvement analysis failed')
-  }
-})
-
-/**
- * Vault synthesizer: hourly during work hours (09:00-21:00 Bali = 01:00-13:00 UTC).
+ * Vault synthesizer: once daily at 08:00 Bali (00:00 UTC), Mon-Fri.
  * Fetches recent Slack messages, synthesizes status updates via Claude, writes to vault.
+ * Uses calculateLookback() for resilience — auto catch-up after missed runs (capped at 7 days).
  */
-// Vault synth: hourly 15:00-23:59 Bali (work hours), Mon-Fri. Server TZ = Asia/Makassar.
-const vaultSynthHourlyJob = cron.schedule('0 15-23 * * 1-5', async () => {
+const vaultSynthDailyJob = cron.schedule('0 8 * * 1-5', async () => {
   if (env.VAULT_SYNTH_ENABLED === 'false') return
-  logger.info('Starting vault synthesizer (hourly)')
+  logger.info('Starting vault synthesizer (daily)')
   try {
-    const stats = await runVaultSynthesizer(env.VAULT_SYNTH_LOOKBACK_HOURS)
-    logger.info(stats, 'Vault synthesizer complete')
-  } catch (error) {
-    logger.error({ error }, 'Vault synthesizer failed')
-  }
-})
-
-// Vault synth: every 8h during off-hours (00:00, 08:00 Bali), Mon-Fri.
-const vaultSynthOffhoursJob = cron.schedule('0 0,8 * * 1-5', async () => {
-  if (env.VAULT_SYNTH_ENABLED === 'false') return
-  logger.info('Starting vault synthesizer (off-hours)')
-  try {
-    const stats = await runVaultSynthesizer(8) // 8h lookback for off-hours
+    const stats = await runVaultSynthesizer(24)
     logger.info(stats, 'Vault synthesizer complete')
   } catch (error) {
     logger.error({ error }, 'Vault synthesizer failed')
@@ -178,9 +149,7 @@ function shutdown(signal: string) {
   digestJob.stop()
   lisbonPrepJob.stop()
   boardPrepJob.stop()
-  selfImproveJob.stop()
-  vaultSynthHourlyJob.stop()
-  vaultSynthOffhoursJob.stop()
+  vaultSynthDailyJob.stop()
   healthCheckJob.stop()
   channelDiscoveryJob.stop()
   driveTreeJob.stop()
