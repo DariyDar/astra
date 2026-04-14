@@ -58,11 +58,9 @@ jobs:
 
             cd /home/clawdbot/personal-assistant
 
-            # ── 1. STOP everything first ──
-            pgrep -f "personal-assistant" | xargs kill -9 2>/dev/null || true
-            pm2 kill 2>/dev/null || true
+            # ── 1. STOP astra processes only (preserve wiki-portal etc.) ──
+            pm2 delete astra-bot astra-worker 2>/dev/null || true
             sleep 2
-            rm -f ~/.pm2/dump.pm2
 
             # ── 2. DEPLOY code ──
             # Clean source dirs before extract so deleted files don't linger
@@ -186,7 +184,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }} << 'START'
             cd /home/clawdbot/personal-assistant
-            pm2 delete all || true
+            pm2 delete astra-bot astra-worker || true
             pm2 start ecosystem.config.cjs
             pm2 save
           START
