@@ -97,7 +97,7 @@ export function generateMcpConfig(outputPath: string): void {
       env: {
         CLICKUP_API_KEY: env.CLICKUP_API_KEY,
         CLICKUP_TEAM_ID: env.CLICKUP_TEAM_ID,
-        CLICKUP_MCP_MODE: 'read',
+        CLICKUP_MCP_MODE: 'write',
       },
     }
     logger.info('MCP: clickup server configured')
