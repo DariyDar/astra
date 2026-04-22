@@ -14,6 +14,8 @@ export interface SkillResult {
   systemPromptExtra?: string
   /** If true, router uses parallel subagent orchestration for deep research */
   investigation?: boolean
+  /** If true, skip MCP tools — all needed data is already in the prompt/systemPromptExtra */
+  skipMcp?: boolean
 }
 
 export interface Skill {

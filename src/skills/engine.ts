@@ -13,6 +13,8 @@ export interface SkillEngineResult {
   skill?: Skill
   /** If true, router uses parallel subagent orchestration for deep research */
   investigation?: boolean
+  /** If true, skip MCP tools — all needed data is already in the prompt */
+  skipMcp?: boolean
 }
 
 export class SkillEngine {
@@ -47,6 +49,7 @@ export class SkillEngine {
         systemPromptExtra: result.systemPromptExtra,
         skill,
         investigation: result.investigation,
+        skipMcp: result.skipMcp,
       }
     } catch (error) {
       logger.warn({ skill: skill.name, error }, 'Skill preProcess failed, falling back to default')

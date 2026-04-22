@@ -160,11 +160,12 @@ export class MessageRouter {
         requestLogger,
       )
     } else {
+      const useMcp = this.mcpEnabled && !skillResult.skipMcp
       response = await callClaude(
         skillResult.prompt,
         {
           system: fullSystem,
-          ...(this.mcpEnabled ? { mcpConfigPath: MCP_CONFIG_PATH } : {}),
+          ...(useMcp ? { mcpConfigPath: MCP_CONFIG_PATH, maxTurns: 15 } : {}),
         },
         requestLogger,
       )
