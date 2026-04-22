@@ -543,11 +543,23 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Replace Slack author names with short Russian display names from KB. Mutates in place. */
+/** Replace Slack display names with short Russian names from KB — both in author AND text. Mutates in place. */
 function resolveSlackDisplayNames(channels: DigestSlackChannel[], nameMap: NameMap): void {
+  // Build a single regex from all aliases for efficient text replacement
+  const entries = [...nameMap.entries()].filter(([alias, name]) => alias !== name.toLowerCase())
+  let textReplacer: ((text: string) => string) | null = null
+  if (entries.length > 0) {
+    // Sort by length descending so longer aliases match first ("Yang Wen" before "Yang")
+    entries.sort((a, b) => b[0].length - a[0].length)
+    const escaped = entries.map(([alias]) => alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    const pattern = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi')
+    textReplacer = (text: string) => text.replace(pattern, (match) => nameMap.get(match.toLowerCase()) || match)
+  }
+
   for (const ch of channels) {
     for (const msg of ch.messages) {
       msg.author = resolveDisplayName(msg.author, nameMap)
+      if (textReplacer) msg.text = textReplacer(msg.text)
     }
   }
 }

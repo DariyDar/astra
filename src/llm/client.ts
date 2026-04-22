@@ -66,6 +66,12 @@ export async function callClaude(
         event: 'llm_response',
         model: MODEL,
         responseLength: result.text.length,
+        ...(result.usage ? {
+          inputTokens: result.usage.inputTokens,
+          outputTokens: result.usage.outputTokens,
+          cacheReadTokens: result.usage.cacheReadTokens,
+          costUsd: result.usage.costUsd,
+        } : {}),
       },
       'Claude CLI response received',
     )

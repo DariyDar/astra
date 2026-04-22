@@ -72,7 +72,7 @@ export async function fetchRecentMessages(
         if (!resp.ok) continue
         const data = await resp.json() as {
           ok: boolean
-          messages?: Array<{ user?: string; text?: string; ts?: string; subtype?: string; bot_id?: string }>
+          messages?: Array<{ user?: string; text?: string; ts?: string; subtype?: string; bot_id?: string; reply_count?: number; thread_ts?: string }>
         }
         if (!data.ok || !data.messages) continue
 
@@ -81,11 +81,43 @@ export async function fetchRecentMessages(
           !m.bot_id && !m.subtype && m.text && m.user,
         )
 
-        const messages = humanMessages.map(m => ({
-          user: userCache.get(m.user!) ?? m.user!,
-          text: resolveSlackMentions(m.text!, userCache),
-          ts: m.ts!,
-        }))
+        const messages: Array<{ user: string; text: string; ts: string }> = []
+        for (const m of humanMessages) {
+          messages.push({
+            user: userCache.get(m.user!) ?? m.user!,
+            text: resolveSlackMentions(m.text!, userCache),
+            ts: m.ts!,
+          })
+
+          // Fetch thread replies if present
+          if (m.reply_count && m.reply_count > 0 && m.ts) {
+            try {
+              await sleep(RATE_LIMIT_MS)
+              const threadResp = await fetch(`https://slack.com/api/conversations.replies?${new URLSearchParams({
+                channel: ch.id,
+                ts: m.ts,
+                limit: '20',
+              })}`, { headers, signal: AbortSignal.timeout(15_000) })
+              const threadData = await threadResp.json() as {
+                ok: boolean
+                messages?: Array<{ user?: string; text?: string; ts?: string; subtype?: string; bot_id?: string }>
+              }
+              if (threadData.ok && threadData.messages) {
+                // Skip first message (it's the parent we already have), take replies only
+                const replies = threadData.messages.slice(1).filter(r => !r.bot_id && !r.subtype && r.text && r.user)
+                for (const r of replies) {
+                  messages.push({
+                    user: userCache.get(r.user!) ?? r.user!,
+                    text: `↳ ${resolveSlackMentions(r.text!, userCache)}`,
+                    ts: r.ts!,
+                  })
+                }
+              }
+            } catch {
+              // Non-fatal: skip thread on error
+            }
+          }
+        }
 
         if (messages.length > 0) {
           results.push({ channel: `#${ch.name}`, workspace: ws.label, messages })

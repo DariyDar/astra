@@ -88,8 +88,8 @@ export async function fetchProductionMilestones(): Promise<ProductionMilestone[]
   const rows = data.values
   if (!rows || rows.length < 2) return []
 
-  // Header row: Client | Code | Name | Project | Description | Contract | Milestone date | ...
-  // We only read: Project (col 3), Name (col 2), Milestone date (col 6)
+  // Header: Client | Code | Name | Project | Description | Contract | Milestone date | Delivery date | Amount | Invoice | Invoice Due | Sent | Paid
+  // Cols:   0        1      2      3         4             5          6                7               8        9         10            11     12
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const lookaheadEnd = new Date(todayStart.getTime() + LOOKAHEAD_DAYS * 86400_000)
@@ -101,20 +101,26 @@ export async function fetchProductionMilestones(): Promise<ProductionMilestone[]
     const projectCode = (row[3] ?? '').trim()
     const name = (row[2] ?? '').trim()
     const dateStr = (row[6] ?? '').trim()
+    const sent = (row[11] ?? '').trim().toUpperCase()
+    const paid = (row[12] ?? '').trim().toUpperCase()
 
     if (!projectCode || !name || !dateStr) continue
+
+    // Skip milestones already delivered or paid
+    if (sent === 'TRUE' || paid === 'TRUE') continue
 
     const deadline = parseUSDate(dateStr)
     if (!deadline) continue
 
-    // Only include: overdue (past) + upcoming within lookahead window
+    // Only include upcoming within lookahead window — skip overdue (past deadlines)
+    if (deadline < todayStart) continue
     if (deadline > lookaheadEnd) continue
 
     const projectName = PROJECT_CODE_MAP[projectCode] ?? projectCode
     const daysUntil = Math.ceil((deadline.getTime() - todayStart.getTime()) / 86400_000)
-    const isOverdue = deadline < todayStart
+    const isOverdue = false // We no longer show overdue
 
-    // Skip if marked as done in vault
+    // Skip if marked as done in vault (additional check)
     if (isMilestoneClosedInVault(projectName, name)) continue
 
     milestones.push({
