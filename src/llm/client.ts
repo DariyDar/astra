@@ -34,7 +34,7 @@ export interface ClaudeResponse {
  */
 export async function callClaude(
   prompt: string,
-  options?: { system?: string; mcpConfigPath?: string; timeoutMs?: number },
+  options?: { system?: string; mcpConfigPath?: string; timeoutMs?: number; maxTurns?: number },
   requestLogger?: pino.Logger,
 ): Promise<ClaudeResponse> {
   const log = requestLogger ?? logger
@@ -51,7 +51,7 @@ export async function callClaude(
     args.push('--permission-mode', 'bypassPermissions')
     // Allow multiple turns so Claude can call MCP tools and then format the response.
     // Without this, --print mode exits after 1 turn and Claude never gets tool results back.
-    args.push('--max-turns', String(MCP_MAX_TURNS))
+    args.push('--max-turns', String(options.maxTurns ?? MCP_MAX_TURNS))
   }
 
   // Prompt is always passed via stdin (not as CLI argument).

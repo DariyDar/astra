@@ -1,21 +1,26 @@
 /**
- * Investigation Orchestrator — runs parallel subagents for deep research queries.
+ * Investigation Orchestrator — two-phase architecture for deep research queries.
  *
- * Instead of one Claude process doing everything sequentially, this launches
- * 3 focused subagents in parallel (Slack, KB, Web), then a synthesizer
- * merges the results into a unified response.
+ * Phase 1 (planning): Claude determines what data to collect (1 LLM turn).
+ * Data collection: tools fetch Slack/KB/ClickUp/Drive data without LLM.
+ * Phase 2 (analysis): Claude analyzes collected data (1 LLM turn).
+ * Optional: Web search still uses MCP (external APIs can't be pre-fetched).
+ *
+ * Total: 2-4 LLM turns instead of 60-90+ with full MCP.
  */
 
 import type pino from 'pino'
 import type { Language } from './language.js'
 import { callClaude } from '../llm/client.js'
-import type { ClaudeResponse, UsageMetrics } from '../llm/client.js'
+import type { ClaudeResponse } from '../llm/client.js'
 import { writeAuditEntry } from '../logging/audit.js'
 import { logger } from '../logging/logger.js'
 import { loadPromptCached } from '../kb/vault-loader.js'
+import { executeToolPlan, TOOL_CATALOG, type ToolPlan } from '../tools/executor.js'
 
-const SUBAGENT_TIMEOUT_MS = 120_000
-const SYNTHESIZER_TIMEOUT_MS = 60_000
+const PLANNING_TIMEOUT_MS = 30_000
+const ANALYSIS_TIMEOUT_MS = 60_000
+const WEB_SEARCH_TIMEOUT_MS = 60_000
 
 const LANGUAGE_LABELS: Record<Language, string> = {
   ru: 'Russian',
@@ -30,15 +35,12 @@ interface InvestigationOpts {
   recentContext?: string
 }
 
-interface SubagentResults {
-  slack: string | null
-  kb: string | null
-  web: string | null
-}
-
 /**
- * Run a parallel investigation with 3 subagents + synthesizer.
- * Falls back gracefully if subagents fail.
+ * Run a two-phase investigation:
+ * 1. Claude plans what tools to run (1 turn)
+ * 2. Tools collect data without LLM
+ * 3. Optionally: web search via MCP (limited turns)
+ * 4. Claude analyzes all collected data (1 turn)
  */
 export async function runInvestigation(
   query: string,
@@ -48,28 +50,102 @@ export async function runInvestigation(
   const log = requestLogger ?? logger
   const startTime = Date.now()
 
-  log.info({ queryLength: query.length }, 'Starting investigation with subagents')
+  log.info({ queryLength: query.length }, 'Starting two-phase investigation')
 
-  // Phase 1: Run 3 subagents in parallel
-  const subagentResults = await runSubagents(query, opts, log)
+  // ── Phase 1: Planning ──
+  const planningSystem = `Ты помощник, который определяет какие данные нужно собрать для ответа на вопрос.
 
-  const successCount = Object.values(subagentResults).filter(Boolean).length
-  log.info({ successCount }, 'Subagents completed')
+${opts.knowledgeMap}
 
-  // Phase 2: Synthesize results
-  if (successCount === 0) {
+${TOOL_CATALOG}
+
+Ответь ТОЛЬКО JSON с планом вызовов. Не отвечай на вопрос пользователя — только план сбора данных.`
+
+  let plan: ToolPlan
+  try {
+    const planResponse = await callClaude(
+      `Вопрос пользователя: ${query}\n\nКакие данные нужно собрать? Ответь JSON.`,
+      { system: planningSystem, timeoutMs: PLANNING_TIMEOUT_MS },
+      log,
+    )
+
+    // Parse JSON from response (may be wrapped in markdown code block)
+    const jsonMatch = planResponse.text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      log.warn({ response: planResponse.text.slice(0, 200) }, 'Investigation: failed to parse plan JSON')
+      plan = { plan: [] }
+    } else {
+      plan = JSON.parse(jsonMatch[0]) as ToolPlan
+    }
+  } catch (error) {
+    log.warn({ error: (error as Error).message }, 'Investigation: planning failed')
+    plan = { plan: [] }
+  }
+
+  log.info({ toolCount: plan.plan.length, tools: plan.plan.map(t => t.tool) }, 'Investigation plan ready')
+
+  // ── Data collection (no LLM) ──
+  let collectedData = ''
+  if (plan.plan.length > 0) {
+    const execution = await executeToolPlan(plan)
+    collectedData = execution.results
+    log.info({ toolsRun: execution.toolsRun, errors: execution.errors }, 'Tools executed')
+  }
+
+  // ── Optional: Web search via MCP (limited turns) ──
+  let webData = ''
+  const needsWeb = /интернет|web|search|внешн|отзыв|review|reddit|форум|community|баг.*(извест|public)/i.test(query)
+  if (needsWeb) {
+    try {
+      const webSystem = loadPromptCached('instructions-for-llm/agent-investigation-web.md')
+      const webResponse = await callClaude(
+        `Search the web for: ${query}`,
+        {
+          system: webSystem,
+          mcpConfigPath: opts.mcpConfigPath,
+          timeoutMs: WEB_SEARCH_TIMEOUT_MS,
+          maxTurns: 6, // limited — 3 searches × 2 turns
+        },
+        log,
+      )
+      webData = webResponse.text
+    } catch (error) {
+      log.warn({ error: (error as Error).message }, 'Web search failed')
+    }
+  }
+
+  // ── Phase 2: Analysis ──
+  const langLabel = LANGUAGE_LABELS[opts.language]
+  const synthSystem = loadPromptCached('instructions-for-llm/agent-investigation-synthesizer.md')
+    .replace(/\{\{languageLabel\}\}/g, langLabel)
+
+  const sections: string[] = []
+  if (collectedData) sections.push(`## Собранные данные (Slack, KB, ClickUp, Drive)\n${collectedData}`)
+  if (webData) sections.push(`## Внешние источники (Web)\n${webData}`)
+
+  if (sections.length === 0) {
     return {
       text: opts.language === 'ru'
-        ? 'Не удалось найти информацию ни в одном из источников. Попробуй переформулировать запрос или уточнить, где именно искать.'
-        : 'Could not find information in any source. Try rephrasing or specifying where to look.',
+        ? 'Не удалось найти информацию. Попробуй переформулировать запрос или уточнить, где именно искать.'
+        : 'Could not find information. Try rephrasing or specifying where to look.',
       model: 'sonnet',
     }
   }
 
-  const response = await synthesize(query, subagentResults, opts.language, log)
+  let response: ClaudeResponse
+  try {
+    response = await callClaude(
+      `Вопрос: ${query}\n\nРезультаты исследования:\n\n${sections.join('\n\n---\n\n')}\n\nДай подробный ответ на основе собранных данных.`,
+      { system: synthSystem, timeoutMs: ANALYSIS_TIMEOUT_MS },
+      log,
+    )
+  } catch (error) {
+    log.warn({ error: (error as Error).message }, 'Analysis failed, returning raw results')
+    response = { text: sections.join('\n\n---\n\n'), model: 'sonnet' }
+  }
 
   const durationMs = Date.now() - startTime
-  log.info({ durationMs, successCount }, 'Investigation completed')
+  log.info({ durationMs, toolsPlanned: plan.plan.length, hadWeb: needsWeb }, 'Investigation completed')
 
   const correlationId = (log.bindings() as { correlationId?: string }).correlationId ?? 'unknown'
   await writeAuditEntry({
@@ -78,11 +154,9 @@ export async function runInvestigation(
     model: 'sonnet',
     metadata: {
       durationMs,
-      subagentResults: {
-        slack: subagentResults.slack !== null,
-        kb: subagentResults.kb !== null,
-        web: subagentResults.web !== null,
-      },
+      toolsPlanned: plan.plan.length,
+      toolNames: plan.plan.map(t => t.tool),
+      hadWebSearch: needsWeb,
       responseLength: response.text.length,
       ...(response.usage ?? {}),
     },
@@ -90,119 +164,4 @@ export async function runInvestigation(
   })
 
   return response
-}
-
-async function runSubagents(
-  query: string,
-  opts: InvestigationOpts,
-  log: pino.Logger,
-): Promise<SubagentResults> {
-  const { mcpConfigPath, knowledgeMap } = opts
-
-  const slackPrompt = buildSlackAgentPrompt(query, knowledgeMap)
-  const kbPrompt = buildKBAgentPrompt(query, knowledgeMap)
-  const webPrompt = buildWebAgentPrompt(query)
-
-  const [slackResult, kbResult, webResult] = await Promise.allSettled([
-    callClaude(slackPrompt.prompt, {
-      system: slackPrompt.system,
-      mcpConfigPath,
-      timeoutMs: SUBAGENT_TIMEOUT_MS,
-    }, log),
-    callClaude(kbPrompt.prompt, {
-      system: kbPrompt.system,
-      mcpConfigPath,
-      timeoutMs: SUBAGENT_TIMEOUT_MS,
-    }, log),
-    callClaude(webPrompt.prompt, {
-      system: webPrompt.system,
-      mcpConfigPath,
-      timeoutMs: SUBAGENT_TIMEOUT_MS,
-    }, log),
-  ])
-
-  const extract = (r: PromiseSettledResult<ClaudeResponse>, name: string): string | null => {
-    if (r.status === 'fulfilled' && r.value.text.length > 10) {
-      log.debug({ agent: name, length: r.value.text.length }, 'Subagent succeeded')
-      return r.value.text
-    }
-    if (r.status === 'rejected') {
-      log.warn({ agent: name, error: (r.reason as Error).message }, 'Subagent failed')
-    }
-    return null
-  }
-
-  return {
-    slack: extract(slackResult, 'slack'),
-    kb: extract(kbResult, 'kb'),
-    web: extract(webResult, 'web'),
-  }
-}
-
-async function synthesize(
-  query: string,
-  results: SubagentResults,
-  language: Language,
-  log: pino.Logger,
-): Promise<ClaudeResponse> {
-  const langLabel = LANGUAGE_LABELS[language]
-  const sections: string[] = []
-
-  if (results.slack) {
-    sections.push(`## Live Slack data (real-time)\n${results.slack}`)
-  }
-  if (results.kb) {
-    sections.push(`## Knowledge Base (historical indexed data)\n${results.kb}`)
-  }
-  if (results.web) {
-    sections.push(`## External sources (web search)\n${results.web}`)
-  }
-
-  // Moved to vault/instructions-for-llm/agent-investigation-synthesizer.md
-  const synthSystem = loadPromptCached('instructions-for-llm/agent-investigation-synthesizer.md')
-    .replace(/\{\{languageLabel\}\}/g, langLabel)
-
-  const synthPrompt = `Original question: ${query}
-
-Research findings from 3 parallel agents:
-
-${sections.join('\n\n---\n\n')}
-
-Synthesize these into a single comprehensive answer.`
-
-  try {
-    return await callClaude(synthPrompt, {
-      system: synthSystem,
-      timeoutMs: SYNTHESIZER_TIMEOUT_MS,
-    }, log)
-  } catch (error) {
-    log.warn({ error: (error as Error).message }, 'Synthesizer failed, returning raw results')
-    // Fallback: concatenate raw results
-    return {
-      text: sections.join('\n\n---\n\n'),
-      model: 'sonnet',
-    }
-  }
-}
-
-// ─── Subagent Prompt Builders ───
-
-// Moved to vault/instructions-for-llm/agent-investigation-slack.md
-function buildSlackAgentPrompt(query: string, knowledgeMap: string): { system: string; prompt: string } {
-  const system = loadPromptCached('instructions-for-llm/agent-investigation-slack.md')
-    .replace(/\{\{knowledgeMap\}\}/g, knowledgeMap)
-  return { system, prompt: `Search Slack for: ${query}` }
-}
-
-// Moved to vault/instructions-for-llm/agent-investigation-kb.md
-function buildKBAgentPrompt(query: string, knowledgeMap: string): { system: string; prompt: string } {
-  const system = loadPromptCached('instructions-for-llm/agent-investigation-kb.md')
-    .replace(/\{\{knowledgeMap\}\}/g, knowledgeMap)
-  return { system, prompt: `Search knowledge base for: ${query}` }
-}
-
-// Moved to vault/instructions-for-llm/agent-investigation-web.md
-function buildWebAgentPrompt(query: string): { system: string; prompt: string } {
-  const system = loadPromptCached('instructions-for-llm/agent-investigation-web.md')
-  return { system, prompt: `Search the web for: ${query}` }
 }
