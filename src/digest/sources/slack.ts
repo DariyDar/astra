@@ -223,7 +223,7 @@ export async function fetchDigestSlack(
             const threadParams = new URLSearchParams({
               channel: ch.id,
               ts: msg.ts,
-              limit: '15',
+              limit: '200',
             })
             const threadResp = await fetch(
               `https://slack.com/api/conversations.replies?${threadParams}`,
