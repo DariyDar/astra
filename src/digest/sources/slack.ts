@@ -215,6 +215,39 @@ export async function fetchDigestSlack(
           threadInfo: msg.reply_count ? `${msg.reply_count} replies` : undefined,
           link: slackLink,
         })
+
+        // Fetch thread replies if present (top 15 replies)
+        if (msg.reply_count && msg.reply_count > 0 && msg.ts) {
+          try {
+            await sleep(RATE_LIMIT_MS)
+            const threadParams = new URLSearchParams({
+              channel: ch.id,
+              ts: msg.ts,
+              limit: '15',
+            })
+            const threadResp = await fetch(
+              `https://slack.com/api/conversations.replies?${threadParams}`,
+              { headers, signal: AbortSignal.timeout(15_000) },
+            )
+            const threadData = await threadResp.json() as { ok: boolean; messages?: SlackMessage[] }
+            if (threadData.ok && threadData.messages) {
+              for (const reply of threadData.messages.slice(1)) { // skip parent
+                if (!reply.text || reply.bot_id) continue
+                const replyAuthor = reply.user ? await resolveUserId(reply.user, userCache) : 'unknown'
+                const replyText = await resolveSlackMentionsAsync(reply.text, userCache)
+                messages.push({
+                  author: replyAuthor,
+                  text: `↳ ${replyText}`,
+                  ts: reply.ts ?? '',
+                  date: reply.ts ? new Date(parseFloat(reply.ts) * 1000).toISOString() : '',
+                  link: slackLink, // same thread link
+                })
+              }
+            }
+          } catch {
+            // non-fatal — skip thread on error
+          }
+        }
       }
 
       if (messages.length > 0) {
