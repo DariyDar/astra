@@ -146,7 +146,7 @@ async function fetchACKBContext(acProjects: ProjectInfo[]): Promise<Array<{ proj
 function buildBriefingReq(period: string, limit: number): BriefingRequest {
   return {
     sources: ['slack', 'gmail', 'calendar', 'clickup'],
-    query_type: 'digest',
+    query_type: 'digest-unread',
     period,
     limit_per_source: limit,
   }

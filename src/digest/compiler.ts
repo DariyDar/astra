@@ -490,7 +490,11 @@ async function fetchKBContext(companyCode: string): Promise<Array<{ project: str
 function buildBriefingReq(period: string, limit: number): BriefingRequest {
   return {
     sources: ['slack', 'gmail', 'calendar', 'clickup'],
-    query_type: 'digest',
+    // 'digest-unread' makes the Gmail fetcher skip already-read mail except for
+    // a whitelist of digest-relevant senders (Outsource QA reports, TestFlight)
+    // whose content stays useful even after auto-filtering. Other sources ignore
+    // the suffix and fall back to their normal digest behavior.
+    query_type: 'digest-unread',
     period,
     limit_per_source: limit,
   }

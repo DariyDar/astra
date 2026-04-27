@@ -1,5 +1,5 @@
 export type Source = 'slack' | 'gmail' | 'calendar' | 'clickup'
-export type QueryType = 'recent' | 'digest' | 'search' | 'unread'
+export type QueryType = 'recent' | 'digest' | 'digest-unread' | 'search' | 'unread'
 export type FieldName = 'author' | 'date' | 'text' | 'text_preview' | 'subject' | 'links' | 'thread_info' | 'status' | 'assignee' | 'due_date' | 'channel' | 'account' | 'list'
 
 export interface BriefingRequest {
