@@ -1,13 +1,45 @@
 /**
- * Auto Channel Discovery — finds Slack channels not mapped to any vault project.
- * No LLM calls. Fetches channels from both workspaces, compares against vault
- * project cards, and notifies via Telegram about unknown channels worth mapping.
+ * Auto Channel Discovery — finds Slack channels not classified anywhere
+ * in the vault. Compares against:
+ *   1. project cards (`slack_channels` field)
+ *   2. the channel index at vault/channels/Slack Channels.md
+ * Only flags channels missing from BOTH sources.
  */
 
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { SLACK_WORKSPACES, fetchSlackChannels } from '../mcp/briefing/slack.js'
 import { getAllProjects, loadProjectCard } from './vault-reader.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
 import { logger } from '../logging/logger.js'
+
+/**
+ * Load channel names from `vault/channels/Slack Channels.md`.
+ * The file is a hand-maintained markdown index where each row in any of the
+ * tables starts with `| #channel-name |`. We don't care about the categories
+ * here — we just need the set of channels the user has already classified.
+ */
+function loadIndexedChannels(): Set<string> {
+  const path = resolve(process.cwd(), 'vault', 'channels', 'Slack Channels.md')
+  let text: string
+  try {
+    text = readFileSync(path, 'utf-8')
+  } catch (error) {
+    logger.warn({ path, error }, 'Channel discovery: vault channel index not readable')
+    return new Set()
+  }
+
+  const out = new Set<string>()
+  for (const line of text.split(/\r?\n/)) {
+    // Match table rows where the first cell is a Slack channel literal,
+    // i.e. starts with `#`. This skips header rows (`| Канал |`) and
+    // separator rows (`|---|`).
+    const m = line.match(/^\s*\|\s*#([a-z0-9][a-z0-9_-]*)\s*\|/i)
+    if (!m) continue
+    out.add(m[1].toLowerCase())
+  }
+  return out
+}
 
 interface DiscoveredChannel {
   name: string
@@ -40,8 +72,9 @@ export async function runChannelDiscovery(): Promise<void> {
     return
   }
 
-  // 2. Get all known channels from vault project cards
-  const knownChannels = new Set<string>()
+  // 2. Get all known channels: (a) those mapped to project cards,
+  //    (b) those listed in the vault channel index file.
+  const knownChannels = loadIndexedChannels()
   const projects = getAllProjects()
 
   for (const p of projects) {
@@ -51,6 +84,7 @@ export async function runChannelDiscovery(): Promise<void> {
       knownChannels.add(ch.replace(/^#/, '').toLowerCase())
     }
   }
+  logger.info({ knownChannels: knownChannels.size }, 'Channel discovery: known channels loaded')
 
   // 3. Find unknown channels (>3 members, not internal/test/bot)
   const unknown = slackChannels.filter(ch =>
