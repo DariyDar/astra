@@ -3,13 +3,8 @@ import '../config/env.js'
 import { logger } from '../logging/logger.js'
 import { cleanupOldEntries } from '../logging/audit.js'
 import { closeDb } from '../db/index.js'
-import { env } from '../config/env.js'
 import { deliverDailyDigest } from '../digest/scheduler.js'
-import { deliverPreMeetingReport } from '../digest/pre-meeting-report.js'
-import { compileMeetingReport } from '../digest/meeting-report.js'
-import { runVaultSynthesizer } from '../kb/vault-synthesizer.js'
 import { runHealthCheck } from '../health/source-monitor.js'
-import { runChannelDiscovery } from '../kb/channel-discovery.js'
 
 const AUDIT_RETENTION_DAYS = 30
 
@@ -49,56 +44,6 @@ const digestJob = cron.schedule('0 9 * * 1-5', async () => { // 09:00 Bali, Mon-
 })
 
 /**
- * Lisbon Talks prep: Tuesday 17:00 Bali (2h before 19:00 meeting).
- * Compiles a weekly AC project status report via meeting-report compiler,
- * then falls back to the legacy pre-meeting report if the new one fails.
- */
-const lisbonPrepJob = cron.schedule('0 17 * * 2', async () => { // 17:00 Bali Tue
-  logger.info('Starting Lisbon Talks report compilation')
-  try {
-    await compileMeetingReport('lisbon')
-  } catch (error) {
-    logger.error({ error }, 'Lisbon Talks report failed, falling back to legacy pre-meeting')
-    try {
-      await deliverPreMeetingReport()
-    } catch (fallbackError) {
-      logger.error({ error: fallbackError }, 'Legacy pre-meeting report also failed')
-    }
-  }
-})
-
-/**
- * Board Meeting prep: every other Friday 20:30 Bali (2h before 22:30 meeting).
- * Biweekly = check if ISO week number is even.
- */
-const boardPrepJob = cron.schedule('30 20 * * 5', async () => { // 20:30 Bali Fri
-  const weekNum = Math.ceil((Date.now() - new Date(2026, 0, 1).getTime()) / (7 * 86400_000))
-  if (weekNum % 2 !== 0) return // skip odd weeks
-  logger.info('Starting Board Meeting report compilation')
-  try {
-    await compileMeetingReport('board')
-  } catch (error) {
-    logger.error({ error }, 'Board Meeting report failed')
-  }
-})
-
-/**
- * Vault synthesizer: once daily at 08:00 Bali (00:00 UTC), Mon-Fri.
- * Fetches recent Slack messages, synthesizes status updates via Claude, writes to vault.
- * Uses calculateLookback() for resilience — auto catch-up after missed runs (capped at 7 days).
- */
-const vaultSynthDailyJob = cron.schedule('0 8 * * 1-5', async () => {
-  if (env.VAULT_SYNTH_ENABLED === 'false') return
-  logger.info('Starting vault synthesizer (daily)')
-  try {
-    const stats = await runVaultSynthesizer(24)
-    logger.info(stats, 'Vault synthesizer complete')
-  } catch (error) {
-    logger.error({ error }, 'Vault synthesizer failed')
-  }
-})
-
-/**
  * External service health check: every 30 minutes, all days.
  * Checks Slack, ClickUp, Google, Notion connectivity. Alerts via Telegram on failures.
  */
@@ -107,19 +52,6 @@ const healthCheckJob = cron.schedule('*/30 * * * *', async () => {
     await runHealthCheck()
   } catch (error) {
     logger.error({ error }, 'Health check failed')
-  }
-})
-
-/**
- * Channel discovery: weekly on Monday 10:00 Bali.
- * Finds Slack channels not mapped to any vault project and notifies via Telegram.
- */
-const channelDiscoveryJob = cron.schedule('0 10 * * 1', async () => { // Mon 10:00 Bali
-  logger.info('Starting channel discovery')
-  try {
-    await runChannelDiscovery()
-  } catch (error) {
-    logger.error({ error }, 'Channel discovery failed')
   }
 })
 
@@ -147,11 +79,7 @@ function shutdown(signal: string) {
   logger.info({ signal }, 'Shutting down worker')
   auditCleanupJob.stop()
   digestJob.stop()
-  lisbonPrepJob.stop()
-  boardPrepJob.stop()
-  vaultSynthDailyJob.stop()
   healthCheckJob.stop()
-  channelDiscoveryJob.stop()
   driveTreeJob.stop()
   closeDb()
     .then(() => {
