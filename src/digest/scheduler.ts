@@ -17,6 +17,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { logger } from '../logging/logger.js'
 import { compileDigest, fetchSharedDigestData } from './compiler.js'
+import { runNewDigestPipeline } from './new-pipeline.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
 
 /** Full-compilation retry: if all per-source retries fail, retry entire compilation. */
@@ -60,6 +61,23 @@ async function compileWithRetry(
 
 /** Compile and deliver digests for both companies. */
 export async function deliverDailyDigest(): Promise<void> {
+  // New pipeline opt-in: set USE_NEW_DIGEST=true (or '1') in env to enable.
+  // Falls back to the legacy multi-subagent compiler if the new one throws.
+  if (process.env.USE_NEW_DIGEST === 'true' || process.env.USE_NEW_DIGEST === '1') {
+    try {
+      await runNewDigestPipeline()
+      return
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.error({ error: msg }, 'New digest pipeline failed, falling back to legacy')
+      try {
+        await sendTelegramMessage(
+          `⚠️ Новый digest pipeline упал (<code>${msg.slice(0, 200)}</code>), переключаюсь на старый.`,
+        )
+      } catch { /* best-effort */ }
+    }
+  }
+
   const startTime = Date.now()
 
   logger.info('Starting daily digest compilation (with retry)')

@@ -65,7 +65,7 @@ interface SourceResult<T> {
 }
 
 /** Project info from KB for matching and context. */
-interface ProjectInfo {
+export interface ProjectInfo {
   id: string
   name: string
   company: string
@@ -77,7 +77,7 @@ interface ProjectInfo {
  * Build a map of company → project search terms for filtering
  * Gmail/Calendar/ClickUp data per company.
  */
-async function buildProjectMap(): Promise<Map<string, ProjectInfo[]>> {
+export async function buildProjectMap(): Promise<Map<string, ProjectInfo[]>> {
   const projects = await findEntitiesByType('project')
   const projectIds = projects.map((p) => p.id)
 
