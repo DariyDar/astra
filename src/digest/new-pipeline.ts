@@ -5,6 +5,7 @@
  * Toggled by the USE_NEW_DIGEST environment variable in scheduler.ts.
  */
 
+import 'dotenv/config'
 import { logger } from '../logging/logger.js'
 import { sendTelegramMessage } from '../telegram/sender.js'
 import { collectDigestData } from './collect.js'

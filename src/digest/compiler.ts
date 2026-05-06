@@ -144,7 +144,7 @@ function textMatchesCompany(text: string, companyProjects: ProjectInfo[]): boole
  * Checks subject, text_preview, list, and account fields.
  * Items that don't match any company go into "shared" bucket.
  */
-function filterItemsForCompany(
+export function filterItemsForCompany(
   items: BriefingItem[],
   companyProjects: ProjectInfo[],
   otherProjects: ProjectInfo[],
@@ -174,7 +174,7 @@ function filterItemsForCompany(
 }
 
 /** Filter Gmail items by account: dariy@astrocat.co → ac, dshatskikh@highground.games → hg. */
-function filterGmailByAccount(
+export function filterGmailByAccount(
   items: BriefingItem[],
   wsLabel: string,
   companyProjects: ProjectInfo[],

@@ -4,7 +4,7 @@ import { logger } from '../logging/logger.js'
 import { writeAuditEntry } from '../logging/audit.js'
 import { sendHealthAlert } from '../health/alerter.js'
 
-const MODEL = 'sonnet'
+const DEFAULT_MODEL = 'sonnet'
 const CLAUDE_TIMEOUT_MS = 300_000
 /**
  * Max agentic turns for MCP tool calls.
@@ -34,12 +34,13 @@ export interface ClaudeResponse {
  */
 export async function callClaude(
   prompt: string,
-  options?: { system?: string; mcpConfigPath?: string; timeoutMs?: number; maxTurns?: number },
+  options?: { system?: string; mcpConfigPath?: string; timeoutMs?: number; maxTurns?: number; model?: string },
   requestLogger?: pino.Logger,
 ): Promise<ClaudeResponse> {
   const log = requestLogger ?? logger
+  const model = options?.model ?? DEFAULT_MODEL
 
-  const args = ['--print', '--no-session-persistence', '--model', MODEL, '--output-format', 'json']
+  const args = ['--print', '--no-session-persistence', '--model', model, '--output-format', 'json']
 
   if (options?.system) {
     args.push('--system-prompt', options.system)
@@ -64,7 +65,7 @@ export async function callClaude(
     log.info(
       {
         event: 'llm_response',
-        model: MODEL,
+        model,
         responseLength: result.text.length,
         ...(result.usage ? {
           inputTokens: result.usage.inputTokens,
@@ -81,7 +82,7 @@ export async function callClaude(
         (log.bindings() as { correlationId?: string }).correlationId ??
         'unknown',
       action: 'llm_request',
-      model: MODEL,
+      model,
       metadata: {
         responseLength: result.text.length,
         ...(result.usage ?? {}),
@@ -111,7 +112,7 @@ export async function callClaude(
         (log.bindings() as { correlationId?: string }).correlationId ??
         'unknown',
       action: 'llm_request',
-      model: MODEL,
+      model,
       metadata: { errorType: 'cli_error' },
       status: 'error',
       errorMessage,
@@ -126,8 +127,19 @@ function execClaude(args: string[], prompt: string, timeoutMs?: number): Promise
     const proc = spawn('claude', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
     })
-    proc.stdin.write(prompt)
-    proc.stdin.end()
+
+    // Handle stdin backpressure for large prompts (>64KB pipe buffer).
+    // Without this, .write() can return false and subsequent .end() may close
+    // the stream before the kernel buffer is drained, leaving the CLI hanging.
+    proc.stdin.on('error', (err) => {
+      // EPIPE if CLI exits before we finish writing — surface via reject path.
+      logger.debug({ error: (err as Error).message }, 'Claude CLI stdin error')
+    })
+    if (!proc.stdin.write(prompt, 'utf-8')) {
+      proc.stdin.once('drain', () => proc.stdin.end())
+    } else {
+      proc.stdin.end()
+    }
 
     let stdout = ''
     let stderr = ''
@@ -156,6 +168,7 @@ function execClaude(args: string[], prompt: string, timeoutMs?: number): Promise
           response?: string
           subtype?: string
           is_error?: boolean
+          model?: string
           usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number }
           total_cost_usd?: number
         }
@@ -181,18 +194,18 @@ function execClaude(args: string[], prompt: string, timeoutMs?: number): Promise
           const costNote = usage ? ` ($${usage.costUsd.toFixed(2)})` : ''
           resolve({
             text: `Не удалось обработать запрос за отведённое количество шагов${costNote}. Попробуй задать вопрос конкретнее.`,
-            model: MODEL,
+            model: parsed.model ?? DEFAULT_MODEL,
             usage,
           })
           return
         }
 
         const text = rawText ?? stdout.trim()
-        resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: MODEL, usage })
+        resolve({ text: typeof text === 'string' ? text : JSON.stringify(text), model: parsed.model ?? DEFAULT_MODEL, usage })
       } catch {
         // Log raw stdout when JSON parse fails — helps debug unexpected output formats
         logger.debug({ stdoutLength: stdout.length, stdoutHead: stdout.slice(0, 500) }, 'Claude CLI non-JSON output')
-        resolve({ text: stdout.trim(), model: MODEL })
+        resolve({ text: stdout.trim(), model: DEFAULT_MODEL })
       }
     })
 
