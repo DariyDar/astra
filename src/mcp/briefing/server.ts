@@ -16,6 +16,16 @@ import { fetchClickUp } from './clickup.js'
 import { executeClockifyReport, clockifyReportTool, type ClockifyReportType } from './clockify.js'
 import { executeAuditTasks, auditTasksTool } from './audit.js'
 import { kbRegistryTool, vaultUpdateTool, handleKBRegistry, handleVaultUpdate } from '../../kb/mcp-tools.js'
+import {
+  wikiFindTool,
+  wikiReadTool,
+  wikiWriteTool,
+  wikiListFolderTool,
+  handleWikiFind,
+  handleWikiRead,
+  handleWikiWrite,
+  handleWikiListFolder,
+} from './wiki-edit.js'
 
 // ── Main briefing logic ──
 
@@ -189,7 +199,7 @@ export async function main(): Promise<void> {
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbRegistryTool, vaultUpdateTool, auditTasksTool],
+    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbRegistryTool, vaultUpdateTool, auditTasksTool, wikiFindTool, wikiReadTool, wikiWriteTool, wikiListFolderTool],
   }))
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -272,6 +282,26 @@ export async function main(): Promise<void> {
       } else if (toolName === 'vault_update') {
         const text = handleVaultUpdate(args)
         log(`tool=${toolName} action=${args.action} done`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'wiki_find') {
+        const wikiResult = await handleWikiFind(args)
+        const text = JSON.stringify(wikiResult, null, 0)
+        log(`tool=${toolName} matches=${wikiResult.matches.length}`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'wiki_read') {
+        const wikiResult = await handleWikiRead(args)
+        const text = JSON.stringify(wikiResult, null, 0)
+        log(`tool=${toolName} fileId=${wikiResult.fileId} size=${wikiResult.content.length}`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'wiki_write') {
+        const wikiResult = await handleWikiWrite(args)
+        const text = JSON.stringify(wikiResult, null, 0)
+        log(`tool=${toolName} fileId=${wikiResult.fileId} created=${wikiResult.created}`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'wiki_list_folder') {
+        const wikiResult = await handleWikiListFolder(args)
+        const text = JSON.stringify(wikiResult, null, 0)
+        log(`tool=${toolName} folderId=${wikiResult.folderId} items=${wikiResult.items.length}`)
         return { content: [{ type: 'text', text }] }
       } else if (toolName === 'audit_tasks') {
         if (!args.list_name) throw new Error('list_name is required')
