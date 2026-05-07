@@ -11,10 +11,32 @@ import { sendTelegramMessage } from '../telegram/sender.js'
 import { collectDigestData } from './collect.js'
 import { compileDigestJson } from './llm-call.js'
 import { formatDigestForTelegram, appendDigestToVault, saveDigestJson } from './format.js'
+import { runVaultSynthesizer } from '../kb/vault-synthesizer.js'
 
 export async function runNewDigestPipeline(): Promise<void> {
   const startedAt = Date.now()
-  logger.info('New digest pipeline: collecting data')
+
+  // Stage 0: Vault synthesis FIRST. Updates per-project status logs in
+  // vault/projects/<X> — Статусы.md so the digest LLM gets richer context
+  // (recent project history) and the vault accumulates a long-term record
+  // independent of digest delivery.
+  // Synth runs on its own Slack collection (24h lookback). It's independent
+  // of the digest collect step — failures here are NON-FATAL: the digest
+  // will still run on raw sources.
+  if (process.env.SKIP_SYNTH !== 'true' && process.env.SKIP_SYNTH !== '1') {
+    try {
+      logger.info('New digest pipeline: stage 0 — vault synth')
+      const synthStats = await runVaultSynthesizer(24)
+      logger.info(synthStats, 'Vault synth done, proceeding to digest')
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.warn({ error: msg }, 'Vault synth failed (non-fatal); digest continues with stale vault')
+    }
+  } else {
+    logger.info('SKIP_SYNTH set — skipping vault synth')
+  }
+
+  logger.info('New digest pipeline: stage 1 — collecting data')
 
   const data = await collectDigestData()
   logger.info(

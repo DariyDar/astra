@@ -58,47 +58,74 @@ function renderProject(p: DigestProject): string {
 }
 
 /**
- * Render Telegram messages for one company. Splits into chunks if a single
- * message would exceed Telegram's character limit.
+ * Render Telegram messages for one company. Returns one message per project
+ * (so the user can reply to a specific project's update with a comment) plus
+ * a single summary message with the company header, general updates, and
+ * silent projects list.
+ *
+ * Each project message is self-contained: starts with project name + status,
+ * lists items. If a single project block exceeds Telegram's char limit, it
+ * gets split — but each split keeps the project header so reply context is
+ * still clear.
  */
 function renderCompany(
   companyLabel: string,
   date: string,
   company: DigestResult['companies']['astrocat'],
 ): string[] {
-  const header = `📅 <b>Дайджест ${ruDate(date)} — ${companyLabel}</b>`
-  const blocks: string[] = []
+  const messages: string[] = []
 
-  // Section 1: project blocks
-  for (const p of company.projects) {
-    blocks.push(renderProject(p))
-  }
-
-  // Section 2: general updates (no project)
+  // Summary header — first message of the company batch.
+  const summaryLines: string[] = [`📅 <b>Дайджест ${ruDate(date)} — ${companyLabel}</b>`]
+  const projectsCount = company.projects.length
+  const generalCount = company.general_updates.length
+  const silentCount = company.silent_projects.length
+  summaryLines.push('')
+  summaryLines.push(
+    `<i>Активных проектов: ${projectsCount}` +
+    (generalCount > 0 ? `, общих апдейтов: ${generalCount}` : '') +
+    (silentCount > 0 ? `, без апдейтов: ${silentCount}` : '') +
+    `</i>`,
+  )
   if (company.general_updates.length > 0) {
     const sorted = [...company.general_updates].sort((a, b) => b.importance - a.importance)
-    const lines = ['<b>📌 Общие апдейты</b>']
-    for (const g of sorted) lines.push(renderItemLine(g))
-    blocks.push(lines.join('\n'))
+    summaryLines.push('')
+    summaryLines.push('<b>📌 Общие апдейты</b>')
+    for (const g of sorted) summaryLines.push(renderItemLine(g))
   }
-
-  // Section 3: silent projects (single line)
   if (company.silent_projects.length > 0) {
-    blocks.push(`<i>Без апдейтов:</i> ${escapeHtml(company.silent_projects.join(', '))}`)
+    summaryLines.push('')
+    summaryLines.push(`<i>Без апдейтов:</i> ${escapeHtml(company.silent_projects.join(', '))}`)
   }
+  messages.push(summaryLines.join('\n'))
 
-  // Pack blocks into messages within TG_MAX_LEN
-  const messages: string[] = []
-  let current = header
-  for (const block of blocks) {
-    if (current.length + block.length + 2 > TG_MAX_LEN) {
-      messages.push(current)
-      current = block
-    } else {
-      current += '\n\n' + block
+  // One message per project (so user can reply to a single project's update)
+  for (const p of company.projects) {
+    const projectText = renderProject(p)
+    if (projectText.length <= TG_MAX_LEN) {
+      messages.push(projectText)
+      continue
+    }
+    // Project too long — split, repeating the header on each part
+    const headerLine = `${STATUS_EMOJI[p.status]} <b>${escapeHtml(p.project_name)}</b>`
+    const sortedItems = [...p.items].sort((a, b) => b.importance - a.importance)
+    let chunk = headerLine
+    let partNum = 1
+    for (const it of sortedItems) {
+      const line = renderItemLine(it)
+      if (chunk.length + line.length + 1 > TG_MAX_LEN - 20) {
+        messages.push(chunk + `\n<i>(часть ${partNum})</i>`)
+        partNum++
+        chunk = headerLine + '\n' + line
+      } else {
+        chunk += '\n' + line
+      }
+    }
+    if (chunk.length > headerLine.length) {
+      messages.push(partNum > 1 ? chunk + `\n<i>(часть ${partNum})</i>` : chunk)
     }
   }
-  if (current.length > 0) messages.push(current)
+
   return messages
 }
 
