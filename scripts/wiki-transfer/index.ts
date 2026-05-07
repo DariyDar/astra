@@ -40,6 +40,7 @@ function flag(name: string): boolean {
 
 const SHEET_ID = arg('--sheet')
 const LIMIT = arg('--limit') ? parseInt(arg('--limit')!, 10) : 0
+const START = arg('--start') ? parseInt(arg('--start')!, 10) : 0
 const PICK = arg('--pick')
 const DEMO = flag('--demo')
 const DRY_RUN = flag('--dry-run')
@@ -152,14 +153,21 @@ async function transferRow(
   // 1. Resolve target folder path
   const segments = ['Проектная документация']
   if (decision.kind === 'archive') {
-    if (!row.project) return { ok: false, error: 'archive but no project' }
-    segments.push(row.project, 'archive')
+    if (row.project) {
+      segments.push(row.project, 'archive')
+    } else {
+      segments.push('_unsorted', 'archive')
+    }
   } else if (decision.kind === 'department') {
     segments.length = 0
     segments.push('Departments', ...decision.path)
   } else if (decision.kind === 'transfer') {
-    if (!row.project) return { ok: false, error: 'transfer but no project' }
-    segments.push(row.project, ...decision.subpath)
+    if (row.project) {
+      segments.push(row.project, ...decision.subpath)
+    } else {
+      // Unmapped row: still useful, drop into _unsorted/ for manual triage
+      segments.push('_unsorted', ...decision.subpath)
+    }
   } else {
     return { ok: false, error: 'unknown decision' }
   }
@@ -264,10 +272,24 @@ async function main(): Promise<void> {
   console.log(`Sheet: ${SHEET_ID}`)
   console.log(`Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}, polish=${!NO_POLISH}, media=${!SKIP_MEDIA}`)
 
-  const tokens = await resolveGoogleTokens()
-  const driveToken = tokens.get(GOOGLE_ACCOUNTS[0]) ?? [...tokens.values()][0]
+  let tokens = await resolveGoogleTokens()
+  let driveToken = tokens.get(GOOGLE_ACCOUNTS[0]) ?? [...tokens.values()][0]
   if (!driveToken) throw new Error('No Google access token')
-  const drive = new DriveClient(driveToken)
+  let drive = new DriveClient(driveToken)
+  let lastTokenRefresh = Date.now()
+
+  /** Refresh OAuth token if it's been > 30 min since last refresh.
+   * resolveGoogleTokens itself only refreshes if expiring soon, so calling
+   * it more often is cheap. */
+  async function ensureFreshToken(): Promise<void> {
+    if (Date.now() - lastTokenRefresh < 30 * 60_000) return
+    tokens = await resolveGoogleTokens()
+    driveToken = tokens.get(GOOGLE_ACCOUNTS[0]) ?? [...tokens.values()][0]
+    if (!driveToken) throw new Error('Token refresh returned empty')
+    drive = new DriveClient(driveToken)
+    lastTokenRefresh = Date.now()
+    console.log('  [token refreshed]')
+  }
 
   const rawRows = await fetchSheetRows(driveToken, SHEET_ID)
   console.log(`Fetched ${rawRows.length} rows from Sheet`)
@@ -289,6 +311,10 @@ async function main(): Promise<void> {
     console.log(`Demo: ${rows.length} rows (1 ClickUp + 1 Notion)`)
   }
 
+  if (START > 0) {
+    console.log(`Starting from index ${START} (skipping ${START} rows)`)
+    rows = rows.slice(START)
+  }
   if (LIMIT > 0) rows = rows.slice(0, LIMIT)
 
   const notion = process.env.NOTION_TOKEN ? new NotionClient(process.env.NOTION_TOKEN) : null
@@ -308,6 +334,7 @@ async function main(): Promise<void> {
     console.log(`\n[${i + 1}/${rows.length}] ${row.source} | ${row.project || '(unmapped)'} | ${row.title}`)
     console.log(`  → ${decision.kind}${decision.kind === 'department' ? ' / ' + decision.path.join(' / ') : ''}${decision.kind === 'transfer' && decision.subpath.length ? ' / ' + decision.subpath.join(' / ') : ''}`)
     try {
+      await ensureFreshToken()
       const result = await transferRow(row, decision, drive, driveToken, notion, clickup)
       if (result.ok) {
         success++
