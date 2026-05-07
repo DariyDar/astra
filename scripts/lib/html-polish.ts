@@ -38,23 +38,33 @@ export interface PolishResult {
   costUsd?: number
 }
 
+/** Collapse runs of whitespace/blank lines to shrink token count for polish. */
+function minifyHtml(html: string): string {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/>\s+</g, '><')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\n+/g, '\n')
+    .trim()
+}
+
 export async function polishHtml(html: string): Promise<PolishResult> {
   const inputChars = html.length
+  const compact = minifyHtml(html)
 
-  // Hard limit on input — Haiku context. Drop polish for very large docs.
   const MAX_INPUT = 80_000
-  if (inputChars > MAX_INPUT) {
-    return { html, inputChars, outputChars: inputChars }
+  if (compact.length > MAX_INPUT) {
+    return { html: compact, inputChars, outputChars: compact.length }
   }
   if (inputChars < 100) {
     return { html, inputChars, outputChars: inputChars }
   }
 
   try {
-    const resp = await callClaude(html, {
+    const resp = await callClaude(compact, {
       system: SYSTEM_PROMPT,
       model: 'haiku',
-      timeoutMs: 180_000,
+      timeoutMs: 480_000,
     })
     let polished = resp.text.trim()
 

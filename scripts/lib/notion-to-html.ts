@@ -11,26 +11,64 @@
 
 import { NotionClient, escapeHtml, richTextToHtml, type NotionBlock, type RichText } from './notion-client.js'
 
+export interface NotionPageHtml {
+  html: string
+  /** Map<image source URL, originating Notion block ID> for media refresh. */
+  imageBlocks: Map<string, string>
+}
+
 export async function pageToHtml(
   client: NotionClient,
   pageId: string,
   pageTitle: string,
-): Promise<string> {
+): Promise<NotionPageHtml> {
   const blocks = await client.getAllChildren(pageId)
   const parts: string[] = []
+  const imageBlocks = new Map<string, string>()
   parts.push(`<h1>${escapeHtml(pageTitle)}</h1>`)
   for (const block of blocks) {
     try {
-      parts.push(await blockToHtml(client, block, 0))
+      parts.push(await blockToHtml(client, block, 0, imageBlocks))
     } catch (e) {
       parts.push(`<!-- block ${block.id} failed: ${escapeHtml((e as Error).message.slice(0, 100))} -->`)
     }
   }
-  // Wrap consecutive <li> into <ul>/<ol>
-  return wrapLists(parts.filter(Boolean).join('\n'))
+  return {
+    html: wrapLists(parts.filter(Boolean).join('\n')),
+    imageBlocks,
+  }
 }
 
-async function blockToHtml(client: NotionClient, block: NotionBlock, depth: number): Promise<string> {
+/**
+ * Refresh a Notion media URL by re-fetching its block. S3 URLs expire ~1h.
+ * Returns null if block has no image URL anymore.
+ */
+export async function refreshNotionMediaUrl(
+  client: NotionClient,
+  blockId: string,
+): Promise<string | null> {
+  try {
+    const block = await client.get(`/blocks/${blockId}`) as NotionBlock & {
+      image?: { type?: string; file?: { url: string }; external?: { url: string } }
+      file?: { type?: string; file?: { url: string }; external?: { url: string } }
+    }
+    const image = block.image
+    if (image) {
+      const url = image.type === 'file' ? image.file?.url : image.external?.url
+      return url ?? null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function blockToHtml(
+  client: NotionClient,
+  block: NotionBlock,
+  depth: number,
+  imageBlocks: Map<string, string>,
+): Promise<string> {
   const type = block.type
   const data = block[type] as Record<string, unknown> | undefined
   if (!data) return ''
@@ -43,7 +81,7 @@ async function blockToHtml(client: NotionClient, block: NotionBlock, depth: numb
     const children = await client.getAllChildren(block.id)
     const parts: string[] = []
     for (const child of children) {
-      parts.push(await blockToHtml(client, child, depth + 1))
+      parts.push(await blockToHtml(client, child, depth + 1, imageBlocks))
     }
     childrenHtml = parts.join('\n')
   }
@@ -96,6 +134,7 @@ async function blockToHtml(client: NotionClient, block: NotionBlock, depth: numb
       const url = imageData.type === 'file' ? imageData.file?.url : imageData.external?.url
       const caption = imageData.caption ? richTextToHtml(imageData.caption) : ''
       if (!url) return '<!-- image: no url -->'
+      imageBlocks.set(url, block.id)
       const alt = caption.replace(/<[^>]+>/g, '') || 'image'
       const img = `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}">`
       return caption ? `<p>${img}<br><em>${caption}</em></p>` : `<p>${img}</p>`

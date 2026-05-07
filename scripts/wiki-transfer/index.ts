@@ -22,7 +22,7 @@ import { resolveGoogleTokens, GOOGLE_ACCOUNTS } from '../../src/mcp/briefing/goo
 import { NotionClient } from '../lib/notion-client.js'
 import { ClickUpClient, flattenPages } from '../lib/clickup-client.js'
 import { DriveClient } from '../lib/drive-client.js'
-import { pageToHtml as notionPageToHtml } from '../lib/notion-to-html.js'
+import { pageToHtml as notionPageToHtml, refreshNotionMediaUrl } from '../lib/notion-to-html.js'
 import { markdownToHtml, sanitizeWikiHtml } from '../lib/markdown-to-html.js'
 import { MediaDownloader, rewriteImagesInHtml, makeSlug } from '../lib/media-downloader.js'
 import { polishHtml } from '../lib/html-polish.js'
@@ -169,6 +169,7 @@ async function transferRow(
 
   // 2. Fetch source content
   let html = ''
+  let notionImageBlocks: Map<string, string> | null = null
   if (row.source === 'ClickUp') {
     if (!clickup) return { ok: false, error: 'ClickUp client not initialized' }
     const ids = extractClickUpIds(row.url)
@@ -184,7 +185,9 @@ async function transferRow(
     if (!notion) return { ok: false, error: 'Notion client not initialized' }
     const pageId = extractNotionId(row.url)
     if (!pageId) return { ok: false, error: 'cannot parse Notion URL' }
-    html = await notionPageToHtml(notion, pageId, row.title)
+    const result = await notionPageToHtml(notion, pageId, row.title)
+    html = result.html
+    notionImageBlocks = result.imageBlocks
   } else {
     return { ok: false, error: `unknown source: ${row.source}` }
   }
@@ -197,7 +200,14 @@ async function transferRow(
   if (!SKIP_MEDIA) {
     const downloader = new MediaDownloader(driveToken, mediaFolderId)
     const slug = makeSlug(row.title)
-    const result = await rewriteImagesInHtml(html, downloader, slug)
+    const refresher = notionImageBlocks && notion
+      ? async (originalUrl: string): Promise<string | null> => {
+          const blockId = notionImageBlocks!.get(originalUrl)
+          if (!blockId) return null
+          return refreshNotionMediaUrl(notion!, blockId)
+        }
+      : undefined
+    const result = await rewriteImagesInHtml(html, downloader, slug, refresher)
     html = result.html
     mediaReplaced = result.replaced
     mediaSkipped = result.skipped

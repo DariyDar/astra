@@ -82,20 +82,36 @@ export class MediaDownloader {
     return this.options.skipLargerThanBytes ?? 25 * 1024 * 1024
   }
 
-  async downloadAndUpload(sourceUrl: string, articleSlug: string): Promise<DownloadedMedia | null> {
+  async downloadAndUpload(
+    sourceUrl: string,
+    articleSlug: string,
+    options: { refreshUrl?: () => Promise<string | null> } = {},
+  ): Promise<DownloadedMedia | null> {
     if (this.cache.has(sourceUrl)) return this.cache.get(sourceUrl)!
 
-    let resp: Response
-    try {
-      resp = await fetch(sourceUrl, { signal: AbortSignal.timeout(60_000) })
-    } catch (e) {
-      console.log(`    media: fetch failed ${sourceUrl.slice(0, 80)}: ${(e as Error).message.slice(0, 80)}`)
+    let activeUrl = sourceUrl
+    let resp: Response | null = null
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        resp = await fetch(activeUrl, { signal: AbortSignal.timeout(60_000) })
+      } catch (e) {
+        console.log(`    media: fetch failed ${activeUrl.slice(0, 80)}: ${(e as Error).message.slice(0, 80)}`)
+        return null
+      }
+      if (resp.ok) break
+      // Common expiry/auth error codes — try refreshing URL once
+      if (attempt === 0 && options.refreshUrl && (resp.status === 400 || resp.status === 403 || resp.status === 404)) {
+        const fresh = await options.refreshUrl()
+        if (fresh && fresh !== activeUrl) {
+          console.log(`    media: ${resp.status} → refreshed URL`)
+          activeUrl = fresh
+          continue
+        }
+      }
+      console.log(`    media: ${resp.status} ${activeUrl.slice(0, 80)}`)
       return null
     }
-    if (!resp.ok) {
-      console.log(`    media: ${resp.status} ${sourceUrl.slice(0, 80)}`)
-      return null
-    }
+    if (!resp || !resp.ok) return null
     const sizeHeader = resp.headers.get('content-length')
     if (sizeHeader && parseInt(sizeHeader, 10) > this.maxBytes) {
       console.log(`    media: too large (${sizeHeader} bytes), skipping ${sourceUrl.slice(0, 80)}`)
@@ -191,13 +207,18 @@ export class MediaDownloader {
  *
  * Returns the rewritten HTML and the count of replaced URLs.
  */
+export interface UrlRefresher {
+  /** Given the original media URL (S3-expiring), return a fresh URL or null. */
+  (sourceUrl: string): Promise<string | null>
+}
+
 export async function rewriteImagesInHtml(
   html: string,
   downloader: MediaDownloader,
   articleSlug: string,
+  refresher?: UrlRefresher,
 ): Promise<{ html: string; replaced: number; skipped: number }> {
   const urls: string[] = []
-  // Collect unique image src URLs
   const re = /<img[^>]+src="([^"]+)"/gi
   let m: RegExpExecArray | null
   while ((m = re.exec(html)) !== null) {
@@ -208,7 +229,9 @@ export async function rewriteImagesInHtml(
   const replacements = new Map<string, string>()
   let skipped = 0
   for (const url of unique) {
-    const result = await downloader.downloadAndUpload(url, articleSlug)
+    const result = await downloader.downloadAndUpload(url, articleSlug, {
+      refreshUrl: refresher ? () => refresher(url) : undefined,
+    })
     if (result) replacements.set(url, result.driveUrl)
     else skipped++
   }
