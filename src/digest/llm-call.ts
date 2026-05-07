@@ -39,6 +39,12 @@ const SYSTEM_PROMPT = `Ты — дневной дайджест-компилят
 11. Дублирование между источниками (та же новость в Slack и Email): один item, выбери лучший источник для link.
 12. Не пиши items с importance 1, кроме случаев когда это часть series ("ДР Маши, Пети и Васи").
 13. item_id формат: "<date>-<companyCode>-<projectId>-<seq>" или "<date>-<companyCode>-general-<seq>". date в формате YYYYMMDD без дефисов. seq — 3-значный с 001. companyCode = "ac" или "hg".
+14. ВАЖНО ПРО JSON STRINGS: внутри значений one_line / detail / source_meta:
+    - НЕ ставь буквальные переносы строк — используй пробел
+    - Все двойные кавычки внутри текста экранируй как \\" (например \\"In A Jam\\")
+    - НЕ используй кавычки-ёлочки « » — заменяй на обычные ' или экранированные \\"
+    - НЕ используй markdown (** _ # *) — в Telegram дайджесте мы рендерим plain text
+    - Не оставляй trailing comma после последнего элемента массива/объекта
 
 ПРОЕКТ-СПЕЦИФИЧНЫЕ ПРАВИЛА:
 
@@ -252,7 +258,61 @@ function buildCompanyPrompt(
   return sections.join('\n')
 }
 
-function parseJsonResponse(raw: string): DigestCompany | null {
+/**
+ * Dump a raw LLM response that failed to parse to /tmp for debugging,
+ * then attempt a series of progressively-lenient cleanup steps.
+ */
+function dumpFailedResponse(company: string, raw: string): void {
+  try {
+    const fs = require('node:fs') as typeof import('node:fs')
+    const path = `/tmp/digest-llm-fail-${company}-${Date.now()}.txt`
+    fs.writeFileSync(path, raw, 'utf-8')
+    logger.warn({ path, company, len: raw.length }, 'Digest LLM: raw response dumped for inspection')
+  } catch { /* best effort */ }
+}
+
+/**
+ * Lenient cleanup pass for common LLM JSON breakage:
+ *   - replace smart quotes (« » “ ” „ ‚) with safe alternatives
+ *   - kill literal newlines inside string values (between an opening and the
+ *     unescaped closing ")
+ * Returns null if cleanup itself failed.
+ */
+function cleanupJson(text: string): string {
+  let t = text
+  // Smart quotes around words → straight single quotes (safer than double).
+  t = t.replace(/[«»“”„‚]/g, "'")
+  // Replace literal newlines inside JSON string values with spaces.
+  // Heuristic: scan char-by-char tracking string state.
+  let out = ''
+  let inStr = false
+  let escaped = false
+  for (const ch of t) {
+    if (escaped) {
+      out += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      out += ch
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      out += ch
+      inStr = !inStr
+      continue
+    }
+    if (inStr && (ch === '\n' || ch === '\r' || ch === '\t')) {
+      out += ' '
+      continue
+    }
+    out += ch
+  }
+  return out
+}
+
+function parseJsonResponse(raw: string, company: string): DigestCompany | null {
   let text = raw.trim()
   if (text.startsWith('```')) {
     const end = text.lastIndexOf('```')
@@ -260,10 +320,22 @@ function parseJsonResponse(raw: string): DigestCompany | null {
   }
   const firstBrace = text.indexOf('{')
   if (firstBrace > 0) text = text.slice(firstBrace)
+
+  // Try strict parse first
   try {
     return JSON.parse(text) as DigestCompany
+  } catch { /* fall through to lenient */ }
+
+  // Try lenient cleanup
+  try {
+    const cleaned = cleanupJson(text)
+    return JSON.parse(cleaned) as DigestCompany
   } catch (error) {
-    logger.error({ error: (error as Error).message, head: text.slice(0, 200) }, 'Digest LLM: JSON parse failed')
+    logger.error(
+      { error: (error as Error).message, head: text.slice(0, 200), tail: text.slice(-200), len: text.length },
+      'Digest LLM: JSON parse failed even after cleanup',
+    )
+    dumpFailedResponse(company, raw)
     return null
   }
 }
@@ -292,7 +364,7 @@ async function compileCompanyJson(
     'Digest LLM: company response received',
   )
 
-  const parsed = parseJsonResponse(response.text)
+  const parsed = parseJsonResponse(response.text, companyCode)
   if (!parsed) throw new Error(`Digest LLM (${companyCode}) returned non-parseable response`)
   if (!Array.isArray(parsed.projects) || !Array.isArray(parsed.silent_projects)) {
     throw new Error(`Digest LLM (${companyCode}) JSON missing required fields`)

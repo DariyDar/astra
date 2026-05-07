@@ -11,31 +11,12 @@ import { sendTelegramMessage } from '../telegram/sender.js'
 import { collectDigestData } from './collect.js'
 import { compileDigestJson } from './llm-call.js'
 import { formatDigestForTelegram, appendDigestToVault, saveDigestJson } from './format.js'
-import { runVaultSynthesizer } from '../kb/vault-synthesizer.js'
+import { runVaultSynthFromCollected } from '../kb/vault-synthesizer.js'
 
 export async function runNewDigestPipeline(): Promise<void> {
   const startedAt = Date.now()
 
-  // Stage 0: Vault synthesis FIRST. Updates per-project status logs in
-  // vault/projects/<X> — Статусы.md so the digest LLM gets richer context
-  // (recent project history) and the vault accumulates a long-term record
-  // independent of digest delivery.
-  // Synth runs on its own Slack collection (24h lookback). It's independent
-  // of the digest collect step — failures here are NON-FATAL: the digest
-  // will still run on raw sources.
-  if (process.env.SKIP_SYNTH !== 'true' && process.env.SKIP_SYNTH !== '1') {
-    try {
-      logger.info('New digest pipeline: stage 0 — vault synth')
-      const synthStats = await runVaultSynthesizer(24)
-      logger.info(synthStats, 'Vault synth done, proceeding to digest')
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      logger.warn({ error: msg }, 'Vault synth failed (non-fatal); digest continues with stale vault')
-    }
-  } else {
-    logger.info('SKIP_SYNTH set — skipping vault synth')
-  }
-
+  // Stage 1: Collect once for both synth and digest.
   logger.info('New digest pipeline: stage 1 — collecting data')
 
   const data = await collectDigestData()
@@ -46,9 +27,46 @@ export async function runNewDigestPipeline(): Promise<void> {
       calendar: data.calendar.length,
       clickup: data.clickup.length,
     },
-    'New digest pipeline: data collected, calling LLM',
+    'New digest pipeline: data collected',
   )
 
+  // Stage 2: Vault synthesis BEFORE digest LLM. Reuses the haul from stage 1
+  // — no duplicate Slack/Gmail fetch. Updates vault/projects/<X> — Статусы.md
+  // so the digest LLM (stage 3) reads fresh kbContext via vault-reader.
+  // Failures are NON-FATAL: digest continues with whatever vault state exists.
+  if (process.env.SKIP_SYNTH !== 'true' && process.env.SKIP_SYNTH !== '1') {
+    try {
+      logger.info('New digest pipeline: stage 2 — vault synth (multi-source)')
+      const synthStats = await runVaultSynthFromCollected({
+        slack: data.slack.map(ch => ({
+          channel: ch.channelName,
+          workspace: ch.workspace,
+          messages: ch.messages.map(m => ({
+            ts: m.ts ?? '',
+            user: m.author ?? '',
+            text: m.text ?? '',
+          })),
+        })),
+        gmail: data.gmail as unknown as Array<Record<string, unknown>>,
+        calendar: data.calendar as unknown as Array<Record<string, unknown>>,
+        clickup: data.clickup as unknown as Array<Record<string, unknown>>,
+      })
+      logger.info(synthStats, 'Vault synth done, proceeding to digest')
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      logger.warn({ error: msg }, 'Vault synth failed (non-fatal); digest continues with stale vault')
+    }
+  } else {
+    logger.info('SKIP_SYNTH set — skipping vault synth')
+  }
+
+  // After synth (which may have updated vault YAML), re-read project statuses
+  // so the digest LLM sees the fresh kbContext.
+  const refreshedStatuses = (await import('../kb/vault-reader.js')).getAllStatuses()
+  data.projectStatuses = refreshedStatuses
+
+  // Stage 3: digest LLM
+  logger.info('New digest pipeline: stage 3 — digest LLM')
   const result = await compileDigestJson(data)
   logger.info(
     {
