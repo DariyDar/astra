@@ -9,10 +9,26 @@ import type { AuditRow } from './types.js'
 
 const TEXT_SNAPSHOT_MAX = 8000
 
+/**
+ * Notion task pages typically use a `[PREFIX]` naming convention.
+ * These prefixes mark the page as a ticket/bug/dev-task, not documentation.
+ * Match is case-insensitive and applied at the start of the title.
+ */
+const TASK_PREFIX_RE = /^\[(DEV|GD|BUG|UI|FX|ART|CONFIG|ANIM|SFX|VFX|QA|TASK|TODO|FIX|FEEDBACK|TEST|FEATURE|REQ|CR|PR)(\/[A-Z]+)?\]\s*\S/i
+
+function looksLikeTask(title: string, parentType: string, size: number): boolean {
+  if (TASK_PREFIX_RE.test(title)) return true
+  // Pages inside a database that are short (< 500 chars) are almost always
+  // tickets — real docs in DBs are bigger. Keeps GDD pages in DBs but drops
+  // bug-tracker entries that don't have a prefix.
+  if (parentType === 'database_id' && size < 500) return true
+  return false
+}
+
 export async function scanNotion(
   client: NotionClient,
   matchers: ProjectMatcher[],
-  options: { limit?: number } = {},
+  options: { limit?: number; includeTasks?: boolean } = {},
 ): Promise<AuditRow[]> {
   console.log('[notion] searching workspace...')
   const pages = await client.searchPages()
@@ -32,12 +48,20 @@ export async function scanNotion(
   const limit = options.limit ?? pages.length
   const slice = pages.slice(0, limit)
   const rows: AuditRow[] = []
+  let taskFilteredByPrefix = 0
+  let taskFilteredByDb = 0
 
   for (let i = 0; i < slice.length; i++) {
     const page = slice[i]
     if (page.archived) continue
 
     process.stdout.write(`\r[notion] ${i + 1}/${slice.length}: ${page.title.slice(0, 50)}                `)
+
+    // Quick prefix check — skip block fetch entirely for obvious tasks
+    if (!options.includeTasks && TASK_PREFIX_RE.test(page.title)) {
+      taskFilteredByPrefix++
+      continue
+    }
 
     const project = resolveProject(page, pageById, explicitProjectMap, matchers)
 
@@ -49,6 +73,12 @@ export async function scanNotion(
     } catch (e) {
       console.log(`\n[notion] failed to read blocks for ${page.title}: ${(e as Error).message.slice(0, 100)}`)
       stats = emptyStats()
+    }
+
+    // Second-pass filter using parent.type + size (after we know the size)
+    if (!options.includeTasks && looksLikeTask(page.title, page.parent.type, stats.textChars)) {
+      taskFilteredByDb++
+      continue
     }
 
     rows.push({
@@ -70,6 +100,9 @@ export async function scanNotion(
   }
 
   process.stdout.write('\n')
+  if (taskFilteredByPrefix + taskFilteredByDb > 0) {
+    console.log(`[notion] filtered out ${taskFilteredByPrefix + taskFilteredByDb} task-like pages (prefix=${taskFilteredByPrefix}, small DB pages=${taskFilteredByDb})`)
+  }
   return rows
 }
 

@@ -44,9 +44,12 @@ const DRY_RUN = flag('--dry-run')
 const NO_SUMMARY = flag('--no-summary')
 const SKIP_NOTION = flag('--skip-notion')
 const SKIP_CLICKUP = flag('--skip-clickup')
+const INCLUDE_TASKS = flag('--include-tasks')
 const LIMIT = arg('--limit') ? parseInt(arg('--limit')!, 10) : undefined
 const CSV_PATH = arg('--csv')
-const SHEET_NAME = arg('--sheet-name') ?? `Wiki Content Audit ${new Date().toISOString().slice(0, 10)}`
+const SHEET_NAME =
+  arg('--sheet-name') ??
+  `Wiki Content Audit ${new Date().toISOString().slice(0, 10)}${INCLUDE_TASKS ? '' : ' (docs only)'}`
 const PROJECT_FILTER = arg('--project')
 
 async function main(): Promise<void> {
@@ -72,7 +75,7 @@ async function main(): Promise<void> {
       console.warn('[notion] NOTION_TOKEN missing — skipping')
     } else {
       const notion = new NotionClient(process.env.NOTION_TOKEN)
-      const notionRows = await scanNotion(notion, filteredMatchers, { limit: LIMIT })
+      const notionRows = await scanNotion(notion, filteredMatchers, { limit: LIMIT, includeTasks: INCLUDE_TASKS })
       rows.push(...notionRows)
       console.log(`[notion] collected ${notionRows.length} rows`)
     }
