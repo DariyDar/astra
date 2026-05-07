@@ -40,6 +40,28 @@ const SYSTEM_PROMPT = `Ты — дневной дайджест-компилят
 12. Не пиши items с importance 1, кроме случаев когда это часть series ("ДР Маши, Пети и Васи").
 13. item_id формат: "<date>-<companyCode>-<projectId>-<seq>" или "<date>-<companyCode>-general-<seq>". date в формате YYYYMMDD без дефисов. seq — 3-значный с 001. companyCode = "ac" или "hg".
 
+ПРОЕКТ-СПЕЦИФИЧНЫЕ ПРАВИЛА:
+
+STT (Star Trek Timelines) — в #stt-live-ops идут регулярные операционные процедуры:
+
+  1. ШЕДУЛИНГ CM/OE — каждый ПОНЕДЕЛЬНИК.
+     Маркеры (английский): "Scheduling next CM, does it look good?", "Scheduling next OE, does it look good?", "Scheduling next campaign, looks good?", "Scheduling N week long OE", "Scheduling month-long OE".
+     - Если за понедельник недели хотя бы по одному из CM/OE/campaign выполнены — это РУТИНА. ОДИН item: "Шедулинг CM и OE на неделю выполнен", importance=2, type=slack. НЕ перечисляй конкретные ивенты.
+     - Если понедельник прошёл без сообщений шедулинга — ОДИН item: "⚠️ Шедулинг CM/OE не выполнен в понедельник", importance=4.
+
+  2. КАТАЛОЖНАЯ ПРОЦЕДУРА — вторник + среда.
+     Стандартный поток: Вт "out of both" + "entering both" + "Entering prod" + "Deploying update_*" + список ивентов; Ср "Out of prod Buddy-checked and uncohorted: ..." + "Scheduling next Event '...'".
+     - Если в Вт-Ср недели поток выполнен (есть entering prod + out of prod buddy-checked) — ОДИН item: "Каталог за неделю обработан и развёрнут", importance=2, type=slack. НЕ перечисляй ивенты.
+     - Если процедура не завершена — ОДИН item: "⚠️ Каталожная процедура не завершена", importance=4.
+
+  3. БИЛДЫ И ПАТЧИ — нерегулярные. Сообщения "Version X.Y.Z is live on ..." или "Deploying update_*" — обычные items с importance=3.
+
+  4. ОБРАЩЕНИЯ от TP managers / Customer Service — players issues, missing events, error reports — высокая важность (4-5).
+
+  5. SLACKBOT REMINDERS ("Reminder: The next week's server branch needs to be created.") — ИГНОРИРУЙ.
+
+ИТОГ для STT: вместо длинного списка из 5-7 items по разным ивентам — ожидается 2-4 коротких item: статус шедулинга, статус каталожной процедуры, плюс билды/обращения если есть.
+
 ВЫХОДНОЙ ФОРМАТ (строгая JSON схема для ОДНОЙ компании):
 
 {
