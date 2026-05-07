@@ -134,7 +134,10 @@ async function blockToHtml(
       const url = imageData.type === 'file' ? imageData.file?.url : imageData.external?.url
       const caption = imageData.caption ? richTextToHtml(imageData.caption) : ''
       if (!url) return '<!-- image: no url -->'
+      // Store both raw and HTML-escaped URL forms — orchestrator extracts
+      // src="..." from sanitized HTML where & is encoded as &amp;.
       imageBlocks.set(url, block.id)
+      imageBlocks.set(escapeHtml(url), block.id)
       const alt = caption.replace(/<[^>]+>/g, '') || 'image'
       const img = `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}">`
       return caption ? `<p>${img}<br><em>${caption}</em></p>` : `<p>${img}</p>`

@@ -70,6 +70,7 @@ export interface DownloadedMedia {
 
 export class MediaDownloader {
   private cache = new Map<string, DownloadedMedia>()
+  private failures = new Set<string>()
 
   constructor(
     private driveToken: string,
@@ -88,6 +89,7 @@ export class MediaDownloader {
     options: { refreshUrl?: () => Promise<string | null> } = {},
   ): Promise<DownloadedMedia | null> {
     if (this.cache.has(sourceUrl)) return this.cache.get(sourceUrl)!
+    if (this.failures.has(sourceUrl)) return null
 
     let activeUrl = sourceUrl
     let resp: Response | null = null
@@ -109,9 +111,13 @@ export class MediaDownloader {
         }
       }
       console.log(`    media: ${resp.status} ${activeUrl.slice(0, 80)}`)
+      this.failures.add(sourceUrl)
       return null
     }
-    if (!resp || !resp.ok) return null
+    if (!resp || !resp.ok) {
+      this.failures.add(sourceUrl)
+      return null
+    }
     const sizeHeader = resp.headers.get('content-length')
     if (sizeHeader && parseInt(sizeHeader, 10) > this.maxBytes) {
       console.log(`    media: too large (${sizeHeader} bytes), skipping ${sourceUrl.slice(0, 80)}`)
