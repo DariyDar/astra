@@ -276,19 +276,20 @@ async function main(): Promise<void> {
   let driveToken = tokens.get(GOOGLE_ACCOUNTS[0]) ?? [...tokens.values()][0]
   if (!driveToken) throw new Error('No Google access token')
   let drive = new DriveClient(driveToken)
-  let lastTokenRefresh = Date.now()
 
-  /** Refresh OAuth token if it's been > 30 min since last refresh.
-   * resolveGoogleTokens itself only refreshes if expiring soon, so calling
-   * it more often is cheap. */
-  async function ensureFreshToken(): Promise<void> {
-    if (Date.now() - lastTokenRefresh < 30 * 60_000) return
+  /** Always re-read tokens from credentials.json before each row.
+   * resolveGoogleTokens calls Google's refresh endpoint when expiry
+   * is < 5 min away. Forcing a re-read every row is cheap (file read
+   * + occasional refresh) and guarantees we never use a stale token. */
+  async function refreshTokenForRow(): Promise<void> {
     tokens = await resolveGoogleTokens()
-    driveToken = tokens.get(GOOGLE_ACCOUNTS[0]) ?? [...tokens.values()][0]
-    if (!driveToken) throw new Error('Token refresh returned empty')
-    drive = new DriveClient(driveToken)
-    lastTokenRefresh = Date.now()
-    console.log('  [token refreshed]')
+    const fresh = tokens.get(GOOGLE_ACCOUNTS[0]) ?? [...tokens.values()][0]
+    if (!fresh) throw new Error('Token refresh returned empty')
+    if (fresh !== driveToken) {
+      driveToken = fresh
+      drive = new DriveClient(driveToken)
+      console.log('  [token rotated]')
+    }
   }
 
   const rawRows = await fetchSheetRows(driveToken, SHEET_ID)
@@ -334,7 +335,7 @@ async function main(): Promise<void> {
     console.log(`\n[${i + 1}/${rows.length}] ${row.source} | ${row.project || '(unmapped)'} | ${row.title}`)
     console.log(`  → ${decision.kind}${decision.kind === 'department' ? ' / ' + decision.path.join(' / ') : ''}${decision.kind === 'transfer' && decision.subpath.length ? ' / ' + decision.subpath.join(' / ') : ''}`)
     try {
-      await ensureFreshToken()
+      await refreshTokenForRow()
       const result = await transferRow(row, decision, drive, driveToken, notion, clickup)
       if (result.ok) {
         success++
