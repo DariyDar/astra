@@ -336,7 +336,14 @@ async function main(): Promise<void> {
     console.log(`  → ${decision.kind}${decision.kind === 'department' ? ' / ' + decision.path.join(' / ') : ''}${decision.kind === 'transfer' && decision.subpath.length ? ' / ' + decision.subpath.join(' / ') : ''}`)
     try {
       await refreshTokenForRow()
-      const result = await transferRow(row, decision, drive, driveToken, notion, clickup)
+      // Hard 12-min timeout per row — guards against hung awaits in
+      // Drive uploads / Claude CLI / Notion fetch.
+      const result = await Promise.race([
+        transferRow(row, decision, drive, driveToken, notion, clickup),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('row timeout (12 min)')), 12 * 60_000),
+        ),
+      ])
       if (result.ok) {
         success++
         const stats = [
