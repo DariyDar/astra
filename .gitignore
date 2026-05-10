@@ -23,3 +23,8 @@ Thumbs.db
 
 # Vault — synced via Syncthing, not git
 vault/
+
+# Agent identity bundle — memory snapshot transferred separately via scp
+agent/memory/
+agent/.credentials.json
+agent/secrets/
