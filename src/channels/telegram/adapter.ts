@@ -137,8 +137,18 @@ export class TelegramAdapter implements ChannelAdapter {
   /**
    * Start the Telegram bot polling.
    * Handles 409 conflict errors with exponential backoff retry.
+   *
+   * When DISABLE_TELEGRAM_POLLING=1, skips bot.start() entirely so the
+   * incoming-message handler stays off. The Bot instance remains available
+   * for outgoing cron messages via bot.api.sendMessage.
    */
   async start(): Promise<void> {
+    if (process.env.DISABLE_TELEGRAM_POLLING === '1') {
+      logger.info(
+        'TelegramAdapter: long-poll disabled via DISABLE_TELEGRAM_POLLING=1, skipping bot.start()',
+      )
+      return
+    }
     this.registerMiddleware()
     this.startPolling()
   }
