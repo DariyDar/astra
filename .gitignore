@@ -23,3 +23,6 @@ Thumbs.db
 
 # Vault — synced via Syncthing, not git
 vault/
+
+# MCP config with secrets — managed on server directly
+src/mcp/mcp-config.json
