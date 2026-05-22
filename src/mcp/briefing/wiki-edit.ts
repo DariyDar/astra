@@ -378,6 +378,69 @@ export async function handleWikiListFolder(args: Record<string, unknown>): Promi
   return { folderId, items: (data.files ?? []).map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType })) }
 }
 
+// ── docs_edit ──
+
+export const docsEditTool = {
+  name: 'docs_edit',
+  description: `Make targeted text replacements in any Google Doc without touching its formatting. Use this for non-wiki documents (Board Meeting notes, trackers, reports, etc.) — unlike wiki_write, it does NOT overwrite the whole document.
+
+Each replacement finds all occurrences of a string and replaces them. Formatting, styles, and untouched content are preserved.`,
+  inputSchema: {
+    type: 'object' as const,
+    properties: {
+      fileId: {
+        type: 'string' as const,
+        description: 'Google Doc file ID.',
+      },
+      replacements: {
+        type: 'array' as const,
+        description: 'List of find/replace operations to apply in order.',
+        items: {
+          type: 'object' as const,
+          properties: {
+            find: { type: 'string' as const, description: 'Exact text to search for.' },
+            replace: { type: 'string' as const, description: 'Text to replace with.' },
+            matchCase: { type: 'boolean' as const, description: 'Case-sensitive match (default: true).' },
+          },
+          required: ['find', 'replace'],
+        },
+      },
+    },
+    required: ['fileId', 'replacements'],
+  },
+}
+
+export async function handleDocsEdit(args: Record<string, unknown>): Promise<{ fileId: string; occurrencesChanged: number }> {
+  const fileId = String(args.fileId ?? '').trim()
+  if (!fileId) throw new Error('fileId is required')
+
+  const replacements = args.replacements as Array<{ find: string; replace: string; matchCase?: boolean }>
+  if (!replacements?.length) throw new Error('replacements must be a non-empty array')
+
+  const token = await getToken()
+
+  const requests = replacements.map(r => ({
+    replaceAllText: {
+      containsText: { text: r.find, matchCase: r.matchCase !== false },
+      replaceText: r.replace,
+    },
+  }))
+
+  const resp = await fetch(`https://docs.googleapis.com/v1/documents/${fileId}:batchUpdate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requests }),
+    signal: AbortSignal.timeout(30_000),
+  })
+  if (!resp.ok) throw new Error(`Docs batchUpdate failed: ${resp.status} ${await resp.text()}`)
+
+  const data = await resp.json() as { replies?: Array<{ replaceAllText?: { occurrencesChanged?: number } }> }
+  const total = (data.replies ?? []).reduce((sum, r) => sum + (r.replaceAllText?.occurrencesChanged ?? 0), 0)
+  log(`docs_edit: fileId=${fileId} replacements=${replacements.length} occurrencesChanged=${total}`)
+
+  return { fileId, occurrencesChanged: total }
+}
+
 async function resolveFolderByPath(path: string, token: string): Promise<string> {
   const wikiRoot = await findCompanyWikiRoot(token)
   if (!path) return wikiRoot

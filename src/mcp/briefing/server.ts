@@ -21,10 +21,12 @@ import {
   wikiReadTool,
   wikiWriteTool,
   wikiListFolderTool,
+  docsEditTool,
   handleWikiFind,
   handleWikiRead,
   handleWikiWrite,
   handleWikiListFolder,
+  handleDocsEdit,
 } from './wiki-edit.js'
 
 // ── Main briefing logic ──
@@ -199,7 +201,7 @@ export async function main(): Promise<void> {
   )
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbRegistryTool, vaultUpdateTool, auditTasksTool, wikiFindTool, wikiReadTool, wikiWriteTool, wikiListFolderTool],
+    tools: [briefingTool, searchEverywhereTool, clockifyReportTool, getSlackThreadTool, getEmailContentTool, kbRegistryTool, vaultUpdateTool, auditTasksTool, wikiFindTool, wikiReadTool, wikiWriteTool, wikiListFolderTool, docsEditTool],
   }))
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -302,6 +304,11 @@ export async function main(): Promise<void> {
         const wikiResult = await handleWikiListFolder(args)
         const text = JSON.stringify(wikiResult, null, 0)
         log(`tool=${toolName} folderId=${wikiResult.folderId} items=${wikiResult.items.length}`)
+        return { content: [{ type: 'text', text }] }
+      } else if (toolName === 'docs_edit') {
+        const result = await handleDocsEdit(args)
+        const text = JSON.stringify(result, null, 0)
+        log(`tool=${toolName} fileId=${result.fileId} occurrencesChanged=${result.occurrencesChanged}`)
         return { content: [{ type: 'text', text }] }
       } else if (toolName === 'audit_tasks') {
         if (!args.list_name) throw new Error('list_name is required')
